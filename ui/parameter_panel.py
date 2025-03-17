@@ -4,6 +4,13 @@ import matplotlib.pyplot as plt
 
 class ParameterPanel:
     def __init__(self, parent, update_callback):
+        """
+        親ウィジェットと更新コールバックを使用して ParameterPanel を初期化します。
+
+        引数:
+            parent (tk.Widget): このパネルが接続される親ウィジェット。
+            update_callback (呼び出し可能): パネル パラメータが更新されたときに呼び出される関数。
+        """
         self.parent = parent
         self.update_callback = update_callback
         self.setup_panel()
