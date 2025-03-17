@@ -6,6 +6,16 @@ from fractal.render import render_fractal
 
 class MainWindow:
     def __init__(self, root):
+        """
+        フラクタル描画アプリケーションのメイン ウィンドウを初期化します。
+        アプリケーションのルート ウィンドウを設定し、キャンバス フレームと
+        コントロール パネル フレームを含む分割レイアウトを作成し、
+        フラクタル キャンバスとパラメーター パネルを初期化し、
+        初期フラクタル レンダリングを実行します。
+
+        引数:
+            root (tk.Tk): アプリケーションのルート Tkinter ウィンドウ。
+        """
         self.root = root
         self.root.title("フラクタル描画アプリケーション")
         self.root.geometry("1200x800")
@@ -30,6 +40,14 @@ class MainWindow:
         self.update_fractal()
 
     def update_fractal(self, *args):
+        """
+        現在のパラメータを使用してフラクタルを再描画します。
+        パラメータパネルから最新のパラメータを取得し、フラクタルを計算・描画し、
+        キャンバスを更新します。
+
+        引数:
+            *args: 追加の引数（イベントハンドリング用）
+        """
         # パネルからパラメータを取得
         params = self.parameter_panel.get_parameters()
         # フラクタル描画（計算・着色）
