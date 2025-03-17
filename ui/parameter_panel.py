@@ -3,16 +3,16 @@ from tkinter import ttk
 import matplotlib.pyplot as plt
 
 class ParameterPanel:
-    def __init__(self, parent, update_callback):
+    def __init__(self, parent, update_callback, reset_callback=None):
         """
-        親ウィジェットと更新コールバックを使用して ParameterPanel を初期化します。
+        ParameterPanel の初期化。
 
-        引数:
-            parent (tk.Widget): このパネルが接続される親ウィジェット。
-            update_callback (呼び出し可能): パネル パラメータが更新されたときに呼び出される関数。
+        update_callback: パラメータ変更時に呼ばれる更新関数
+        reset_callback: 「描画リセット」ボタン押下時に呼ばれる関数
         """
         self.parent = parent
         self.update_callback = update_callback
+        self.reset_callback = reset_callback
         self.setup_panel()
 
     def setup_panel(self):
@@ -139,6 +139,12 @@ class ParameterPanel:
         # 描画ボタン
         render_button = ttk.Button(self.parent, text="描画", command=self.update_callback)
         render_button.grid(row=row, column=0, columnspan=2, sticky=tk.W+tk.E, padx=10, pady=10)
+        row += 1
+
+        # 描画リセットボタン（reset_callbackが設定されていれば）
+        if self.reset_callback is not None:
+            reset_button = ttk.Button(self.parent, text="描画リセット", command=self.reset_callback)
+            reset_button.grid(row=row, column=0, columnspan=2, sticky=tk.W+tk.E, padx=10, pady=10)
 
     def update_formula_display(self):
         fractal_type = self.fractal_type_var.get()
