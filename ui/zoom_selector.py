@@ -9,10 +9,10 @@ class ZoomSelector:
         on_zoom_confirm: ズーム確定時に呼ばれるコールバック（zoom_paramsを引数に取る）
         on_zoom_cancel: ズームキャンセル時に呼ばれるコールバック
         """
-        self.ax = ax
-        self.canvas = ax.figure.canvas
-        self.on_zoom_confirm = on_zoom_confirm
-        self.on_zoom_cancel = on_zoom_cancel
+        self.ax = ax  # ズーム選択を行うAxes
+        self.canvas = ax.figure.canvas  # ズーム選択を行うFigureのCanvas
+        self.on_zoom_confirm = on_zoom_confirm  # ズーム確定時のコールバック
+        self.on_zoom_cancel = on_zoom_cancel  # ズームキャンセル時のコールバック
 
         self.rect = None            # ズーム矩形のパッチ
         self.zoom_active = False    # ズーム選択中フラグ

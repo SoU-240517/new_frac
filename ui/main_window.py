@@ -11,13 +11,13 @@ class MainWindow:
         キャンバスとパラメータパネルを含む左右分割レイアウトを作成し、
         ズーム操作の状態管理も行います。
         """
-        self.root = root
-        self.root.title("フラクタル描画アプリケーション")
-        self.root.geometry("1200x800")
+        self.root = root  # Tkinter のルートウィンドウ
+        self.root.title("フラクタル描画アプリケーション")  # ウィンドウタイトルの設定
+        self.root.geometry("1200x800")  # ウィンドウサイズの設定
 
         # ズームパラメータ（初期状態）
-        self.zoom_params = {"center_x": 0.0, "center_y": 0.0, "width": 4.0, "height": 4.0, "rotation": 0.0}
-        self.prev_zoom_params = None
+        self.zoom_params = {"center_x": 0.0, "center_y": 0.0, "width": 4.0, "height": 4.0, "rotation": 0.0}  # ズームパラメータ
+        self.prev_zoom_params = None  # 前回のズームパラメータを保存するための変数
 
         # メインフレーム（左右分割）
         self.main_frame = ttk.PanedWindow(root, orient=tk.HORIZONTAL)
@@ -33,6 +33,7 @@ class MainWindow:
 
         # キャンバスとパラメータパネルの初期化
         self.fractal_canvas = FractalCanvas(self.canvas_frame)
+
         # ZoomSelector のコールバックを MainWindow のメソッドに設定
         self.fractal_canvas.set_zoom_callback(self.on_zoom_confirm, self.on_zoom_cancel)
         self.parameter_panel = ParameterPanel(self.control_frame, self.update_fractal, reset_callback=self.reset_zoom)
@@ -42,7 +43,7 @@ class MainWindow:
 
     def update_fractal(self, *args):
         """
-        パラメータパネルの最新パラメータに、ズーム情報を上書きしてフラクタルを再描画。
+        パラメータパネルの最新パラメータにズーム情報を上書きしてフラクタルを再描画。
         """
         # パネルからパラメータを取得
         params = self.parameter_panel.get_parameters()
