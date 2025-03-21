@@ -55,12 +55,41 @@ class MainWindow:
 
     def on_zoom_confirm(self, new_zoom_params):
         """
-        ZoomSelector によるズーム確定時のコールバック。
-        直前のズーム状態を保存し、新しいズームパラメータに更新して再描画。
+        ズーム確定時のコールバック。
+        - 縦横比を調整
+        - ズームレベルに応じて反復回数を自動調整
         """
+        if new_zoom_params == self.zoom_params:
+            return  # ズームパラメータが変わっていないなら何もしない
+
+        # ズーム確定前の状態を保存（キャンセル機能用）
         self.prev_zoom_params = self.zoom_params.copy()
-        self.zoom_params = new_zoom_params
+
+        # 縦横比補正
+        aspect_ratio = self.fractal_canvas.fig.get_size_inches()[0] / self.fractal_canvas.fig.get_size_inches()[1]
+        new_width = new_zoom_params["width"]
+        new_height = new_width / aspect_ratio  # 縦横比を維持
+
+        # ズームレベルに応じて `max_iterations` を増やす
+        zoom_factor = self.zoom_params["width"] / new_width  # ズーム倍率
+        new_max_iterations = min(1000, int(self.parameter_panel.max_iter_var.get()) * zoom_factor)
+
+        # 新しいズームパラメータを適用
+        self.zoom_params = {
+            "center_x": new_zoom_params["center_x"],
+            "center_y": new_zoom_params["center_y"],
+            "width": new_width,
+            "height": new_height,
+            "rotation": new_zoom_params["rotation"]
+        }
+
+        # 反復回数を更新
+        self.parameter_panel.max_iter_var.set(str(new_max_iterations))
+
+        # 再描画
         self.update_fractal()
+
+
 
     def on_zoom_cancel(self):
         """

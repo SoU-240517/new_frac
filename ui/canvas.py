@@ -43,6 +43,14 @@ class FractalCanvas:
         self.ax.axis('off')  # 座標軸を非表示
         self.fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
         self.ax.set_position([0, 0, 1, 1])
-        self.ax.imshow(fractal_image, extent=[-2, 2, -2, 2], origin="lower", aspect="equal")
+        aspect_ratio = fractal_image.shape[1] / fractal_image.shape[0]  # 画像のアスペクト比を取得
+        width = params["width"]
+        height = width / aspect_ratio  # アスペクト比を維持するために高さを計算
+
+        self.ax.set_aspect("auto")  # 縦横比を自動調整
+        self.ax.imshow(fractal_image, extent=[
+            params["center_x"] - width / 2, params["center_x"] + width / 2,
+            params["center_y"] - height / 2, params["center_y"] + height / 2
+        ], origin="lower")
         self.fig.patch.set_visible(False)
         self.canvas.draw()

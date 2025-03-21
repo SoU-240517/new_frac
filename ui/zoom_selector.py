@@ -1,5 +1,6 @@
 # ui/zoom_selector.py
 import matplotlib.patches as patches
+import matplotlib.transforms as transforms
 import numpy as np
 
 class ZoomSelector:
@@ -35,7 +36,7 @@ class ZoomSelector:
         if event.inaxes != self.ax:
             return
 
-        # まず回転ハンドル上かチェック
+        # 回転バーのクリック判定を修正
         if self.rotation_handle is not None:
             dx = event.xdata - self.rotation_handle.center[0]
             dy = event.ydata - self.rotation_handle.center[1]
@@ -117,16 +118,33 @@ class ZoomSelector:
         if not self.zoom_active or event.inaxes != self.ax:
             return
 
-        # 回転モードの場合
+        # カーソル変更処理
+        self.update_cursor(event)
+
+        """
+        # 回転モードの処理を修正
         if self.press is not None and isinstance(self.press, tuple) and self.press[0] == 'rotate':
-            _, center, _, _, start_angle = self.press
+            _, center, press_x, press_y, start_angle = self.press
             dx = event.xdata - center[0]
             dy = event.ydata - center[1]
-            new_angle = np.arctan2(dy, dx)
-            self.angle = new_angle
+            press_dx = press_x - center[0]
+            press_dy = press_y - center[1]
+
+            # 初回クリック時の角度と現在の角度の差分を求める
+            initial_angle = np.arctan2(press_dy, press_dx)
+            current_angle = np.arctan2(dy, dx)
+            delta_angle = current_angle - initial_angle
+
+            # 角度を更新
+            self.angle = start_angle + delta_angle
+
+            # 矩形の回転を適用
+            self.apply_rotation()
+
             self.update_rotation_bar()
             self.canvas.draw()
             return
+        """
 
         if self.mode == 'resize' and self.press is not None:
             # press: (corner_name, fixed, orig_x, orig_y, orig_width, orig_height, press_x, press_y)
@@ -147,9 +165,15 @@ class ZoomSelector:
         elif self.mode == 'create':
             dx = event.xdata - self.start_x
             dy = event.ydata - self.start_y
-            self.rect.set_width(dx)
-            self.rect.set_height(dy)
-        self.update_rotation_bar()
+            new_x = min(self.start_x, event.xdata)
+            new_y = min(self.start_y, event.ydata)
+            new_width = abs(dx)
+            new_height = abs(dy)
+
+            self.rect.set_xy((new_x, new_y))
+            self.rect.set_width(new_width)
+            self.rect.set_height(new_height)
+        #self.update_rotation_bar()  # 回転バーを更新
         self.canvas.draw()
 
     def on_release(self, event):
@@ -159,15 +183,21 @@ class ZoomSelector:
                 dx = event.xdata - x0
                 dy = event.ydata - y0
                 if dx != 0 and dy != 0:
-                    self.rect.set_width(dx)
-                    self.rect.set_height(dy)
-                    self.update_rotation_bar()
+                    new_x = min(x0, event.xdata)
+                    new_y = min(y0, event.ydata)
+                    new_width = abs(dx)
+                    new_height = abs(dy)
+                    self.rect.set_xy((new_x, new_y))
+                    self.rect.set_width(new_width)
+                    self.rect.set_height(new_height)
+                    #self.update_rotation_bar()  # 回転バーを更新
             self.press = None
             self.mode = None
         self.canvas.draw()
 
+    """
     def update_rotation_bar(self):
-        """矩形の上辺中央に回転バーとハンドルを描画・更新する"""
+        矩形の上辺中央に回転バーとハンドルを描画・更新する
         if self.rect is None:
             return
         x, y = self.rect.get_xy()
@@ -185,10 +215,119 @@ class ZoomSelector:
             self.rotation_bar.set_data([top_center[0], end_point[0]],
                                        [top_center[1], end_point[1]])
         if self.rotation_handle is None:
-            self.rotation_handle = self.ax.add_patch(patches.Circle(end_point, radius=bar_length*0.3, color='white'))
+            self.rotation_handle = self.ax.add_patch(patches.Circle(end_point, radius=bar_length*6.0, color='white'))
         else:
             self.rotation_handle.center = end_point
         self.canvas.draw()
+    """
+
+    """
+    def apply_rotation(self):
+        矩形の回転を適用する（正しく回転のみ行う）
+        if self.rect is None:
+            return
+
+        x, y = self.rect.get_xy()
+        width = self.rect.get_width()
+        height = self.rect.get_height()
+        center_x = x + width / 2
+        center_y = y + height / 2
+
+        # 回転変換を適用（中心を軸に回転）
+        t = transforms.Affine2D().rotate_around(center_x, center_y, self.angle) + self.ax.transData
+        self.rect.set_transform(t)
+
+        # 回転バーの位置を更新
+        self.update_rotation_bar()
+
+        self.canvas.draw()
+    """
+
+    """
+    def update_rotation_bar(self):
+        矩形の回転に合わせて回転バーの位置も更新
+        if self.rect is None:
+            return
+
+        x, y = self.rect.get_xy()
+        width = self.rect.get_width()
+        height = self.rect.get_height()
+        center_x = x + width / 2.0
+        center_y = y + height / 2.0
+
+        # 矩形の上辺中央の位置を計算（回転後）
+        top_center = (center_x, center_y + height / 2.0)
+
+        # 回転行列を適用
+        cos_theta = np.cos(self.angle)
+        sin_theta = np.sin(self.angle)
+        rotated_top_center = (
+            center_x + (top_center[0] - center_x) * cos_theta - (top_center[1] - center_y) * sin_theta,
+            center_y + (top_center[0] - center_x) * sin_theta + (top_center[1] - center_y) * cos_theta
+        )
+
+        # 回転バーの長さを調整
+        bar_length = max(abs(width), abs(height)) * 0.1
+        end_point = (rotated_top_center[0], rotated_top_center[1] + bar_length)
+
+        # 回転バーを更新
+        if self.rotation_bar is None:
+            self.rotation_bar, = self.ax.plot([rotated_top_center[0], end_point[0]],
+                                            [rotated_top_center[1], end_point[1]], color='white')
+        else:
+            self.rotation_bar.set_data([rotated_top_center[0], end_point[0]],
+                                    [rotated_top_center[1], end_point[1]])
+
+        # 回転ハンドル（円）を更新
+        if self.rotation_handle is None:
+            self.rotation_handle = self.ax.add_patch(patches.Circle(end_point, radius=bar_length * 6.0, color='white'))
+        else:
+            self.rotation_handle.center = end_point
+
+        self.canvas.draw()
+    """
+
+    def update_cursor(self, event):
+        """マウス位置に応じてカーソルを変更する"""
+        if self.rect is None:
+            return
+
+        x, y = self.rect.get_xy()
+        width = self.rect.get_width()
+        height = self.rect.get_height()
+
+        # 角の判定用（サイズ変更）
+        corners = {
+            'bottom_left': (x, y),
+            'bottom_right': (x + width, y),
+            'top_left': (x, y + height),
+            'top_right': (x + width, y + height)
+        }
+        tol = 0.05 * min(width, height) if min(width, height) != 0 else 0.1
+
+        for corner, (cx, cy) in corners.items():
+            if np.hypot(event.xdata - cx, event.ydata - cy) < tol:
+                self.canvas.get_tk_widget().config(cursor="crosshair")  # サイズ変更カーソル
+                return
+
+        # 矩形の内側（移動）
+        contains, _ = self.rect.contains(event)
+        if contains:
+            self.canvas.get_tk_widget().config(cursor="fleur")  # 移動カーソル
+            return
+
+        """
+        # 回転バーのチェック（修正）
+        if self.rotation_handle is not None:
+            dx = event.xdata - self.rotation_handle.center[0]
+            dy = event.ydata - self.rotation_handle.center[1]
+            if np.hypot(dx, dy) < self.rotation_handle.radius:
+                self.canvas.get_tk_widget().config(cursor="exchange")  # 回転用のカーソル
+                return
+        """
+
+        # デフォルトカーソル
+        self.canvas.get_tk_widget().config(cursor="arrow")
 
     def confirm_zoom(self):
         """右クリックによるズーム確定時、矩形情報からズームパラメータを計算してコールバック呼出"""

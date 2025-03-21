@@ -11,18 +11,23 @@ def render_fractal(params):
     height = params.get("height", 4.0)
     rotation = params.get("rotation", 0.0)
 
-    # ローカル座標系でグリッド作成
+    # キャンバスのアスペクト比を維持するために、高さを幅に合わせる
+    aspect_ratio = resolution / resolution  # 縦横比（通常は1）
+    height = width / aspect_ratio
+
     x = np.linspace(-width/2, width/2, resolution)
     y = np.linspace(-height/2, height/2, resolution)
     X, Y = np.meshgrid(x, y)
 
+    """
     # 回転があれば回転変換
     if rotation != 0.0:
         cos_theta = np.cos(rotation)
         sin_theta = np.sin(rotation)
         X_rot = X * cos_theta - Y * sin_theta
         Y_rot = X * sin_theta + Y * cos_theta
-        X, Y = X_rot, Y_rot
+        X, Y = X_rot, Y_rot"
+    """
 
     # グリッドをズーム中心にシフト
     X = X + center_x
