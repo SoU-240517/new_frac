@@ -32,11 +32,11 @@ class MainWindow:
         self.main_frame.add(self.control_frame, weight=1)
 
         # キャンバスとパラメータパネルの初期化
-        self.fractal_canvas = FractalCanvas(self.canvas_frame)
+        self.fractal_canvas = FractalCanvas(self.canvas_frame)  # キャンバスの初期化
 
         # ZoomSelector のコールバックを MainWindow のメソッドに設定
-        self.fractal_canvas.set_zoom_callback(self.on_zoom_confirm, self.on_zoom_cancel)
-        self.parameter_panel = ParameterPanel(self.control_frame, self.update_fractal, reset_callback=self.reset_zoom)
+        self.fractal_canvas.set_zoom_callback(self.on_zoom_confirm, self.on_zoom_cancel)  # コールバックの設定
+        self.parameter_panel = ParameterPanel(self.control_frame, self.update_fractal, reset_callback=self.reset_zoom)  # パラメータパネルの初期化
 
         # 初期描画
         self.update_fractal()

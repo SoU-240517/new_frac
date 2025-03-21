@@ -13,6 +13,8 @@ class ZoomSelector:
         self.canvas = ax.figure.canvas  # ズーム選択を行うFigureのCanvas
         self.on_zoom_confirm = on_zoom_confirm  # ズーム確定時のコールバック
         self.on_zoom_cancel = on_zoom_cancel  # ズームキャンセル時のコールバック
+        self.mode = None            # 現在の操作モード（'create', 'move', 'resize', 'rotate'）
+        self.saved_rect = None      # キャンセル時に復元するための直前の矩形情報
 
         self.rect = None            # ズーム矩形のパッチ
         self.zoom_active = False    # ズーム選択中フラグ
@@ -57,24 +59,58 @@ class ZoomSelector:
 
         # 左クリックの場合
         if event.button == 1:
-            if self.rect is None:
+            if self.rect is not None:
+                # 既存矩形の現在の位置・サイズを保存（キャンセル用）
+                x, y = self.rect.get_xy()
+                width = self.rect.get_width()
+                height = self.rect.get_height()
+                self.saved_rect = (x, y, width, height)
+
+                # 角部付近かどうか判定（サイズ変更モード）
+                corners = {
+                    'bottom_left': (x, y),
+                    'bottom_right': (x+width, y),
+                    'top_left': (x, y+height),
+                    'top_right': (x+width, y+height)
+                }
+                tol = 0.05 * min(width, height) if min(width, height) != 0 else 0.1
+                for corner_name, (cx, cy) in corners.items():
+                    if np.hypot(event.xdata - cx, event.ydata - cy) < tol:
+                        # 固定する角は対角の角
+                        if corner_name == 'bottom_left':
+                            fixed = (x+width, y+height)
+                        elif corner_name == 'bottom_right':
+                            fixed = (x, y+height)
+                        elif corner_name == 'top_left':
+                            fixed = (x+width, y)
+                        elif corner_name == 'top_right':
+                            fixed = (x, y)
+                        self.mode = 'resize'
+                        self.press = (corner_name, fixed, x, y, width, height, event.xdata, event.ydata)
+                        self.canvas.draw()
+                        return
+
+                # 矩形内なら移動モード
+                contains, _ = self.rect.contains(event)
+                if contains:
+                    self.mode = 'move'
+                    self.press = (self.rect.get_xy(), event.xdata, event.ydata)
+                    self.canvas.draw()
+                    return
+                # それ以外は新規作成とする
+                self.start_x, self.start_y = event.xdata, event.ydata
+                self.rect.set_xy((self.start_x, self.start_y))
+                self.rect.set_width(0)
+                self.rect.set_height(0)
+                self.mode = 'create'
+            else:
                 # 新規矩形作成開始
                 self.start_x, self.start_y = event.xdata, event.ydata
                 self.rect = patches.Rectangle((self.start_x, self.start_y), 0, 0,
-                                              edgecolor='white', facecolor='none', linestyle='-')
+                                            edgecolor='white', facecolor='none', linestyle='-')
                 self.ax.add_patch(self.rect)
                 self.zoom_active = True
-            else:
-                # 既存矩形内なら移動開始（簡易実装）
-                contains, _ = self.rect.contains(event)
-                if contains:
-                    self.press = (self.rect.get_xy(), event.xdata, event.ydata)
-                else:
-                    # 矩形外なら新規作成とする
-                    self.start_x, self.start_y = event.xdata, event.ydata
-                    self.rect.set_xy((self.start_x, self.start_y))
-                    self.rect.set_width(0)
-                    self.rect.set_height(0)
+                self.mode = 'create'
             self.canvas.draw()
 
     def on_motion(self, event):
@@ -92,26 +128,42 @@ class ZoomSelector:
             self.canvas.draw()
             return
 
-        if self.press is None:
-            # 新規矩形作成中：幅・高さを更新
-            x0, y0 = self.start_x, self.start_y
-            dx = event.xdata - x0
-            dy = event.ydata - y0
-            self.rect.set_width(dx)
-            self.rect.set_height(dy)
-            self.update_rotation_bar()
-        else:
-            # 移動モード：矩形全体をドラッグ
-            (orig_xy, xpress, ypress) = self.press
-            dx = event.xdata - xpress
-            dy = event.ydata - ypress
+        if self.mode == 'resize' and self.press is not None:
+            # press: (corner_name, fixed, orig_x, orig_y, orig_width, orig_height, press_x, press_y)
+            _, fixed, orig_x, orig_y, orig_width, orig_height, press_x, press_y = self.press
+            new_x = min(fixed[0], event.xdata)
+            new_y = min(fixed[1], event.ydata)
+            new_width = abs(fixed[0] - event.xdata)
+            new_height = abs(fixed[1] - event.ydata)
+            self.rect.set_xy((new_x, new_y))
+            self.rect.set_width(new_width)
+            self.rect.set_height(new_height)
+        elif self.mode == 'move' and self.press is not None:
+            orig_xy, press_x, press_y = self.press
+            dx = event.xdata - press_x
+            dy = event.ydata - press_y
             new_xy = (orig_xy[0] + dx, orig_xy[1] + dy)
             self.rect.set_xy(new_xy)
-            self.update_rotation_bar()
+        elif self.mode == 'create':
+            dx = event.xdata - self.start_x
+            dy = event.ydata - self.start_y
+            self.rect.set_width(dx)
+            self.rect.set_height(dy)
+        self.update_rotation_bar()
         self.canvas.draw()
 
     def on_release(self, event):
-        self.press = None
+        if self.mode in ['resize', 'move', 'create'] and event.inaxes == self.ax:
+            if self.mode == 'create':
+                x0, y0 = self.start_x, self.start_y
+                dx = event.xdata - x0
+                dy = event.ydata - y0
+                if dx != 0 and dy != 0:
+                    self.rect.set_width(dx)
+                    self.rect.set_height(dy)
+                    self.update_rotation_bar()
+            self.press = None
+            self.mode = None
         self.canvas.draw()
 
     def update_rotation_bar(self):
@@ -156,10 +208,18 @@ class ZoomSelector:
             self.on_zoom_confirm(zoom_params)
 
     def cancel_zoom(self):
-        """中クリックによるキャンセル時の処理"""
-        self.clear_rectangle()
-        if self.on_zoom_cancel:
-            self.on_zoom_cancel()
+        if self.zoom_active and self.saved_rect is not None and self.rect is not None:
+            # 未確定状態の場合、直前の矩形情報を復元
+            x, y, width, height = self.saved_rect
+            self.rect.set_xy((x, y))
+            self.rect.set_width(width)
+            self.rect.set_height(height)
+            self.saved_rect = None
+            self.canvas.draw()
+        else:
+            self.clear_rectangle()
+            if self.on_zoom_cancel:
+                self.on_zoom_cancel()
 
     def clear_rectangle(self):
         """矩形および回転バー・ハンドルを消去"""
