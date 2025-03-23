@@ -1,4 +1,5 @@
 import tkinter as tk
+import numpy as np
 from tkinter import ttk
 from ui.canvas import FractalCanvas
 from ui.parameter_panel import ParameterPanel
@@ -72,7 +73,7 @@ class MainWindow:
 
         # ズームレベルに応じて `max_iterations` を増やす
         zoom_factor = self.zoom_params["width"] / new_width  # ズーム倍率
-        new_max_iterations = min(1000, int(self.parameter_panel.max_iter_var.get()) * zoom_factor)
+        new_max_iterations = min(1000, max(int(self.parameter_panel.max_iter_var.get()), int(100 * np.log2(zoom_factor + 1))))
 
         # 新しいズームパラメータを適用
         self.zoom_params = {
@@ -89,17 +90,18 @@ class MainWindow:
         # 再描画
         self.update_fractal()
 
-
-
     def on_zoom_cancel(self):
         """
         ズームキャンセル時のコールバック。
         既にズーム確定後の場合は直前の状態に戻し、未確定の場合は単に再描画。
         """
         if self.prev_zoom_params is not None:
+#            print("zoom in cancel: cyokuzen no settei ni modosu")
             self.zoom_params = self.prev_zoom_params
             self.prev_zoom_params = None
-        self.update_fractal()
+        else:
+#            print("zoom cancel: zoom jyouhou nashi")
+            self.update_fractal()
 
     def reset_zoom(self):
         """

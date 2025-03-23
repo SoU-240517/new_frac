@@ -24,8 +24,8 @@ class ZoomSelector:
         self.start_y = None         # 矩形作成開始点（y）
         self.angle = 0.0            # 回転角（ラジアン）
 
-        self.rotation_bar = None    # 回転バー（線）
-        self.rotation_handle = None # 回転バー先端のハンドル（円）
+#        self.rotation_bar = None    # 回転バー（線）
+#        self.rotation_handle = None # 回転バー先端のハンドル（円）
 
         # イベントハンドラ接続
         self.cid_press = self.canvas.mpl_connect('button_press_event', self.on_press)
@@ -36,6 +36,7 @@ class ZoomSelector:
         if event.inaxes != self.ax:
             return
 
+        """
         # 回転バーのクリック判定を修正
         if self.rotation_handle is not None:
             dx = event.xdata - self.rotation_handle.center[0]
@@ -44,6 +45,7 @@ class ZoomSelector:
                 # 回転モード開始
                 self.press = ('rotate', self.rotation_handle.center, event.xdata, event.ydata, self.angle)
                 return
+        """
 
         # 中クリックでキャンセル
         if event.button == 2:
@@ -108,7 +110,7 @@ class ZoomSelector:
                 # 新規矩形作成開始
                 self.start_x, self.start_y = event.xdata, event.ydata
                 self.rect = patches.Rectangle((self.start_x, self.start_y), 0, 0,
-                                            edgecolor='white', facecolor='none', linestyle='-')
+                              edgecolor='white', facecolor='none', linestyle='solid')
                 self.ax.add_patch(self.rect)
                 self.zoom_active = True
                 self.mode = 'create'
@@ -348,7 +350,6 @@ class ZoomSelector:
 
     def cancel_zoom(self):
         if self.zoom_active and self.saved_rect is not None and self.rect is not None:
-            # 未確定状態の場合、直前の矩形情報を復元
             x, y, width, height = self.saved_rect
             self.rect.set_xy((x, y))
             self.rect.set_width(width)
@@ -356,20 +357,21 @@ class ZoomSelector:
             self.saved_rect = None
             self.canvas.draw()
         else:
-            self.clear_rectangle()
+#            print("zoom kakutei go no cancel wo jikkou")
             if self.on_zoom_cancel:
                 self.on_zoom_cancel()
 
     def clear_rectangle(self):
-        """矩形および回転バー・ハンドルを消去"""
+        """ 矩形および回転バー・ハンドルを消去 """
         if self.rect is not None:
             self.rect.remove()
             self.rect = None
-        if self.rotation_bar is not None:
-            self.rotation_bar.remove()
-            self.rotation_bar = None
-        if self.rotation_handle is not None:
-            self.rotation_handle.remove()
-            self.rotation_handle = None
+#        if self.rotation_bar is not None:
+#            self.rotation_bar.remove()
+#            self.rotation_bar = None
+#        if self.rotation_handle is not None:
+#            self.rotation_handle.remove()
+#            self.rotation_handle = None
         self.zoom_active = False
+        self.canvas.get_tk_widget().config(cursor="arrow")  # カーソルをデフォルトに戻す
         self.canvas.draw()

@@ -39,8 +39,8 @@ class ParameterPanel:
         self.max_iter_var = tk.StringVar(value="100")
         max_iter_entry = ttk.Entry(self.parent, textvariable=self.max_iter_var)
         max_iter_entry.grid(row=row, column=1, sticky=tk.W+tk.E, padx=10, pady=5)
-        max_iter_entry.bind("<Return>", self.update_callback)
-        max_iter_entry.bind("<FocusOut>", self.update_callback)
+        max_iter_entry.bind("<Return>", lambda e: self.update_callback())
+        max_iter_entry.bind("<FocusOut>", lambda e: self.update_callback())
         row += 1
 
         # Z (実部)
@@ -48,8 +48,8 @@ class ParameterPanel:
         self.z_real_var = tk.StringVar(value="0.0")
         z_real_entry = ttk.Entry(self.parent, textvariable=self.z_real_var)
         z_real_entry.grid(row=row, column=1, sticky=tk.W+tk.E, padx=10, pady=5)
-        z_real_entry.bind("<Return>", self.update_callback)
-        z_real_entry.bind("<FocusOut>", self.update_callback)
+        z_real_entry.bind("<Return>", lambda e: self.update_callback())
+        z_real_entry.bind("<FocusOut>", lambda e: self.update_callback())
         row += 1
 
         # Z (虚部)
@@ -57,8 +57,8 @@ class ParameterPanel:
         self.z_imag_var = tk.StringVar(value="0.0")
         z_imag_entry = ttk.Entry(self.parent, textvariable=self.z_imag_var)
         z_imag_entry.grid(row=row, column=1, sticky=tk.W+tk.E, padx=10, pady=5)
-        z_imag_entry.bind("<Return>", self.update_callback)
-        z_imag_entry.bind("<FocusOut>", self.update_callback)
+        z_imag_entry.bind("<Return>", lambda e: self.update_callback())
+        z_imag_entry.bind("<FocusOut>", lambda e: self.update_callback())
         row += 1
 
         # C (実部)
@@ -66,8 +66,8 @@ class ParameterPanel:
         self.c_real_var = tk.StringVar(value="-0.7")
         c_real_entry = ttk.Entry(self.parent, textvariable=self.c_real_var)
         c_real_entry.grid(row=row, column=1, sticky=tk.W+tk.E, padx=10, pady=5)
-        c_real_entry.bind("<Return>", self.update_callback)
-        c_real_entry.bind("<FocusOut>", self.update_callback)
+        c_real_entry.bind("<Return>", lambda e: self.update_callback())
+        c_real_entry.bind("<FocusOut>", lambda e: self.update_callback())
         row += 1
 
         # C (虚部)
@@ -75,8 +75,8 @@ class ParameterPanel:
         self.c_imag_var = tk.StringVar(value="0.27015")
         c_imag_entry = ttk.Entry(self.parent, textvariable=self.c_imag_var)
         c_imag_entry.grid(row=row, column=1, sticky=tk.W+tk.E, padx=10, pady=5)
-        c_imag_entry.bind("<Return>", self.update_callback)
-        c_imag_entry.bind("<FocusOut>", self.update_callback)
+        c_imag_entry.bind("<Return>", lambda e: self.update_callback())
+        c_imag_entry.bind("<FocusOut>", lambda e: self.update_callback())
         row += 1
 
         # 発散部の着色アルゴリズム選択
