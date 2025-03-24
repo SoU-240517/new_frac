@@ -202,7 +202,6 @@ class ZoomSelector:
                 print("=== 通常のカーソル")  # ← debug print★
                 self.canvas.get_tk_widget().config(cursor="arrow")  # 通常のカーソル
                 self.last_cursor_state = current_cursor_state
-                print(self.last_cursor_state)
                 return
             return
         # 矩形がある場合は、矩形の座標とサイズを取得
@@ -226,7 +225,6 @@ class ZoomSelector:
                     print("=== カーソル変更：crosshair")  # ← debug print★
                     self.canvas.get_tk_widget().config(cursor="crosshair")  # サイズ変更カーソル
                     self.last_cursor_state = current_cursor_state
-                    print(self.last_cursor_state)
                     return
                 return
         # 矩形の内側（移動）
@@ -238,7 +236,6 @@ class ZoomSelector:
                 print("=== カーソル変更：fleur")  # ← debug print★
                 self.canvas.get_tk_widget().config(cursor="fleur")  # 移動カーソル
                 self.last_cursor_state = current_cursor_state
-                print(self.last_cursor_state)
                 return
             return
 
@@ -248,7 +245,6 @@ class ZoomSelector:
             print("=== カーソルデフォルト：arrow")  # ← debug print★
             self.canvas.get_tk_widget().config(cursor="arrow")  # デフォルトカーソル
             self.last_cursor_state = "arrow"
-            print(self.last_cursor_state)
             return
         return
     def confirm_zoom(self):
