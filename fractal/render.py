@@ -3,6 +3,7 @@ from fractal.fractal_types import julia, mandelbrot
 from coloring import color_algorithms
 
 def render_fractal(params):
+    print("====== フラクタル描画開始:（def render_fractal）")  # ← debug print★
     resolution = 500
     # ズーム情報があればそれを使用、なければ初期値
     center_x = params.get("center_x", 0.0)
@@ -18,16 +19,6 @@ def render_fractal(params):
     x = np.linspace(-width/2, width/2, resolution)
     y = np.linspace(-height/2, height/2, resolution)
     X, Y = np.meshgrid(x, y)
-
-    """
-    # 回転があれば回転変換
-    if rotation != 0.0:
-        cos_theta = np.cos(rotation)
-        sin_theta = np.sin(rotation)
-        X_rot = X * cos_theta - Y * sin_theta
-        Y_rot = X * sin_theta + Y * cos_theta
-        X, Y = X_rot, Y_rot"
-    """
 
     # グリッドをズーム中心にシフト
     X = X + center_x

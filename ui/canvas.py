@@ -7,6 +7,7 @@ class FractalCanvas:
         """
         フラクタル描画キャンバスの初期化。MatplotlibのFigureをTkinterウィジェットに埋め込みます。
         """
+        print("====== キャンバスの初期化開始:（def __init__）")  # ← debug print★
         self.parent = parent
         self.fig = Figure(figsize=(6, 6), dpi=100)
         self.ax = self.fig.add_subplot(111)
@@ -18,14 +19,17 @@ class FractalCanvas:
         self.zoom_selector = ZoomSelector(self.ax, on_zoom_confirm=self.zoom_confirmed, on_zoom_cancel=self.zoom_cancelled)
 
     def set_zoom_callback(self, zoom_confirm_callback, zoom_cancel_callback):
+        print("====== コールバックの設定開始:（def set_zoom_callback）")  # ← debug print★
         self.zoom_confirm_callback = zoom_confirm_callback
         self.zoom_cancel_callback = zoom_cancel_callback
 
     def zoom_confirmed(self, zoom_params):
+        print("====== ズーム確定:（def zoom_confirmed）")  # ← debug print★
         if hasattr(self, 'zoom_confirm_callback') and self.zoom_confirm_callback:
             self.zoom_confirm_callback(zoom_params)
 
     def zoom_cancelled(self):
+        print("====== ズームキャンセル:（def zoom_cancelled）")  # ← debug print★
         if hasattr(self, 'zoom_cancel_callback') and self.zoom_cancel_callback:
             self.zoom_cancel_callback()
 
@@ -39,6 +43,7 @@ class FractalCanvas:
             fractal_image (numpy.ndarray): 描画するフラクタル画像
             params (dict): フラクタルのパラメータ（'fractal_type' キーを含む）
         """
+        print("====== キャンバスの更新開始:（def update_canvas）")  # ← debug print★
         self.ax.clear()
         self.ax.axis('off')  # 座標軸を非表示
         self.fig.subplots_adjust(left=0, right=1, top=1, bottom=0)

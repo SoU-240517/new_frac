@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 from coloring import gradient
 
 def apply_coloring_algorithm(results, params):
+    """ 着色アルゴリズムを適用して結果を返す """
+    print("====== 着色アルゴリズム適用開始:（def apply_coloring_algorithm）")  # ← debug print★
     iterations = results['iterations']
     mask = results['mask']
     z_vals = results['z_vals']
@@ -12,6 +14,7 @@ def apply_coloring_algorithm(results, params):
     divergent = iterations > 0
 
     if np.any(divergent):
+        # 発散する場合の処理
         algo = params["diverge_algorithm"]
         if algo == "反復回数線形マッピング":
             norm = plt.Normalize(1, params["max_iterations"])
@@ -53,6 +56,7 @@ def apply_coloring_algorithm(results, params):
 
     non_divergent = ~divergent
     if np.any(non_divergent):
+        # 発散しない場合の処理
         non_algo = params["non_diverge_algorithm"]
         if non_algo == "単色":
             colored[non_divergent] = [0, 0, 0, 1]

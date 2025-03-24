@@ -10,12 +10,14 @@ class ParameterPanel:
         update_callback: パラメータ変更時に呼ばれる更新関数
         reset_callback: 「描画リセット」ボタン押下時に呼ばれる関数
         """
+        print("====== パラメータパネルの初期化開始:（def __init__）")  # ← debug print★
         self.parent = parent
         self.update_callback = update_callback
         self.reset_callback = reset_callback
         self.setup_panel()
 
     def setup_panel(self):
+        print("====== パラメータパネルの設定開始:（def setup_panel）")  # ← debug print★
         row = 0
 
         # フラクタルタイプ選択
@@ -147,6 +149,7 @@ class ParameterPanel:
             reset_button.grid(row=row, column=0, columnspan=2, sticky=tk.W+tk.E, padx=10, pady=10)
 
     def update_formula_display(self):
+        print("====== 漸化式更新:（def update_formula_display）")  # ← debug print★
         fractal_type = self.fractal_type_var.get()
         if fractal_type == "Julia":
             self.formula_var.set("Z_n+1 = Z_n² + C")
@@ -154,6 +157,7 @@ class ParameterPanel:
             self.formula_var.set("Z_n+1 = Z_n² + C\nZ_0 = 0, C = 座標")
 
     def get_parameters(self):
+        print("====== パラメータ取得:（def get_parameters）")  # ← debug print★
         try:
             params = {
                 "fractal_type": self.fractal_type_var.get(),
