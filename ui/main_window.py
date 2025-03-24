@@ -46,13 +46,10 @@ class MainWindow:
         """
         パラメータパネルの最新パラメータにズーム情報を上書きしてフラクタルを再描画。
         """
-        # パネルからパラメータを取得
-        params = self.parameter_panel.get_parameters()
-        # ズーム情報をパラメータに追加
-        params.update(self.zoom_params)
+        params = self.parameter_panel.get_parameters()  # パネルからパラメータを取得
+        params.update(self.zoom_params)  # ズーム情報をパラメータに追加
         fractal_image = render_fractal(params)
-        # キャンバスを更新
-        self.fractal_canvas.update_canvas(fractal_image, params)
+        self.fractal_canvas.update_canvas(fractal_image, params)  # キャンバスを更新
 
     def on_zoom_confirm(self, new_zoom_params):
         """
@@ -95,12 +92,12 @@ class MainWindow:
         ズームキャンセル時のコールバック。
         既にズーム確定後の場合は直前の状態に戻し、未確定の場合は単に再描画。
         """
-        if self.prev_zoom_params is not None:
-#            print("zoom in cancel: cyokuzen no settei ni modosu")
+        if self.prev_zoom_params is not None:  # ズーム確定済みの場合
+            print("zoom in cancel：以前の設定に戻す")  # ← debug print★
             self.zoom_params = self.prev_zoom_params
             self.prev_zoom_params = None
-        else:
-#            print("zoom cancel: zoom jyouhou nashi")
+        else:  # ズーム未確定の場合
+            print("zoom cancel：ズーム情報なし、再描画")  # ← debug print★
             self.update_fractal()
 
     def reset_zoom(self):

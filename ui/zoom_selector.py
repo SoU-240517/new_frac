@@ -76,7 +76,7 @@ class ZoomSelector:
                         elif corner_name == 'top_right':
                             fixed = (x, y)
                         self.mode = 'resize'
-                        self.press = (corner_name, fixed, x, y, width, height, event.xdata, event.ydata)
+                        self.press = (corner_name, fixed, x, y, width, height, event.xdata, event.ydata)  # サイズ変更モードの情報を保存
                         self.canvas.draw()
                         return
 
@@ -84,7 +84,7 @@ class ZoomSelector:
                 contains, _ = self.rect.contains(event)
                 if contains:
                     self.mode = 'move'
-                    self.press = (self.rect.get_xy(), event.xdata, event.ydata)
+                    self.press = (self.rect.get_xy(), event.xdata, event.ydata)  # 移動開始点と現在の座標を保存
                     self.canvas.draw()
                     return
                 # それ以外は新規作成とする
@@ -116,10 +116,8 @@ class ZoomSelector:
         # カーソル変更処理
         self.update_cursor(event)
 
-        if self.mode == 'resize' and self.press is not None:
-            # サイズ変更モード
-            corner_name, fixed, orig_x, orig_y, orig_width, orig_height, press_x, press_y = self.press
-            _, fixed, orig_x, orig_y, orig_width, orig_height, press_x, press_y = self.press
+        if self.mode == 'resize' and self.press is not None:  # サイズ変更モード
+            corner_name, fixed, orig_x, orig_y, orig_width, orig_height, press_x, press_y = self.press  # ドラッグ開始時の情報
             new_x = min(fixed[0], event.xdata)
             new_y = min(fixed[1], event.ydata)
             new_width = abs(fixed[0] - event.xdata)
@@ -169,14 +167,16 @@ class ZoomSelector:
 
     def update_cursor(self, event):
         """マウス位置に応じてカーソルを変更する"""
+        print("update_cursor：開始")  # ← debug print★
         if self.rect is None:  # 矩形がない場合は通常のカーソル
+            print("矩形無し：(cursor arrow)")  # ← debug print★
             self.canvas.get_tk_widget().config(cursor="arrow")  # 通常のカーソル
             return
-
-        x, y = self.rect.get_xy()  # 矩形の位置
+        print("矩形有り")  # ← debug print★
+        # 矩形がある場合は、矩形の座標とサイズを取得
+        x, y = self.rect.get_xy()
         width = self.rect.get_width()
         height = self.rect.get_height()
-
         # 角の判定用（サイズ変更）
         corners = {
             'bottom_left': (x, y),
@@ -185,12 +185,11 @@ class ZoomSelector:
             'top_right': (x + width, y + height)
         }
         tol = 0.05 * min(width, height) if min(width, height) != 0 else 0.1  # 許容誤差
-
+        # カーソルの更新
         for corner, (cx, cy) in corners.items():  # サイズ変更カーソル判定
             if np.hypot(event.xdata - cx, event.ydata - cy) < tol:  # サイズ変更カーソル判定
                 self.canvas.get_tk_widget().config(cursor="crosshair")  # サイズ変更カーソル
                 return
-
         # 矩形の内側（移動）
         contains, _ = self.rect.contains(event)  # 矩形の内側かどうか判定
         if contains:  # 矩形の内側の場合
@@ -202,8 +201,9 @@ class ZoomSelector:
 
     def confirm_zoom(self):
         """右クリックによるズーム確定時、矩形情報からズームパラメータを計算してコールバック呼出"""
-        if self.rect is None:
+        if self.rect is None:  # 矩形がない場合は無視
             return
+        # 矩形がある場合は、矩形の情報を取得
         x, y = self.rect.get_xy()
         width = self.rect.get_width()
         height = self.rect.get_height()
@@ -213,13 +213,15 @@ class ZoomSelector:
         zoom_params = {"center_x": center_x, "center_y": center_y,
                        "width": abs(width), "height": abs(height),
                        "rotation": self.angle}
-        self.clear_rectangle()
-        if self.on_zoom_confirm:
+        self.clear_rectangle()  # 矩形を削除
+        if self.on_zoom_confirm:  # コールバックが存在する場合のみ呼び出す
             self.on_zoom_confirm(zoom_params)
 
     def cancel_zoom(self):
         """中クリックによるズームキャンセル時、矩形情報をもとに戻す"""
+        print("cancel_zoom：開始")  # ← debug print★
         if self.zoom_active and self.saved_rect is not None and self.rect is not None:  # 矩形が存在する場合のみ削除
+            print("cancel_zoom: 矩形有り")  # ← debug print★
             x, y, width, height = self.saved_rect  # 保存した矩形の情報を取得
             self.rect.set_xy((x, y))  # 矩形の位置を設定
             self.rect.set_width(width)  # 矩形の幅を設定
@@ -227,16 +229,23 @@ class ZoomSelector:
             self.saved_rect = None  # 保存した矩形の情報をクリア
             self.canvas.draw()
         else:  # 矩形が存在しない場合、コールバックを呼び出す
-#            print("zoom kakutei go no cancel wo jikkou")
+            print("cancel_zoom: 矩形無し")  # ← debug print★
             if self.on_zoom_cancel:  # コールバックが存在する場合のみ呼び出す
+                print("コールバックがある")  # ← debug print★
+                self.clear_rectangle()  # 矩形を削除
+                self.zoom_active = False  # ズームモードを終了
+                self.canvas.get_tk_widget().config(cursor="arrow")  # カーソルをデフォルトに戻す
                 self.on_zoom_cancel()  # コールバックを呼び出す
 
     def clear_rectangle(self):
-        """ 矩形および回転バー・ハンドルを消去 """
+        """ 矩形を消去 """
+        print("矩形消去：実行")  # ← debug print★
         if self.rect is not None:  # 矩形が存在する場合のみ削除
+            print(f"矩形がある場合：{self.rect}")  # ← debug print★ (削除前の情報を出力)
             self.rect.remove()  # 矩形を削除
             self.rect = None  # 矩形をNoneに設定
         self.zoom_active = False  # ズームモードを終了
         self.canvas.get_tk_widget().config(cursor="arrow")  # カーソルをデフォルトに戻す
         self.canvas.draw()  # 描画を更新
         self.canvas.draw()  # 描画を更新
+        print(f"矩形が無い場合：{self.rect}")  # ← debug print★ (削除後に None になっているか確認)
