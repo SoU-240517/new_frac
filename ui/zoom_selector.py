@@ -22,15 +22,13 @@ class ZoomSelector:
         self.on_zoom_confirm = on_zoom_confirm  # 確定時のコールバック
         self.on_zoom_cancel = on_zoom_cancel  # キャンセル時のコールバック
         self.zoom_active = False  # 選択中フラグ
-        # ドラッグ開始時の情報（移動 or 回転判定用）
+        # ドラッグ開始時の情報（移動判定定用）
         self.press = None
         # 矩形情報
         self.start_x = None  # 開始点（x）
         self.start_y = None  # 開始点（y）
         self.rect = None  # パッチ
         self.saved_rect = None  # 直前の情報
-        # 回転
-        self.angle = 0.0  # 回転角（ラジアン）
         # イベントハンドラ接続
         self.cid_press = self.canvas.mpl_connect('button_press_event', self.on_press)  # マウスボタンが押された
         self.cid_release = self.canvas.mpl_connect('button_release_event', self.on_release)  # マウスボタンが離された
@@ -211,6 +209,8 @@ class ZoomSelector:
                 print("=== 通常のカーソル")
                 self.canvas.get_tk_widget().config(cursor="arrow")
                 self.last_cursor_state = current_cursor_state
+                return
+            return
         # 矩形がある場合は、矩形の座標とサイズを取得
         x, y = self.rect.get_xy()
         width = self.rect.get_width()
@@ -235,6 +235,8 @@ class ZoomSelector:
                     print("=== カーソル変更：crosshair")
                     self.canvas.get_tk_widget().config(cursor="crosshair")
                     self.last_cursor_state = current_cursor_state
+                    return
+                return
         # 矩形の内側かどうか判定
         contains, _ = self.rect.contains(event)
         # 矩形の内側にあればカーソルを変更
@@ -246,12 +248,15 @@ class ZoomSelector:
                 print("=== カーソル変更：fleur")
                 self.canvas.get_tk_widget().config(cursor="fleur")
                 self.last_cursor_state = current_cursor_state
+                return
+            return
         # カーソル状態が変化した場合のみプリント  debug print用★
         if self.last_cursor_state != "arrow":
             print("====== カーソルを更新:（def update_cursor）")
             print("=== カーソルデフォルト：arrow")
             self.canvas.get_tk_widget().config(cursor="arrow")
             self.last_cursor_state = "arrow"
+            return
 
     def confirm_zoom(self):
         """右クリックによるズーム確定時、矩形情報からズームパラメータを計算してコールバック呼出"""
