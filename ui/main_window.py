@@ -12,7 +12,7 @@ class MainWindow:
         キャンバスとパラメータパネルを含む左右分割レイアウトを作成し、
         ズーム操作の状態管理も行います。
         """
-        print("====== メインウィンドウの初期化開始:（def __init__）")  # ← debug print★
+        print("初期化 : メインウィンドウ : __init__ / main_window.py")  # debug_log(print)
         self.root = root  # Tkinter のルートウィンドウ
         self.root.title("フラクタル描画アプリケーション")  # ウィンドウタイトルの設定
         self.root.geometry("1200x800")  # ウィンドウサイズの設定
@@ -47,7 +47,7 @@ class MainWindow:
         """
         パラメータパネルの最新パラメータにズーム情報を上書きしてフラクタルを再描画。
         """
-        print("====== 描画更新開始:（def update_fractal）")  # ← debug print★
+        print("描画更新開始 : update_fractal / main_window.py")  # debug_log(print)
         params = self.parameter_panel.get_parameters()  # パネルからパラメータを取得
         params.update(self.zoom_params)  # ズーム情報をパラメータに追加
         fractal_image = render_fractal(params)
@@ -59,7 +59,7 @@ class MainWindow:
         - 縦横比を調整
         - ズームレベルに応じて反復回数を自動調整
         """
-        print("====== ズーム確定:（def on_zoom_confirm）")  # ← debug print★
+        print("ズーム確定 : on_zoom_confirm / main_window.py")  # debug_log(print)
         if new_zoom_params == self.zoom_params:
             return  # ズームパラメータが変わっていないなら何もしない
 
@@ -95,13 +95,11 @@ class MainWindow:
         ズームキャンセル時のコールバック。
         既にズーム確定後の場合は直前の状態に戻し、未確定の場合は単に再描画。
         """
-        print("====== ズームキャンセル:（def on_zoom_cancel）")  # ← debug print★
+        print("ズームキャンセル : on_zoom_cancel / main_window.py")  # debug_log(print)
         if self.prev_zoom_params is not None:  # ズーム確定済みの場合
-            print("=== zoom in cancel：以前の設定に戻す")  # ← debug print★
             self.zoom_params = self.prev_zoom_params
             self.prev_zoom_params = None
         else:  # ズーム未確定の場合
-            print("=== zoom cancel：ズーム情報なし、再描画")  # ← debug print★
             self.update_fractal()
 
     def reset_zoom(self):
@@ -109,7 +107,7 @@ class MainWindow:
         操作パネルの「描画リセット」ボタン押下時の処理。
         ズームパラメータを初期状態に戻して再描画。
         """
-        print("====== 描画リセット:（def reset_zoom）")  # ← debug print★
+        print("描画リセット : reset_zoom / main_window.py")  # debug_log(print)
         self.zoom_params = {"center_x": 0.0, "center_y": 0.0, "width": 4.0, "height": 4.0, "rotation": 0.0}
         self.prev_zoom_params = None
         self.update_fractal()

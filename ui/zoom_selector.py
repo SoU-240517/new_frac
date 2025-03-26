@@ -10,7 +10,7 @@ class ZoomSelector:
         on_zoom_confirm: ズーム確定時に呼ばれるコールバック（zoom_paramsを引数に取る）
         on_zoom_cancel: ズームキャンセル時に呼ばれるコールバック
         """
-        print("====== ZoomSelector の初期化開始:（def __init__）")  # ← debug log★
+        print("初期化 : ZoomSelector : __init__ / zoom_selector.py")  # debug_log(print)
         # 前回の状態を保存する変数★
         self.last_cursor_state = None  # カーソル
         self.last_mode_state = None  # 移動
@@ -40,25 +40,27 @@ class ZoomSelector:
 
     def on_key_press(self, event):
         """ Altキーが押されている場合は、回転モードに切り替える """
-        # 直前の状態が回転モード以外の場合はデdebug logを出力。出力を制限するための処理
+        # 直前の状態が回転モード以外の場合はデdebug_logを出力。出力を制限するための処理
         if self.mode != "rotate":
-            print("====== altキーが押された:（def on_key_press）")  # ← debug log★
+            print("altキーが押された : on_key_press / zoom_selector.py")  # debug_log(print)
         # altキーが押されていれば、回転モードに切り替えてカーソルを更新
         if event.key == "alt" and self.mode != "rotate":
             self.mode = "rotate"
+            print(f"[self.mode] = {self.mode} : on_key_press / zoom_selector.py")  # debug_log(値)
             self.update_cursor(event)
 
     def on_key_release(self, event):
         """ Altキーを離したら通常モードに戻す """
-        print("====== altキーが離された:（def on_key_release）")  # ← debug log★
+        print("altキーが離された : on_key_release / zoom_selector.py")  # debug_log(print)
         # altキーが離された場合は、回転モードを解除してカーソルを更新
         if event.key == "alt":
             self.mode = None
+            print(f"[self.mode] = {self.mode} : on_key_release / zoom_selector.py")  # debug_log(値)
             self.update_cursor(event)
 
     def on_press(self, event):
         """ マウスボタンが押されたときのイベントハンドラ """
-        print("====== マウスボタンが押された:（def on_press）")  # ← debug log★
+        print("マウスボタンが押された : on_press / zoom_selector.py")  # debug_log(print)
         # 選択されたAxesが異なる場合は無視
         if event.inaxes != self.ax:
             return
@@ -96,23 +98,23 @@ class ZoomSelector:
                 tol = 0.1 * min(width, height) if min(width, height) != 0 else 0.2
                 # 各角の「名前」と「座標」を取得しつつループを回す
                 for corner_name, (cx, cy) in corners.items():
-#                    print(f"{corner_name}: ({cx}, {cy})")  # ← debug log★
+                    print(f"[corner_name] = {corner_name}, [cx] = {cx}, [cy] = {cy} : on_press / zoom_selector.py")  # debug_log(値)
                     # 距離がサイズ調整域以下なら、サイズ変更モードに切り替える
                         # マウスカーソルの座標と、角の座標の距離を計算する
                         # マウスカーソルの座標は、event.xdata, event.ydata で取得できる
                         # 距離は、hypot 関数で計算できる
                     if np.hypot(event.xdata - cx, event.ydata - cy) < tol:
-                        print("self.mode : on_press 1 : ", self.mode)  # ← debug log★
+                        print(f"角にカーソル : [corner_name] = {corner_name}, [self.mode] = {self.mode}, [event.xdata] = {event.xdata}, [event.ydata] = {event.ydata} : on_press / zoom_selector.py")  # debug_log(値)
                         # 回転モードの場合
                         if self.mode == "rotate":
                             # 左ドラッグによる回転開始
                             self.mode = "rotate_drag"
-                            print("self.mode : on_press 2 : ", self.mode)  # ← debug log★
                             cx_rect = x + width/2
                             cy_rect = y + height/2
                             initial_angle = np.degrees(np.arctan2(event.ydata - cy_rect, event.xdata - cx_rect))
                             self.rot_base = self.angle
                             self.press = (cx_rect, cy_rect, initial_angle)
+                            print(f"★ 回転開始: [self.mode] = {self.mode}, [center] = ({cx_rect}, {cy_rect}), [initial_angle] = {initial_angle} : on_press / zoom_selector.py")  # debug_log(値)
                             self.canvas.draw()
                             return
                         # サイズ変更モードの場合
@@ -156,8 +158,8 @@ class ZoomSelector:
                 self.rect = patches.Rectangle((self.start_x, self.start_y), 0, 0,
                             edgecolor='white',
                             facecolor='none',
-#                            facecolor='red',  # ← debug log★矩形内を赤色で表示
-#                            alpha=0.3,  # ← debug log★透明度
+#                            facecolor='red',  # debug_log(テストコード：矩形内を赤色で表示)
+#                            alpha=0.3,  # debug_log(テストコード：透明度)
                             linestyle='solid'
                         )
                 self.ax.add_patch(self.rect)
@@ -172,7 +174,7 @@ class ZoomSelector:
             return
         # カーソル変更処理を実行
         self.update_cursor(event)
-        # カレントモードを初期化して、各条件に応じて現在のモードを取得 debug log★
+        # カレントモードを初期化して、各条件に応じて現在のモードを取得 debug_log(準備)
         current_mode_state = None
         if self.mode == 'resize' and self.press is not None:
             current_mode_state = 'resize'
@@ -180,29 +182,49 @@ class ZoomSelector:
             current_mode_state = 'move'
         elif self.mode == 'create':
             current_mode_state = 'create'
-        # 現在のモードと前回のモードが異なる場合、状態が変化したと判断してログを出力  debug log★
+        # 現在のモードと前回のモードが異なる場合、状態が変化したと判断してログを出力  debug_log(準備)
         if current_mode_state != self.last_mode_state:
-            print("====== マウスが移動した:（def on_motion）")
+            print("マウスが移動した : on_motion / zoom_selector.py")
             if current_mode_state == 'resize':
-                print("=== サイズ変更モード")
+                print("サイズ変更モード : on_motion / zoom_selector.py")
             elif current_mode_state == 'move':
-                print("=== 移動モード")
+                print("移動モード : on_motion / zoom_selector.py")
             elif current_mode_state == 'create':
-                print("=== 新規作成モード")
+                print("新規作成モード : on_motion / zoom_selector.py")
             self.last_mode_state = current_mode_state
+        # 回転ドラッグ中の場合　★★★
+        if self.mode == "rotate_drag":
+            # ドラッグ中の場合
+            if self.press is None:
+                print("★ [ERROR] 回転中だが self.press が None : on_motion / zoom_selector.py")  # debug_log(print)
+                return  # 何もしないで終了
+
+            cx_rect, cy_rect, initial_angle = self.press
+            current_angle = np.degrees(np.arctan2(event.ydata - cy_rect, event.xdata - cx_rect))
+            angle_diff = current_angle - initial_angle
+            new_angle = self.rot_base + angle_diff
+
+            print(f"★ 回転中 : [current_angle] = {current_angle}, [angle_diff] = {angle_diff}, [new_angle] = {new_angle} : on_motion / zoom_selector.py")
+
+            self.angle = new_angle
+            t = transforms.Affine2D().rotate_deg_around(cx_rect, cy_rect, new_angle) + self.ax.transData
+            self.rect.set_transform(t)
+            self.canvas.draw()
+        """
         # 回転ドラッグ中 ＆ ドラッグ中の場合 ＆ 矩形が存在する場合、矩形を回転
-#        print("event.xdata : on_motion : ", event.xdata)  # ← debug log★
-#        print("event.ydata : on_motion : ", event.ydata)  # ← debug log★
+#        print(f"[event.xdata] = {event.xdata}, [event.ydata] = {event.ydata} : on_motion / zoom_selector.py")  # debug_log(値)
         if self.mode == "rotate_drag" and self.press is not None and self.rect is not None:
             cx_rect, cy_rect, initial_angle = self.press
             current_angle = np.degrees(np.arctan2(event.ydata - cy_rect, event.xdata - cx_rect))
             angle_diff = current_angle - initial_angle
             new_angle = self.rot_base + angle_diff
+            print(f"回転中 : [current_angle] = {current_angle}, [angle_diff] = {angle_diff}, [new_angle] = {new_angle} : on_motion / zoom_selector.py")  # debug_log(値)
             self.angle = new_angle
             t = transforms.Affine2D().rotate_deg_around(cx_rect, cy_rect, new_angle) + self.ax.transData
             self.rect.set_transform(t)
             self.canvas.draw()
             return
+        """
         # サイズ変更モード中、かつマウスが移動した場合、矩形のサイズを変更
         if self.mode == 'resize' and self.press is not None:
             # ドラッグ中に矩形のサイズを更新
@@ -240,7 +262,7 @@ class ZoomSelector:
 
     def on_release(self, event):
         """ マウスを離したときのイベントハンドラ """
-        print("====== マウスを離した:（def on_release）")  # ← debug log★
+        print("マウスを離した : on_release / zoom_selector.py")  # debug_log(print)
         # 現在のモードが指定された5種類のいずれか、かつイベントが self.ax 内で発生した場合に処理を実行
         if self.mode in ['resize', 'move', 'create', 'rotate', 'rotate_drag'] and event.inaxes == self.ax:
             # 新規作成モードの場合は、マウスが離されたら矩形を確定する
@@ -257,15 +279,16 @@ class ZoomSelector:
                     self.rect.set_xy((new_x, new_y))
                     self.rect.set_width(new_width)
                     self.rect.set_height(new_height)
-                print("self.mode : on_release 1 : ", self.mode)  # ← debug log★
+                print(f"[self.mode] 1 = {self.mode} : on_release / zoom_selector.py")  # debug_log(値)
             # 回転ドラッグ中の場合、モードを通常の回転モードに戻す
             elif self.mode == 'rotate_drag':
                 self.press = None
                 self.mode = "rotate"
+                print(f"回転終了 : [self.mode] = {self.mode} : on_release / zoom_selector.py")
             # それ以外の場合、モードをNoneに設定
             self.press = None
             self.mode = None
-            print("self.mode : on_release 2 : ", self.mode)  # ← debug log★
+            print(f"[self.mode] 2 = {self.mode} : on_release / zoom_selector.py")  # debug_log(値)
         self.canvas.draw()
 
     def update_cursor(self, event):
@@ -275,9 +298,9 @@ class ZoomSelector:
         # ◆　矩形がない場合は、通常のカーソルに変更
         if self.rect is None:
             current_cursor_state = "arrow"
-            # カーソル状態が変化した場合のみプリント debug log★
+            # カーソル状態が変化した場合のみプリント debug_log(print)
             if self.last_cursor_state != current_cursor_state:
-                print("====== 通常のカーソル（矩形無し）（def update_cursor）：矢印 arrow")
+                print("カーソル変更 : 矩形無し : 矢印(arrow) : update_cursor / zoom_selector.py")
                 self.canvas.get_tk_widget().config(cursor="arrow")
                 self.last_cursor_state = current_cursor_state
                 return
@@ -309,18 +332,18 @@ class ZoomSelector:
                 # ◆　回転モードの場合（"rotate" および "rotate_drag" 共に対象）
                 if self.mode in ["rotate", "rotate_drag"]:
                     current_cursor_state = "rotate"
-                    # カーソル状態が変化した場合のみプリント  debug log★
+                    # カーソル状態が変化した場合のみプリント  debug_log(print)
                     if self.last_cursor_state != current_cursor_state:
-                        print("====== カーソル変更（def update_cursor）：回転 exchange")  # debug log★
+                        print("カーソル変更 : 回転モード : 回転(exchange) : update_cursor / zoom_selector.py")
                         self.canvas.get_tk_widget().config(cursor="exchange")  # カーソルを回転カーソルに変更
                         self.last_cursor_state = current_cursor_state
                         return
                 # ◆　サイズ変更モードの場合
                 else:
                     current_cursor_state = "crosshair"
-                    # カーソル状態が変化した場合のみプリント  debug log★
+                    # カーソル状態が変化した場合のみプリント  debug_log(print)
                     if self.last_cursor_state != current_cursor_state:
-                        print("====== カーソル変更（def update_cursor）：十字 crosshair")
+                        print("カーソル変更 : サイズ変更モード : 十字(crosshair) : update_cursor / zoom_selector.py")
                         self.canvas.get_tk_widget().config(cursor="crosshair")
                         self.last_cursor_state = current_cursor_state
                         return
@@ -332,24 +355,24 @@ class ZoomSelector:
             # on_pressにも似たような部分があるので、詳細はそちらを参照
         if contains:
             current_cursor_state = "fleur"
-            # カーソル状態が変化した場合のみプリント  debug log★
+            # カーソル状態が変化した場合のみプリント  debug_log(print)
             if self.last_cursor_state != current_cursor_state:
-                print("=== カーソル変更（def update_cursor）：移動 fleur")
+                print("カーソル変更 : 移動モード : 移動(fleur) : update_cursor / zoom_selector.py")
                 self.canvas.get_tk_widget().config(cursor="fleur")
                 self.last_cursor_state = current_cursor_state
                 return
             return
         # ◆　諸々の範囲外の場合
-        # カーソル状態が変化した場合のみプリント  debug log★
+        # カーソル状態が変化した場合のみプリント  debug_log(print)
         if self.last_cursor_state != "arrow":
-            print("====== 通常のカーソル（諸々の範囲外）（def update_cursor）：矢印 arrow")
+            print("カーソル変更 : 諸々の範囲外 : 矢印(arrow) : update_cursor / zoom_selector.py")
             self.canvas.get_tk_widget().config(cursor="arrow")
             self.last_cursor_state = "arrow"
             return
 
     def confirm_zoom(self):
         """ 右クリックによるズーム確定時、矩形情報からズームパラメータを計算してコールバック呼出 """
-        print("====== ズーム確定:（def confirm_zoom）")  # ← debug log★
+        print("ズーム確定 : confirm_zoom / zoom_selector.py")  # debug_log(print)
         # 矩形がない場合はなにもしない
         if self.rect is None:
             return
@@ -369,10 +392,10 @@ class ZoomSelector:
 
     def cancel_zoom(self):
         """ 中クリックによるズームキャンセル時、矩形情報をもとに戻す """
-        print("====== ズームキャンセル:（def cancel_zoom）")  # ← debug log★
+        print("ズームキャンセル : cancel_zoom / zoom_selector.py")  # debug_log(print)
         # 矩形が確定される前＆保存された矩形情報がある＆現在の矩形も存在する場合に処理を実行
         if self.zoom_active and self.saved_rect is not None and self.rect is not None:
-            print("=== ズーム中、セーブ情報あり、矩形有り")  # ← debug log★
+            print("ズーム中、セーブ情報あり、矩形有り : cancel_zoom / zoom_selector.py")  # debug_log(print)
             x, y, width, height = self.saved_rect  # 保存した矩形の情報を取得
             self.rect.set_xy((x, y))  # 矩形の位置を設定
             self.rect.set_width(width)  # 矩形の幅を設定
@@ -381,26 +404,26 @@ class ZoomSelector:
             self.canvas.draw()
         # それ以外の場合は、コールバックを呼び出す
         else:
-            print("=== 矩形無し")  # ← debug log★
+            print("矩形無し : cancel_zoom / zoom_selector.py")  # debug_log(print)
             # コールバックが存在する場合のみ呼び出す
             if self.on_zoom_cancel:
-                print("コールバックがある")  # ← debug log★
+                print("コールバックがある : cancel_zoom")  # debug_log(print)
                 self.clear_rectangle()  # 矩形を削除
                 self.zoom_active = False  # ズームモードを終了
-                print("通常のカーソル（def cancel_zoom）：矢印 arrow")  # ← debug log★
+                print("カーソル変更 : 通常 : 矢印(arrow) : cancel_zoom / zoom_selector.py")  # debug_log(print)
                 self.canvas.get_tk_widget().config(cursor="arrow")  # カーソルをデフォルトに戻す
                 self.on_zoom_cancel()  # コールバックを呼び出す
 
     def clear_rectangle(self):
         """ 矩形を消去 """
-        print("====== 矩形を消去:（def clear_rectangle）")  # ← debug log★
+        print("矩形を消去 : clear_rectangle / zoom_selector.py")  # debug_log(print)
         # 矩形が存在する場合のみ削除
         if self.rect is not None:
-            print(f"=== 矩形がある場合：{self.rect}")  # ← debug log★ (削除前の情報を出力)
+            print(f"矩形がある場合 : [self.rect] : {self.rect} : clear_rectangle / zoom_selector.py")  # debug_log(self.rect)(削除前の情報を表示)
             self.rect.remove()  # 矩形を削除
             self.rect = None  # 矩形をNoneに設定
         self.zoom_active = False  # ズームモードを終了
-        print("通常のカーソル（def clear_rectangle）：矢印 arrow")  # ← debug log★
+        print("カーソル変更 : 通常 : 矢印(arrow) : clear_rectangle / zoom_selector.py")  # debug_log(print)
         self.canvas.get_tk_widget().config(cursor="arrow")  # カーソルをデフォルトに戻す
         self.canvas.draw()  # 描画を更新
-        print(f"=== 矩形が無い場合：{self.rect}")  # ← debug log★ (削除後に None になっているか確認)
+        print(f"矩形が無い場合 : [self.rect] : {self.rect} : clear_rectangle / zoom_selector.py")  # ← debug_log(self.rect)(削除後に None になっているか確認)
