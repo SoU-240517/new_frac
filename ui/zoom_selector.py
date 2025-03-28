@@ -34,7 +34,7 @@ class ZoomSelector:
         self.start_y = None      # 新規作成開始時の y 座標
 
         self.current_key = None  # 現在 ON のキー（'shift' または 'alt'）
-        key_state = {"Shift": False, "Alt": False}
+        self.key_pressed = {'shift': False, 'alt': False}  # キー状態追跡用の変数を追加
         self.angle = 0.0         # 現在の回転角（度）
         self.rot_base = 0.0      # 回転開始時の角度
         self.last_cursor_state = "arrow"
@@ -53,12 +53,7 @@ class ZoomSelector:
         if self.state == ZoomState.NO_ZOOM_AREA:  # on_press：NO_ZOOM_AREA の場合の処理
             if event.button == 1:
                 self.state = ZoomState.CREATE  # on_press：ズーム領域無し、左ボタン ON：CREATE へ変更
-                self.start_x, self.start_y = event.xdata, event.ydata
-                self.rect = patches.Rectangle(
-                    (self.start_x, self.start_y), 0, 0,
-                    edgecolor='white', facecolor='none', linestyle='solid'
-                )
-                self.ax.add_patch(self.rect)
+                self._create_rectangle(event)
             elif event.button == 2:  # 中ボタン ON でズーム取り消し（直前情報があれば復元、なければ何もしない）
                 self._handle_cancel()
 
@@ -84,7 +79,7 @@ class ZoomSelector:
                 self.rot_base = self.angle
                 self.press = (cx, cy, initial_angle)
 
-        self.canvas.draw()
+#        self.canvas.draw()
 
     def on_motion(self, event):
         if event.inaxes != self.ax:
@@ -147,11 +142,11 @@ class ZoomSelector:
                 self._clear_rectangle()
                 self.state = ZoomState.NO_ZOOM_AREA  # on_release：矩形が未作成：NO_ZOOM_AREA へ変更
 
-        elif self.state in (ZoomState.MOVE):  # on_release：移動モード完了の場合の処理
+        elif self.state == ZoomState.MOVE:  # on_release：移動モード完了の場合の処理
             self.press = None
             self.state = ZoomState.WAIT_NOKEY_ZOOM_AREA_EXISTS  # on_release：移動完了：WAIT_NOKEY_ZOOM_AREA_EXISTS へ変更
 
-        elif self.state in (ZoomState.RESIZE):  # on_release：リサイズモードが完了した場合の処理
+        elif self.state == ZoomState.RESIZE:  # on_release：リサイズモードが完了した場合の処理
             self.press = None
             # shift ON なら、WAIT_SHIFT_RESIZE に遷移
             if event.key == 'shift':
@@ -159,7 +154,7 @@ class ZoomSelector:
             else:
                 self.state = ZoomState.WAIT_NOKEY_ZOOM_AREA_EXISTS  # on_release：リサイズ完了、shift OFF：WAIT_NOKEY_ZOOM_AREA_EXISTS へ変更
 
-        elif self.state in (ZoomState.ROTATE):  # on_release：回転モードが完了した場合の処理
+        elif self.state == ZoomState.ROTATE:  # on_release：回転モードが完了した場合の処理
             self.press = None
             # alt ON なら、WAIT_ALT_ROTATE に遷移
             if event.key == 'alt':
@@ -172,26 +167,32 @@ class ZoomSelector:
     def on_key_press(self, event):
         # キー割り込みは、ズーム領域が存在する状態または移動中のみ有効
         if self.state == ZoomState.WAIT_NOKEY_ZOOM_AREA_EXISTS and event.key in ['shift', 'alt']:  # on_key_press：キー割り込み条件
-            self.current_key = event.key
+            self.current_key = event.key  # 現在のキーを押されているキーで更新
 
-            if event.key == 'shift':  # shift ON → リサイズモードへ（マウスカーソルが角に近いかチェック）
-                if self._pointer_near_corner(event):  # マウスカーソルが角許容範囲内の場合
-                    self.state = ZoomState.WAIT_SHIFT_RESIZE  # on_key_press：shift ON、カーソルが角許容範囲内：WAIT_SHIFT_RESIZE へ変更
+            if not self.key_pressed[self.current_key]:  # キーがまだ押されていない場合のみ処理
+                self.key_pressed[self.current_key] = True  # キー状態を「押されている」に更新
 
-            elif event.key == 'alt':  # alt ON → 回転モードへ（マウスカーソルが角に近いかチェック）
-                if self._pointer_near_corner(event):  # マウスカーソルが角許容範囲内の場合
-                    self.state = ZoomState.WAIT_ALT_ROTATE  # on_key_press：alt ON、カーソルが角許容範囲内：WAIT_ALT_ROTATE へ変更
+                if self.current_key == 'shift':  # shift ON → リサイズモードへ（マウスカーソルが角に近いかチェック）
+                    if self._pointer_near_corner(event):  # マウスカーソルが角許容範囲内の場合
+                        self.state = ZoomState.WAIT_SHIFT_RESIZE  # on_key_press：shift ON、カーソルが角許容範囲内：WAIT_SHIFT_RESIZE へ変更
+
+                elif self.current_key == 'alt':  # alt ON → 回転モードへ（マウスカーソルが角に近いかチェック）
+                    if self._pointer_near_corner(event):  # マウスカーソルが角許容範囲内の場合
+                        self.state = ZoomState.WAIT_ALT_ROTATE  # on_key_press：alt ON、カーソルが角許容範囲内：WAIT_ALT_ROTATE へ変更
 
         self.update_cursor(event)
-        self.canvas.draw()
+#        self.canvas.draw()
 
     def on_key_release(self, event):
-        if self.current_key == event.key:
+        if event.key in ['shift', 'alt']:
+            self.current_key = event.key
+            self.key_pressed[self.current_key] = False  # そのキーだけを「離された」状態に更新
             self.current_key = None
             if self.state in (ZoomState.WAIT_SHIFT_RESIZE, ZoomState.RESIZE, ZoomState.WAIT_ALT_ROTATE, ZoomState.ROTATE):  # キー割り込みで入ったモードの場合、解除して待機状態へ戻す
                 self.state = ZoomState.WAIT_NOKEY_ZOOM_AREA_EXISTS  # on_key_release：キー割り込みが解除された場合：WAIT_NOKEY_ZOOM_AREA_EXISTS へ変更
+
         self.update_cursor(event)
-        self.canvas.draw()
+#        self.canvas.draw()
 
     def confirm_zoom(self):
         """
@@ -232,6 +233,14 @@ class ZoomSelector:
             if self.on_zoom_cancel:
                 self.on_zoom_cancel()
                 self.state = ZoomState.NO_ZOOM_AREA  # _handle_cancel：ズームキャンセル後、矩形無し：NO_ZOOM_AREA へ変更
+
+    def _create_rectangle(self, event):
+        self.start_x, self.start_y = event.xdata, event.ydata
+        self.rect = patches.Rectangle(
+            (self.start_x, self.start_y), 0, 0,
+            edgecolor='white', facecolor='none', linestyle='solid'
+        )
+        self.ax.add_patch(self.rect)
 
     def _clear_rectangle(self):
         if self.rect is not None:
