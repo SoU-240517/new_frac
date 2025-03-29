@@ -165,11 +165,11 @@ class ZoomSelector:
                 self.key_pressed[self.current_key] = True  # キー状態を「押されている」に更新
 
                 if self.current_key == 'shift':
-                    print(f"pointer_near_corner/on_key_press: {self._get_pointer_near_corner(event)}")
-                    print(f"state前/on_key_press: {self.state}")
+#                    print(f"pointer_near_corner/on_key_press: {self._get_pointer_near_corner(event)}")
+#                    print(f"state前/on_key_press: {self.state}")
                     if self._get_pointer_near_corner(event):  # マウスカーソルが角許容範囲内の場合
                         self.state = ZoomState.WAIT_SHIFT_RESIZE  # on_key_press：shift ON、カーソルが角許容範囲内：WAIT_SHIFT_RESIZE へ変更
-                        print(f"state後/on_key_press: {self.state}")
+#                        print(f"state後/on_key_press: {self.state}")
 
                 elif self.current_key == 'alt':  # alt ON → 回転モードへ（マウスカーソルが角に近いかチェック）
                     if self._get_pointer_near_corner(event):  # マウスカーソルが角許容範囲内の場合
@@ -191,7 +191,7 @@ class ZoomSelector:
 
     def _handle_confirm_zoom(self):
         """
-        右ボタン ON による確定時に、領域情報からズームパラメータを生成しコールバック呼び出し
+        ズーム領域の情報からズームパラメータを生成しコールバック呼び出す
         """
         if self.rect is None:
             return
@@ -212,8 +212,7 @@ class ZoomSelector:
 
     def _handle_cancel_zoom(self):
         """
-        中ボタン ON で、直前の描画情報があれば復元、
-        無い場合は領域を削除してコールバックを呼び出す
+        直前の描画情報があれば復元、無い場合は領域を削除してコールバックを呼び出す
         """
         # 直前の領域と現在の領域が在る場合、直前の領域を復元
         if self.last_rect and self.rect:
@@ -229,6 +228,11 @@ class ZoomSelector:
                 self.state = ZoomState.NO_ZOOM_AREA  # _handle_cancel_zoom：ズームキャンセル後、領域無し：NO_ZOOM_AREA へ変更
 
     def _start_create_zoom_rectangle(self, event):
+        """
+        ズーム領域の作成開始
+        :param event:
+        :return:
+        """
         self.start_x, self.start_y = event.xdata, event.ydata
         self.rect = patches.Rectangle(
             (self.start_x, self.start_y), 0, 0,
@@ -237,6 +241,11 @@ class ZoomSelector:
         self.ax.add_patch(self.rect)
 
     def _fix_create_zoom_rectangle(self, event):
+        """
+        ズーム領域の作成完了
+        :param event:
+        :return:
+        """
         dx = event.xdata - self.start_x
         dy = event.ydata - self.start_y
         if dx != 0 and dy != 0:
@@ -251,6 +260,11 @@ class ZoomSelector:
             self.state = ZoomState.NO_ZOOM_AREA  # _fix_create_zoom_rectangle：領域が未作成：NO_ZOOM_AREA へ変更
 
     def _clear_zoom_rectangle(self):
+        """
+        ズーム領域の削除
+        :param event:
+        :return:
+        """
         if self.rect is not None:
             self.rect.remove()
             self.rect = None
@@ -259,7 +273,9 @@ class ZoomSelector:
 
     def _cursor_inside_rect(self, event):
         """
-        マウスカーソルが領域内部に在るかどうか
+        マウスカーソルが領域内部に在るかどうかを判定する
+        :param event:
+        :return: マウスカーソルが領域内部に在る場合は True、そうでない場合は False
         """
         if self.rect is None:
             return False  # 領域が存在しない場合は False を返す
@@ -267,7 +283,12 @@ class ZoomSelector:
         return contains  # マウスカーソルが領域内部に在る場合は True、そうでない場合は False を返す
 
     def _get_move_start_position(self, event):
-        self.press = (self.rect.get_xy(), event.xdata, event.ydata)  # 移動開始位置を記録
+        """
+        移動開始位置を取得する
+        :param event:
+        :return: 移動開始位置
+        """
+        self.press = (self.rect.get_xy(), event.xdata, event.ydata)
 
     def _get_rect_center(self):
         x, y, width, height = self._get_rect_properties()
@@ -277,6 +298,8 @@ class ZoomSelector:
         """
         マウス位置が領域の角に近いかどうかを判定する
         許容範囲 tol = 0.1 * min(width, height)（ただし min が 0 の場合は 0.2）
+        :param event:
+        :return: マウス位置が領域の角に近い場合は True、そうでない場合は False
         """
         if self.rect is None:
             return False
@@ -291,7 +314,11 @@ class ZoomSelector:
         return False
 
     def _get_rect_properties(self):
-        """矩形の位置とサイズを取得する。矩形が存在しない場合はNoneを返す。"""
+        """
+        矩形の位置とサイズを取得する。矩形が存在しない場合はNoneを返す
+        :param event:
+        :return: 矩形の位置とサイズのタプル。矩形が存在しない場合はNoneを返す
+        """
         if self.rect is None:
             return None
 
@@ -303,8 +330,9 @@ class ZoomSelector:
 
     def _prepare_resize(self, event):
         """
-        マウス位置から最も近い角を選定し、対角固定のため固定すべき点を求める。
-        戻り値は、対角固定のための固定点の座標と名前
+        マウス位置から最も近い角を選定し、対角固定のため固定すべき点を求める
+        :param event:
+        :return: 固定する対角の点
         """
         # 領域の現在の位置・サイズを保存
         x, y, width, height = self._get_rect_properties()
@@ -336,12 +364,22 @@ class ZoomSelector:
         return (nearest_key, fixed, x, y, width, height, event.xdata, event.ydata)
 
     def _prepare_rotation(self, event):
+        """
+        回転の準備
+        :param event:
+        :return:
+        """
         cx, cy = self._get_rect_center()
         initial_angle = np.degrees(np.arctan2(event.ydata - cy, event.xdata - cx))
         self.rot_base = self.angle
         self.press = (cx, cy, initial_angle)
 
     def _update_zoom_area(self, event):
+        """
+        ズーム領域の更新
+        :param event:
+        :return:
+        """
         dx = event.xdata - self.start_x
         dy = event.ydata - self.start_y
         new_x = min(self.start_x, event.xdata)
@@ -351,6 +389,11 @@ class ZoomSelector:
         self.rect.set_height(abs(dy))
 
     def _update_zoom_position(self, event):
+        """
+        ズーム領域の位置の更新
+        :param event:
+        :return:
+        """
         orig_xy, press_x, press_y = self.press
         dx = event.xdata - press_x
         dy = event.ydata - press_y
@@ -358,14 +401,60 @@ class ZoomSelector:
         self.rect.set_xy(new_xy)
 
     def _update_zoom_size(self, event):
+        """
+        ズーム領域のサイズ更新（対角点固定でスムーズなリサイズ）
+        :param event:
+        :return:
+        """
+        if self.press is None or self.rect is None:
+            return
+
         (corner_name, fixed, orig_x, orig_y, orig_width, orig_height, press_x, press_y) = self.press
-        new_x = min(fixed[0], event.xdata)
-        new_y = min(fixed[1], event.ydata)
+
+        # 固定点とドラッグ点の座標を取得
+        fixed_x, fixed_y = fixed
+        current_x, current_y = event.xdata, event.ydata
+
+        # マウスの移動方向に応じて新しい座標を計算
+        if corner_name == 'bottom_left':
+            new_x = current_x
+            new_y = current_y
+            new_width = fixed_x - current_x
+            new_height = fixed_y - current_y
+        elif corner_name == 'bottom_right':
+            new_x = fixed_x
+            new_y = current_y
+            new_width = current_x - fixed_x
+            new_height = fixed_y - current_y
+        elif corner_name == 'top_left':
+            new_x = current_x
+            new_y = fixed_y
+            new_width = fixed_x - current_x
+            new_height = current_y - fixed_y
+        elif corner_name == 'top_right':
+            new_x = fixed_x
+            new_y = fixed_y
+            new_width = current_x - fixed_x
+            new_height = current_y - fixed_y
+
+        # 最小サイズ制限（0.1は適切な値に調整可能）
+        min_size = 0.1
+        if abs(new_width) < min_size:
+            new_width = min_size if new_width >= 0 else -min_size
+        if abs(new_height) < min_size:
+            new_height = min_size if new_height >= 0 else -min_size
+
+        # 矩形を更新
         self.rect.set_xy((new_x, new_y))
-        self.rect.set_width(abs(fixed[0] - event.xdata))
-        self.rect.set_height(abs(fixed[1] - event.ydata))
+        self.rect.set_width(new_width)
+        self.rect.set_height(new_height)
 
     def _update_zoom_rotate(self, event):
+        """
+        ズーム領域の回転の更新
+        :param event:
+        :return:
+        """
         if self.press is None:
             return
         cx, cy, initial_angle = self.press
@@ -378,11 +467,9 @@ class ZoomSelector:
 
     def update_cursor(self, event):
         """
-        各状態およびカーソル位置に応じたカーソル形状を設定する。
-         - ズーム領域無しや新規作成中は arrow
-         - 移動中なら fleur
-         - リサイズ中は、角近傍なら crosshair、それ以外は arrow
-         - 回転中は、角近傍なら exchange、それ以外は arrow
+        各状態およびカーソル位置に応じたカーソル形状を設定する
+        :param event:
+        :return:
         """
 #        print(f"pointer_near_corner: {self._get_pointer_near_corner(event)}")
         new_cursor = "arrow"
