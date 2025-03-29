@@ -175,8 +175,10 @@ class ZoomSelector:
                     if self._get_pointer_near_corner(event):  # マウスカーソルが角許容範囲内の場合
                         self.state = ZoomState.WAIT_ALT_ROTATE  # on_key_press：alt ON、カーソルが角許容範囲内：WAIT_ALT_ROTATE へ変更
 
+                self.canvas.draw()
+
         self.update_cursor(event)
-        self.canvas.draw()
+#        self.canvas.draw()
 
     def on_key_release(self, event):
         if event.key in ['shift', 'alt']:
@@ -402,52 +404,45 @@ class ZoomSelector:
 
     def _update_zoom_size(self, event):
         """
-        ズーム領域のサイズ更新（対角点固定でスムーズなリサイズ）
+        ズーム領域のサイズ更新
         :param event:
         :return:
         """
+        # press が None の場合か、rect が None の場合はメソッドを終了
         if self.press is None or self.rect is None:
+            return
+
+        # xdata か ydata が None の場合はメソッドを終了
+        if event.xdata is None or event.ydata is None:
             return
 
         (corner_name, fixed, orig_x, orig_y, orig_width, orig_height, press_x, press_y) = self.press
 
-        # 固定点とドラッグ点の座標を取得
+        # 固定点と現在のマウス位置
         fixed_x, fixed_y = fixed
         current_x, current_y = event.xdata, event.ydata
 
         # マウスの移動方向に応じて新しい座標を計算
         if corner_name == 'bottom_left':
-            new_x = current_x
-            new_y = current_y
-            new_width = fixed_x - current_x
-            new_height = fixed_y - current_y
+            new_x, new_y = current_x, current_y
+            new_width, new_height = fixed_x - current_x, fixed_y - current_y
         elif corner_name == 'bottom_right':
-            new_x = fixed_x
-            new_y = current_y
-            new_width = current_x - fixed_x
-            new_height = fixed_y - current_y
+            new_x, new_y = fixed_x, current_y
+            new_width, new_height = current_x - fixed_x, fixed_y - current_y
         elif corner_name == 'top_left':
-            new_x = current_x
-            new_y = fixed_y
-            new_width = fixed_x - current_x
-            new_height = current_y - fixed_y
+            new_x, new_y = current_x, fixed_y
+            new_width, new_height = fixed_x - current_x, current_y - fixed_y
         elif corner_name == 'top_right':
-            new_x = fixed_x
-            new_y = fixed_y
-            new_width = current_x - fixed_x
-            new_height = current_y - fixed_y
+            new_x, new_y = fixed_x, fixed_y
+            new_width, new_height = current_x - fixed_x, current_y - fixed_y
 
-        # 最小サイズ制限（0.1は適切な値に調整可能）
+        # 最小サイズ制限
         min_size = 0.1
-        if abs(new_width) < min_size:
-            new_width = min_size if new_width >= 0 else -min_size
-        if abs(new_height) < min_size:
-            new_height = min_size if new_height >= 0 else -min_size
+        new_width = max(abs(new_width), min_size) * (1 if new_width >= 0 else -1)
+        new_height = max(abs(new_height), min_size) * (1 if new_height >= 0 else -1)
 
-        # 矩形を更新
-        self.rect.set_xy((new_x, new_y))
-        self.rect.set_width(new_width)
-        self.rect.set_height(new_height)
+        # 矩形を更新（左下座標とサイズをまとめて設定）
+        self.rect.set_bounds(new_x, new_y, new_width, new_height)
 
     def _update_zoom_rotate(self, event):
         """
@@ -491,3 +486,33 @@ class ZoomSelector:
         if new_cursor != self.last_cursor_state:  # 変更が有る場合のみ更新
             self.canvas.get_tk_widget().config(cursor=new_cursor)
             self.last_cursor_state = new_cursor  # カーソルの形状を更新
+
+
+
+
+
+
+
+
+
+
+# 3. イベントのスロットリング導入
+def __init__(self, ax, on_zoom_confirm, on_zoom_cancel):
+    # 既存のコード...
+
+    # スロットリング用の変数を追加
+    self.last_motion_time = 0
+    self.motion_throttle_ms = 30  # 30ミリ秒ごとに処理（約33fps）
+
+def on_motion(self, event):
+    # 現在の時間を取得
+    current_time = int(time.time() * 1000)  # ミリ秒単位の現在時刻
+
+    # 前回の処理から指定時間が経過していない場合はスキップ
+    if current_time - self.last_motion_time < self.motion_throttle_ms:
+        return
+
+    # 時間を更新
+    self.last_motion_time = current_time
+
+    # 既存のコード...
