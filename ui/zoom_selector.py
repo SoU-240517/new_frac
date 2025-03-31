@@ -7,7 +7,7 @@ from enum import Enum, auto
 import time  # スロットリング用の時間処理モジュール
 
 @dataclass
-class ResizeOperationData:
+class ResizeOperationData:            # リサイズ操作のデータを保持するデータクラス
     corner_name: str                  # 操作中の角（'bottom_left'など）
     fixed_point: tuple[float, float]  # 固定される対角の座標
     original_x: float                 # 矩形の元のx座標
@@ -17,7 +17,6 @@ class ResizeOperationData:
     press_x: float                    # ドラッグ開始時のx座標
     press_y: float                    # ドラッグ開始時のy座標
 
-@dataclass
 class RotationOperationData:
     center_x: float
     center_y: float
@@ -51,7 +50,6 @@ class ZoomSelector:
         self.press = None        # ドラッグ開始時の情報（移動・リサイズ・回転共通）
         self.start_x = None      # 新規作成開始時の x 座標
         self.start_y = None      # 新規作成開始時の y 座標
-        self.current_key = None  # 現在 ON のキー（'shift' または 'alt'）
         self.key_pressed = {'shift': False, 'alt': False}  # キー状態追跡用の変数を追加
         self.angle = 0.0         # 現在の回転角（度）
         self.rot_base = 0.0      # 回転開始時の角度
@@ -130,11 +128,11 @@ class ZoomSelector:
         elif self.state == ZoomState.WAIT_NOKEY_ZOOM_AREA_EXISTS:
             # 状態遷移のチェック
             if self._get_pointer_near_corner(event):
-                if self.current_key == 'shift':
+                if self.key_pressed['shift']:
                     old_state = self.state
                     self.state = ZoomState.WAIT_SHIFT_RESIZE
                     self._debug_log_transition(old_state, self.state)
-                elif self.current_key == 'alt':
+                elif self.key_pressed['alt']:
                     old_state = self.state
                     self.state = ZoomState.WAIT_ALT_ROTATE
                     self._debug_log_transition(old_state, self.state)
@@ -214,41 +212,69 @@ class ZoomSelector:
 
         # キー割り込みは、ズーム領域が有り、かつ shift か alt キーが押された場合のみ実行
         if self.state == ZoomState.WAIT_NOKEY_ZOOM_AREA_EXISTS and event.key in ['shift', 'alt']:
-            self.current_key = event.key  # 「現在のキー」を「押されているキー」で更新
 
             if not self.key_pressed[self.current_key]:  # キーがまだ押されていない場合のみ処理
                 self.key_pressed[self.current_key] = True  # キー状態を「押されている」に更新
 
-                if self.current_key == 'shift':
-#                    print(f"pointer_near_corner/on_key_press: {self._get_pointer_near_corner(event)}")
-#                    print(f"state前/on_key_press: {self.state}")
-                    if self._get_pointer_near_corner(event):  # マウスカーソルが角許容範囲内の場合
+                if event.key == 'shift':
+                    if self._get_pointer_near_corner(self._last_motion_event):  # マウスカーソルが角許容範囲内の場合
                         old_state = self.state
                         self.state = ZoomState.WAIT_SHIFT_RESIZE  # on_key_press：shift ON、カーソルが角許容範囲内：WAIT_SHIFT_RESIZE へ変更
                         self._debug_log_transition(old_state, self.state)
 
-                elif self.current_key == 'alt':  # alt ON → 回転モードへ（マウスカーソルが角に近いかチェック）
-                    if self._get_pointer_near_corner(event):  # マウスカーソルが角許容範囲内の場合
+                elif event.key == 'alt':  # alt ON → 回転モードへ（マウスカーソルが角に近いかチェック）
+                    if self._get_pointer_near_corner(self._last_motion_event):  # マウスカーソルが角許容範囲内の場合
                         old_state = self.state
                         self.state = ZoomState.WAIT_ALT_ROTATE  # on_key_press：alt ON、カーソルが角許容範囲内：WAIT_ALT_ROTATE へ変更
                         self._debug_log_transition(old_state, self.state)
 
                 self.canvas.draw()
 
-        self.update_cursor(event)
+        self.update_cursor(self._last_motion_event)
 
     def on_key_release(self, event):
-        if event.key != getattr(self, 'current_key', None):  # 現在のキーと一致するか
+        # 離されたキーが 'shift' または 'alt' でなければ無視
+        if event.key not in ['shift', 'alt']:
             return
 
-        if event.key in ['shift', 'alt']:
-            self.current_key = event.key
-            self.key_pressed[self.current_key] = False  # そのキーだけを「離された」状態に更新
-            self.current_key = None
-            if self.state in (ZoomState.WAIT_SHIFT_RESIZE, ZoomState.RESIZE, ZoomState.WAIT_ALT_ROTATE, ZoomState.ROTATE):  # キー割り込みで入ったモードの場合、解除して待機状態へ戻す
-                old_state = self.state
-                self.state = ZoomState.WAIT_NOKEY_ZOOM_AREA_EXISTS  # on_key_release：キー割り込みが解除された場合：WAIT_NOKEY_ZOOM_AREA_EXISTS へ変更
+        # 直前のマウスイベント情報があるかチェック(カーソル更新のために必要)
+        if self._last_motion_event is None:
+            return
+
+        # 対応するキーの状態を「離された」 (False) に更新
+        if event.key in self.key_pressed:
+            self.key_pressed[event.key] = False
+
+        # --- 状態遷移のロジック ---
+        old_state = self.state
+        state_changed = False # 状態が変わったかどうかのフラグ
+
+        # Shift キーが離された場合
+        if event.key == 'shift':
+            # リサイズ関連の状態だったら、待機状態に戻す
+            if self.state in (ZoomState.WAIT_SHIFT_RESIZE, ZoomState.RESIZE):
+                self.state = ZoomState.WAIT_NOKEY_ZOOM_AREA_EXISTS
                 self._debug_log_transition(old_state, self.state)
+                state_changed = True
+
+        # Alt キーが離された場合
+        elif event.key == 'alt':
+            # 回転関連の状態だったら、待機状態に戻す
+            if self.state in (ZoomState.WAIT_ALT_ROTATE, ZoomState.ROTATE):
+                self.state = ZoomState.WAIT_NOKEY_ZOOM_AREA_EXISTS
+                self._debug_log_transition(old_state, self.state)
+                state_changed = True
+
+        # 状態が変わった場合のみログ出力と再描画
+        if state_changed:
+            self._debug_log_transition(old_state, self.state)
+            # カーソル更新のために self._last_motion_event を使う
+            self.update_cursor(self._last_motion_event)
+            self.canvas.draw()
+        # 状態が変わらなくてもカーソルは更新する可能性がある
+        else:
+            # カーソル更新のために self._last_motion_event を使う
+            self.update_cursor(self._last_motion_event)
 
         self.update_cursor(event)
         self.canvas.draw()
@@ -738,10 +764,12 @@ class ZoomSelector:
             e = self._last_motion_event
             event_pos = f"\n  - event_pos: ({e.xdata:.1f}, {e.ydata:.1f})"
 
+        key_status = f"shift: {self.key_pressed['shift']}, alt: {self.key_pressed['alt']}"
+
         print(
             f"State changed: {old_state.name} → {new_state.name}\n"
             f"  - mouse_pos: {mouse_pos}\n"
-            f"  - current_key: {self.current_key or 'None'}\n"
+            f"  - key_pressed: {key_status}\n"
             f"  - Rect: {rect_str}"
             f"{resize_info}"
             f"{event_pos}"
