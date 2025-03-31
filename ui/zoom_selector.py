@@ -151,42 +151,61 @@ class ZoomSelector:
         if not self._is_valid_event(event):
             return
 
-        if self.state == ZoomState.CREATE:  # on_release：CREATE が完了した場合の処理
-            self.press = None
-            self._finalize_zoom_rect(event)
+        # 状態ごとの処理を定義
+        state_handlers = {
+            ZoomState.CREATE: self._handle_create_release,
+            ZoomState.MOVE: self._handle_move_release,
+            ZoomState.RESIZE: self._handle_resize_release,
+            ZoomState.ROTATE: self._handle_rotate_release,
+        }
 
-        elif self.state == ZoomState.MOVE:  # on_release：MOVE が完了の場合の処理
-            self.press = None
-            old_state = self.state
-            self.state = ZoomState.WAIT_NOKEY_ZOOM_AREA_EXISTS  # on_release：移動完了：WAIT_NOKEY_ZOOM_AREA_EXISTS へ変更
-            self._debug_log_transition(old_state, self.state)
-
-        elif self.state == ZoomState.RESIZE:  # on_release：RESIZE が完了した場合の処理
-            self.press = None
-            # shift ON なら、WAIT_SHIFT_RESIZE に遷移
-            if self.key_pressed['shift']:
-                old_state = self.state
-                self.state = ZoomState.WAIT_SHIFT_RESIZE  # on_release：リサイズ完了、shift ON：WAIT_SHIFT_RESIZE へ変更
-                self._debug_log_transition(old_state, self.state)
-            else:
-                old_state = self.state
-                self.state = ZoomState.WAIT_NOKEY_ZOOM_AREA_EXISTS  # on_release：リサイズ完了、shift OFF：WAIT_NOKEY_ZOOM_AREA_EXISTS へ変更
-                self._debug_log_transition(old_state, self.state)
-
-        elif self.state == ZoomState.ROTATE:  # on_release：ROTATE が完了した場合の処理
-            self.press = None
-            # alt ON なら、WAIT_ALT_ROTATE に遷移
-            if self.key_pressed['alt']:
-                old_state = self.state
-                self.state = ZoomState.WAIT_ALT_ROTATE  # on_release：回転完了、alt ON：WAIT_ALT_ROTATE へ変更
-                self._debug_log_transition(old_state, self.state)
-            else:
-                old_state = self.state
-                self.state = ZoomState.WAIT_NOKEY_ZOOM_AREA_EXISTS  # on_release：回転完了、alt OFF：WAIT_NOKEY_ZOOM_AREA_EXISTS へ変更
-                self._debug_log_transition(old_state, self.state)
+        # 現在の状態に対応するハンドラを実行
+        if self.state in state_handlers:
+            state_handlers[self.state](event)
+        else:
+            # 他の状態では何もしない
+            pass
 
         self.update_cursor(event)
         self.canvas.draw()
+
+    def _handle_create_release(self, event):
+        """CREATE状態でのリリース処理"""
+        self.press = None
+        self._finalize_zoom_rect(event)
+
+    def _handle_move_release(self, event):
+        """MOVE状態でのリリース処理"""
+        self.press = None
+        old_state = self.state
+        self.state = ZoomState.WAIT_NOKEY_ZOOM_AREA_EXISTS
+        self._debug_log_transition(old_state, self.state)
+
+    def _handle_resize_release(self, event):
+        """RESIZE状態でのリリース処理"""
+        self.press = None
+        # shift ON なら、WAIT_SHIFT_RESIZE に遷移
+        if self.key_pressed['shift']:
+            old_state = self.state
+            self.state = ZoomState.WAIT_SHIFT_RESIZE
+            self._debug_log_transition(old_state, self.state)
+        else:
+            old_state = self.state
+            self.state = ZoomState.WAIT_NOKEY_ZOOM_AREA_EXISTS
+            self._debug_log_transition(old_state, self.state)
+
+    def _handle_rotate_release(self, event):
+        """ROTATE状態でのリリース処理"""
+        self.press = None
+        # alt ON なら、WAIT_ALT_ROTATE に遷移
+        if self.key_pressed['alt']:
+            old_state = self.state
+            self.state = ZoomState.WAIT_ALT_ROTATE
+            self._debug_log_transition(old_state, self.state)
+        else:
+            old_state = self.state
+            self.state = ZoomState.WAIT_NOKEY_ZOOM_AREA_EXISTS
+            self._debug_log_transition(old_state, self.state)
 
     def on_key_press(self, event):
         # キーイベントでは event.inaxes や xdata が不要
