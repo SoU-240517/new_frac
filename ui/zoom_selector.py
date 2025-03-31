@@ -17,6 +17,7 @@ class ResizeOperationData:            # リサイズ操作のデータを保持�
     press_x: float                    # ドラッグ開始時のx座標
     press_y: float                    # ドラッグ開始時のy座標
 
+@dataclass
 class RotationOperationData:
     center_x: float
     center_y: float
