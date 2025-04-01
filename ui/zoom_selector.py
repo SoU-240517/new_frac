@@ -140,23 +140,34 @@ class ZoomSelector:
             self._cancel_zoom()
 
     def _handle_zoom_rect_exists_press(self, event):
-            if event.button == 1:
-                self._record_drag_start(event)
-                self.state = ZoomState.MOVE
-            elif event.button == 2:
-                self._cancel_zoom()
-            elif event.button == 3:
-                self._confirm_zoom()
+        if event.button == 1:
+            self._record_drag_start(event)
+            self.state = ZoomState.MOVE
+        elif event.button == 2:
+            self._cancel_zoom()
+        elif event.button == 3:
+            self._confirm_zoom()
 
     def _handle_resize_press(self, event):
-        if not self._validate_resize_event(event):
+        # 基本チェック（マウスが角近く + 左クリック）
+        if not self._get_pointer_near_corner(event) or event.button != 1:
             return
 
-        if self._get_pointer_near_corner(event) and event.button == 1:
-            # まずデータを準備してから状態を遷移させる
-            self.press = self._prepare_resize(event)
-            print(f"[DEBUG] press type: {type(self.press)}")  # 追加
-            self.state = ZoomState.RESIZE
+        # データ準備
+        self.press = self._prepare_resize(event)
+
+        # リサイズ可能か簡易チェック（状態チェックは除外）
+        if (self.rect is None or
+            not isinstance(self.press, ResizeOperationData) or
+            event.xdata is None or
+            event.ydata is None):
+            self.press = None  # 不正データをクリア
+            if self._debug:
+                print("[Resize Init Failed] Invalid initial state")
+            return
+
+        # すべてOKならリサイズモードへ遷移
+        self.state = ZoomState.RESIZE
 
     def _handle_rotate_press(self, event):
         if self._get_pointer_near_corner(event) and event.button == 1:
@@ -478,52 +489,49 @@ class ZoomSelector:
         if event.key not in ['shift', 'alt']:  # 必要なキーのみ許可
             return
 
-        print(f"Key pressed.on_key_press: {event.key}, ZoomState: {self.state}")
         # キー割り込みは、ズーム領域が有り、かつ shift か alt キーが押された場合のみ実行
         if self.state == ZoomState.WAIT_NOKEY_ZOOM_RECT_EXISTS and event.key in ['shift', 'alt']:
-
-            if not self.key_pressed[event.key]:  # キーがまだ押されていない場合のみ処理
-                self.key_pressed[event.key] = True  # キー状態を「押されている」に更新
-
+            # キーリピート対策：初めてキーが押された場合は Ture ではないので、処理を実行
+            # 直後に True になるので、その後は実行しない
+            if not self.key_pressed[event.key]:
+                self.key_pressed[event.key] = True
                 if self.key_pressed['shift']:
                     if self._get_pointer_near_corner(self._last_motion_event):  # マウスカーソルが角許容範囲内の場合
                         self.state = ZoomState.WAIT_SHIFT_RESIZE  # on_key_press：shift ON、カーソルが角許容範囲内：WAIT_SHIFT_RESIZE へ変更
-
                 elif self.key_pressed['alt']:  # alt ON → 回転モードへ（マウスカーソルが角に近いかチェック）
                     if self._get_pointer_near_corner(self._last_motion_event):  # マウスカーソルが角許容範囲内の場合
                         self.state = ZoomState.WAIT_ALT_ROTATE  # on_key_press：alt ON、カーソルが角許容範囲内：WAIT_ALT_ROTATE へ変更
-
                 self.canvas.draw()
-
         self.update_cursor(self._last_motion_event)
 
     # on_key_release 関連--------------------------------------------------
     def on_key_release(self, event):
-        # 離されたキーが 'shift' または 'alt' でなければ無視
-        if event.key not in ['shift', 'alt']:
-            return
-
         # 直前のマウスイベント情報があるかチェック(カーソル更新のために必要)
         if self._last_motion_event is None:
             return
-
-        # 対応するキーの状態を「離された」 (False) に更新
+        # 離されたキーが 'shift' または 'alt' でなければ無視
+        # これを通過するなら、離されたキーが shift または alt であることが確定する
+        if event.key not in ['shift', 'alt']:
+            return
+        # 離されたキーが self.key_pressed 辞書に含まれるか（追跡対象か）を確認する
+            # 例えば、shift キーが離された場合、'shift' in self.key_pressed は True になりるので、
+            # その後の処理が実行されて、self.key_pressed['shift'] は False になる
         if event.key in self.key_pressed:
             self.key_pressed[event.key] = False
 
-        # --- 状態遷移のロジック ---
-        state_changed = False # 状態が変わったかどうかのフラグ
+        # 状態が変わったかどうかのフラグに、false を設定
+        state_changed = False
 
         # Shift キーが離された場合
-        if self.key_pressed['shift']:
-            # リサイズ関連の状態だったら、待機状態に戻す
+        if not self.key_pressed['shift']:
+            # 状態が WAIT_SHIFT_RESIZE か RESIZE だったら、WAIT_NOKEY_ZOOM_RECT_EXISTS に戻す
             if self.state in (ZoomState.WAIT_SHIFT_RESIZE, ZoomState.RESIZE):
                 self.state = ZoomState.WAIT_NOKEY_ZOOM_RECT_EXISTS
                 state_changed = True
 
         # Alt キーが離された場合
-        elif self.key_pressed['alt']:
-            # 回転関連の状態だったら、待機状態に戻す
+        elif not self.key_pressed['alt']:
+            # WAIT_ALT_ROTATE か ROTATE だったら、WAIT_NOKEY_ZOOM_RECT_EXISTS に戻す
             if self.state in (ZoomState.WAIT_ALT_ROTATE, ZoomState.ROTATE):
                 self.state = ZoomState.WAIT_NOKEY_ZOOM_RECT_EXISTS
                 state_changed = True
@@ -540,6 +548,7 @@ class ZoomSelector:
 
         self.update_cursor(event)
         self.canvas.draw()
+
     # -------------------------------------------------------------------------
     def _clear_zoom_rect(self):
         """
