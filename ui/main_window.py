@@ -92,15 +92,16 @@ class MainWindow:
 
     def on_zoom_cancel(self):
         """
-        ズームキャンセル時のコールバック。
-        既にズーム確定後の場合は直前の状態に戻し、未確定の場合は単に再描画。
+        ズームキャンセル時のコールバック
+        既にズーム確定後の場合は直前の状態に戻し、未確定の場合は単に再描画
         """
         print("ズームキャンセル : on_zoom_cancel / main_window.py")  # debug_log(print)
         if self.prev_zoom_params is not None:  # ズーム確定済みの場合
-            self.zoom_params = self.prev_zoom_params
-            self.prev_zoom_params = None
-        else:  # ズーム未確定の場合
-            self.update_fractal()
+            self.zoom_params = self.prev_zoom_params.copy()  # 状態を復元
+            self.update_fractal()  # 再描画を実行
+            self.prev_zoom_params = None  # 再描画後にクリア
+        else:
+            self.update_fractal()  # 未確定時のキャンセルでも再描画
 
     def reset_zoom(self):
         """
