@@ -63,6 +63,7 @@ class ZoomSelector:
         self._debug = True  # デバッグモードフラグ
         self._cached_rect_props = None  # キャッシュ用変数
         self._last_motion_event = None  # 直前のマウス移動イベントを保存する変数
+        self.drag_direction = None  # ドラッグ方向を保存する変数
 
         # イベントハンドラ接続
         self.cid_press       = self.canvas.mpl_connect('button_press_event', self.on_press)
@@ -302,6 +303,9 @@ class ZoomSelector:
 
     # on_motion 関連--------------------------------------------------
     def on_motion(self, event):
+#        if self._debug and event.xdata is not None:  # デバッグ用★★★
+#            print(f"[Mouse Position.on_motion] X: {event.xdata:.2f}, Y: {event.ydata:.2f}")  # デバッグ用★★★
+
         # 受け取ったイベント情報を直前のズーム領域として保存
         self._last_motion_event = event
 
@@ -399,8 +403,48 @@ class ZoomSelector:
 
         # ズーム領域の左下座標とサイズを設定
         self.rect.set_bounds(x, y, width, height)
+#        print(f"[Rect Actual._update_rect_size] XY: {self.rect.get_xy()} | Width: {self.rect.get_width():.2f} | Height: {self.rect.get_height():.2f}") if self._debug else None  # デバッグ用★★★
         self._invalidate_rect_cache()
         self.canvas.draw()
+
+    def _calculate_resized_rect(self, current_x: float, current_y: float) -> tuple:
+        """
+        リサイズ後のズーム領域の座標を計算（共通化されたロジック）
+        Args:
+            current_x (float): 現在のマウスX座標
+            current_y (float): 現在のマウスY座標
+        Returns:
+            tuple: (x, y, width, height)
+        """
+        if not isinstance(self.press, ResizeOperationData):
+#            print("[_calculate_resized_rect] Invalid press data") if self._debug else None  # デバッグ用★★★
+            return None
+
+        # 固定点と現在の座標からズーム領域を計算
+        fixed_x, fixed_y = self.press.fixed_point
+#        print(f"[_calculate_resized_rect] Corner: {self.press.corner_name} | Fixed point: ({fixed_x:.2f}, {fixed_y:.2f})") if self._debug else None  # デバッグ用★★★
+#        print(f"[_calculate_resized_rect] Current mouse: ({current_x:.2f}, {current_y:.2f})") if self._debug else None  # デバッグ用★★★
+
+        if self.press.corner_name == 'bottom_left':
+            x0, x1 = sorted([current_x, fixed_x])
+            y0, y1 = sorted([current_y, fixed_y])
+        elif self.press.corner_name == 'bottom_right':
+            x0, x1 = sorted([fixed_x, current_x])
+            y0, y1 = sorted([current_y, fixed_y])
+        elif self.press.corner_name == 'top_left':
+            x0, x1 = sorted([current_x, fixed_x])
+            y0, y1 = sorted([fixed_y, current_y])
+        elif self.press.corner_name == 'top_right':
+            x0, x1 = sorted([fixed_x, current_x])
+            y0, y1 = sorted([fixed_y, current_y])
+        else:
+            return None
+
+        width = x1 - x0
+        height = y1 - y0
+#        print(f"[_calculate_resized_rect] Calculated Rect: x={x0:.2f}, y={y0:.2f}, w={width:.2f}, h={height:.2f}") if self._debug else None  # デバッグ用★★★
+
+        return (x0, y0, width, height)
 
     # on_release 関連--------------------------------------------------
     def on_release(self, event):
@@ -470,11 +514,11 @@ class ZoomSelector:
         ズーム領域の作成を確定し、最小サイズを保証する
         """
         # 開始座標と終了座標を保存
-        self.end_x, self.end_y = event.xdata, event.ydata
+        end_x, end_y = event.xdata, event.ydata
 
         # 差分計算（現在の座標 - 開始座標）
-        dx = self.end_x - self.start_x
-        dy = self.end_y - self.start_y
+        dx = end_x - self.start_x
+        dy = end_y - self.start_y
 
         # ズーム領域の幅か高さが 0 の場合は、ズーム領域をクリア
         if dx == 0 or dy == 0:
@@ -483,8 +527,8 @@ class ZoomSelector:
             return
 
         # ズーム領域の仮位置・サイズ計算（最小サイズ適用前）
-        new_x = self.start_x if dx > 0 else self.end_x
-        new_y = self.start_y if dy > 0 else self.end_y
+        new_x = self.start_x if dx > 0 else end_x
+        new_y = self.start_y if dy > 0 else end_y
         width = abs(dx)
         height = abs(dy)
 
@@ -499,8 +543,6 @@ class ZoomSelector:
     def _apply_min_size_constraints(self):
         """
         ズーム領域のサイズが最小サイズ未満の場合、最小サイズを適用する
-        Args:
-            adjust_position (bool, optional): Trueなら中心を保つように位置調整する. Defaults to False.
         """
         if self.rect is None:
             return
@@ -714,39 +756,6 @@ class ZoomSelector:
             center_y=cy,
             initial_angle=initial_angle
         )
-
-    def _calculate_resized_rect(self, current_x: float, current_y: float) -> tuple:
-        """
-        リサイズ後のズーム領域の座標を計算（共通化されたロジック）
-        Args:
-            current_x (float): 現在のマウスX座標
-            current_y (float): 現在のマウスY座標
-        Returns:
-            tuple: (x, y, width, height)
-        """
-        if not isinstance(self.press, ResizeOperationData):
-            return None
-
-        # 固定点と現在の座標からズーム領域を計算
-        fixed_x, fixed_y = self.press.fixed_point
-
-        if self.press.corner_name == 'bottom_left':
-            x0, x1 = sorted([current_x, fixed_x])
-            y0, y1 = sorted([current_y, fixed_y])
-        elif self.press.corner_name == 'bottom_right':
-            x0, x1 = sorted([fixed_x, current_x])
-            y0, y1 = sorted([current_y, fixed_y])
-        elif self.press.corner_name == 'top_left':
-            x0, x1 = sorted([current_x, fixed_x])
-            y0, y1 = sorted([fixed_y, current_y])
-        elif self.press.corner_name == 'top_right':
-            x0, x1 = sorted([fixed_x, current_x])
-            y0, y1 = sorted([fixed_y, current_y])
-        else:
-            return None
-
-        return (x0, y0, x1 - x0, y1 - y0)
-
 
     def _update_rect_rotate(self, event):
         """
