@@ -264,23 +264,29 @@ class ZoomSelector:
         """
         マウス位置から最も近い角を選定し、固定すべき点を求める
         """
-        # ズーム領域の現在の位置・サイズを保存
+        # ズーム領域の現在位置(x,y)とサイズ(width,height)を取得
         x, y, width, height = self._get_rect_properties()
-        # 角の名前と座標を設定
+
+        # 左下、右下、左上、右上の4つの角とその名前を辞書で定義
         corners = {
             'bottom_left': (x, y),
             'bottom_right': (x + width, y),
             'top_left': (x, y + height),
             'top_right': (x + width, y + height)
         }
-        min_dist = float('inf')
-        nearest_key = None  # 最も近い角の名前を保存する変数を初期化
-        for key, (cx, cy) in corners.items():
+
+        # マウス位置から最も近い角を特定するための変数の初期化
+        min_dist = float('inf')  # 角までの距離を保存する変数
+        nearest_key = None  # 角の名前を保存する変数
+
+        # 各角までの距離を計算
+        for key, (cx, cy) in corners.items():  # 辞書のキーとxy座標を取得
             dist = np.hypot(event.xdata - cx, event.ydata - cy)
             if dist < min_dist:
                 min_dist = dist
-                nearest_key = key
-        # 固定する対角の点を設定（例：bottom_left の場合は top_right が固定点）
+                nearest_key = key  # 最も近い角を保存
+
+        # 固定する対角の点を決定（例：bottom_left の場合は top_right が固定点）
         if nearest_key == 'bottom_left':
             fixed = (x + width, y + height)
         elif nearest_key == 'bottom_right':
@@ -289,6 +295,7 @@ class ZoomSelector:
             fixed = (x + width, y)
         elif nearest_key == 'top_right':
             fixed = (x, y)
+
         # 変更後（データクラスを返す）
         return ResizeOperationData(
             corner_name=nearest_key,
