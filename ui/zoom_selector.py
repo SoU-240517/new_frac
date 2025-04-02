@@ -10,10 +10,10 @@ import time  # スロットリング用の時間処理モジュール
 class ResizeOperationData:            # リサイズ操作のデータを保持するデータクラス
     corner_name: str                  # 操作中の角（'bottom_left'など）
     fixed_point: tuple[float, float]  # 固定される対角の座標
-    original_x: float                 # 矩形の元のx座標
-    original_y: float                 # 矩形の元のy座標
-    original_width: float             # 矩形の元の幅
-    original_height: float            # 矩形の元の高さ
+    original_x: float                 # ズーム領域の元のx座標
+    original_y: float                 # ズーム領域の元のy座標
+    original_width: float             # ズーム領域の元の幅
+    original_height: float            # ズーム領域の元の高さ
     press_x: float                    # ドラッグ開始時のx座標
     press_y: float                    # ドラッグ開始時のy座標
 
@@ -24,10 +24,10 @@ class RotationOperationData:
     initial_angle: float
 
 class ZoomState(Enum):                    # ズーム操作の状態を表す列挙型
-    NO_ZOOM_RECT = auto()                 # ズーム領域無し（領域が存在しない）
-    CREATE = auto()                       # ズーム領域新規作成モード（左ボタン ONで開始）
+    NO_ZOOM_RECT = auto()                 # ズーム領域無し（ズーム領域が存在しない）
+    CREATE = auto()                       # ズーム領域の新規作成モード（左ボタン ONで開始）
     WAIT_NOKEY_ZOOM_RECT_EXISTS = auto()  # ズーム領域有り（キー入力無し）
-    MOVE = auto()                         # 領域移動モード（領域内で左ドラッグ）
+    MOVE = auto()                         # ズーム領域移動モード（ズーム領域内で左ドラッグ）
     WAIT_SHIFT_RESIZE = auto()            # リサイズ待機モード（shift ON）
     RESIZE = auto()                       # リサイズモード（shift＋左ドラッグ）
     WAIT_ALT_ROTATE = auto()              # 回転待機モード（alt ON）
@@ -35,24 +35,26 @@ class ZoomState(Enum):                    # ズーム操作の状態を表す列
 
 class ZoomSelector:
     def __init__(self, ax, on_zoom_confirm, on_zoom_cancel):
+        """
+        ズームセレクターの初期化
+        Args:
+            ax: 対象の matplotlib Axes
+            on_zoom_confirm: ズーム確定時のコールバック（zoom_params を引数に取る）
+            on_zoom_cancel: ズームキャンセル時のコールバック
+        """
         print("START : __init__")
-        """
-        ax: 対象の matplotlib Axes
-        on_zoom_confirm: ズーム確定時のコールバック（zoom_params を引数に取る）
-        on_zoom_cancel: ズームキャンセル時のコールバック
-        """
         self.ax = ax
         self.canvas = ax.figure.canvas
         self.on_zoom_confirm = on_zoom_confirm
         self.on_zoom_cancel = on_zoom_cancel
-        self.rect = None         # 現在のズーム領域（情報があれば領域有り）
-        self.last_rect = None    # 直前のズーム領域（キャンセル用）
-        self.press = None        # ドラッグ開始時の情報（移動・リサイズ・回転共通）
-        self.start_x = None      # 新規作成開始時の x 座標
-        self.start_y = None      # 新規作成開始時の y 座標
+        self.rect = None  # 現在のズーム領域（情報があればズーム領域有り）
+        self.last_rect = None  # 直前のズーム領域（キャンセル用）
+        self.press = None  # ドラッグ開始時の情報（移動・リサイズ・回転共通）
+        self.start_x = None  # 新規作成開始時の x 座標
+        self.start_y = None  # 新規作成開始時の y 座標
         self.key_pressed = {'shift': False, 'alt': False}  # キー状態追跡用の変数
-        self.angle = 0.0         # 現在の回転角（度）
-        self.rot_base = 0.0      # 回転開始時の角度
+        self.angle = 0.0  # 現在の回転角（度）
+        self.rot_base = 0.0  # 回転開始時の角度
         self.last_cursor_state = "arrow"
         self.last_motion_time = int(time.time() * 1000)  # 初期値を設定
         self.motion_throttle_ms = 30  # 30ミリ秒ごとに処理（約33fps）
@@ -74,6 +76,8 @@ class ZoomSelector:
     def state(self):
         """
         ゲッター：ズーム操作の現在の状態を返すだけ
+        Returns:
+            ZoomState: 現在のズーム操作の状態
         """
         return self._state
 
@@ -81,7 +85,10 @@ class ZoomSelector:
     def state(self, new_state):
         """
         セッター：ズーム操作の状態変更時の処理を一元管理
-        引数：new_state（新しい状態）
+        Args:
+            new_state (_type_): 新しい状態
+        Raises:
+            TypeError: 新しい状態が ZoomState 型でない場合、エラーを発生させる
         """
         # new_state が ZoomState 型かどうかを確認し、違う場合はエラー（TypeError）を発生させる
         if not isinstance(new_state, ZoomState):
@@ -101,8 +108,10 @@ class ZoomSelector:
 
     def _on_state_changed(self, old_state, new_state):
         """
-        ズーム操作の状態変更時の追加処理
-        今は、メソッド内で引数が未使用
+        ズーム操作の状態変更時の追加処理（今は、メソッド内で引数が未使用）
+        Args:
+            old_state (_type_): 未使用
+            new_state (_type_): 未使用
         """
         # サンプル: カーソル更新
         if self._last_motion_event:  # 直前のマウス移動イベントがある場合
@@ -133,6 +142,9 @@ class ZoomSelector:
         self.canvas.draw()
 
     def _handle_no_zoom_rect_press(self, event):
+        """
+        ズーム領域が無い状態でのマウス左押下時の処理
+        """
         if event.button == 1:
             self.state = ZoomState.CREATE
             self._begin_zoom_rect_creation(event)
@@ -140,6 +152,9 @@ class ZoomSelector:
             self._cancel_zoom()
 
     def _handle_zoom_rect_exists_press(self, event):
+        """
+        ズーム領域ありで待機中のマウス左押下時の処理
+        """
         if event.button == 1:
             self._record_drag_start(event)
             self.state = ZoomState.MOVE
@@ -149,7 +164,10 @@ class ZoomSelector:
             self._confirm_zoom()
 
     def _handle_resize_press(self, event):
-        # 基本チェック（マウスが角近く + 左クリック）
+        """
+        ズーム領域あり、かつ Shift キーが押下状態でのマウス左押下時の処理
+        """
+        # 基本チェック（マウスが角近くにあるか、マウスボタンが 1 以外の場合は、メソッドを終了）
         if not self._get_pointer_near_corner(event) or event.button != 1:
             return
 
@@ -170,8 +188,12 @@ class ZoomSelector:
         self.state = ZoomState.RESIZE
 
     def _handle_rotate_press(self, event):
+        """
+        ズーム領域あり、かつ Alt キーが押下状態でのマウス左押下時の処理
+        """
+        # 基本チェック（マウスが角近くにあり、マウスボタンが 1 以外の場合は、メソッドを終了）
         if self._get_pointer_near_corner(event) and event.button == 1:
-            self._initiate_rotation(event)
+            self._initiate_rect_rotation(event)
             self.state = ZoomState.ROTATE
 
     def _begin_zoom_rect_creation(self, event):
@@ -190,42 +212,39 @@ class ZoomSelector:
 
     def _cancel_zoom(self):
         """
-        直前の描画情報があれば復元、無い場合は領域を削除してコールバックを呼び出す
+        直前の描画情報があれば復元、無い場合はズーム領域を削除してコールバックを呼び出す
         """
         if self.state == ZoomState.WAIT_NOKEY_ZOOM_RECT_EXISTS:
             if self.last_rect:
-                # 直前の矩形を復元し、prev_zoom_params も更新
+                # 直前のズーム領域を復元し、prev_zoom_params も更新
                 x, y, width, height = self.last_rect
                 self.rect.set_xy((x, y))
                 self.rect.set_width(width)
                 self.rect.set_height(height)
-                self.state = ZoomState.WAIT_NOKEY_ZOOM_RECT_EXISTS  # cancel_zoom：ズームキャンセル後、領域無し：WAIT_NOKEY_ZOOM_AREA_EXISTS へ変更
+                self.state = ZoomState.WAIT_NOKEY_ZOOM_RECT_EXISTS  # cancel_zoom：ズームキャンセル後、ズーム領域無し：WAIT_NOKEY_ZOOM_AREA_EXISTS へ変更
             else:
-                self._clear_zoom_rect()
-                self.state = ZoomState.NO_ZOOM_RECT  # _cancel_zoom：ズームキャンセル後、領域無し：NO_ZOOM_AREA へ変更
+                self._clear_rect()
+                self.state = ZoomState.NO_ZOOM_RECT  # _cancel_zoom：ズームキャンセル後、ズーム領域無し：NO_ZOOM_AREA へ変更
         elif self.state == ZoomState.NO_ZOOM_RECT:
             if self.on_zoom_cancel:
                 self.on_zoom_cancel()  # コールバック：MainWindow.on_zoom_cancel を呼ぶ
-                self.state = ZoomState.NO_ZOOM_RECT  # _cancel_zoom：ズームキャンセル後、領域無し：NO_ZOOM_AREA へ変更
+                self.state = ZoomState.NO_ZOOM_RECT  # _cancel_zoom：ズームキャンセル後、ズーム領域無し：NO_ZOOM_AREA へ変更
 
     def _record_drag_start(self, event):
         """
         移動開始位置を取得する
-        :param event:
-        :return: 移動開始位置
         """
         self.press = (self.rect.get_xy(), event.xdata, event.ydata)
 
     def _confirm_zoom(self):
         """
-        ズーム領域の確定処理
-        ズーム領域の情報からズームパラメータを生成しコールバック呼び出す
+        ズーム領域確定処理：ズーム領域の情報からズームパラメータを生成しコールバック呼び出す
         """
         # ズーム領域が無い場合は何もしない
         if self.rect is None:
             return
 
-        x, y, width, height = self._get_zoom_rect_properties()
+        x, y, width, height = self._get_rect_properties()
         center_x = x + width / 2.0
         center_y = y + height / 2.0
         zoom_params = {
@@ -235,7 +254,7 @@ class ZoomSelector:
             "height": abs(height),
             "rotation": self.angle
         }
-        self._clear_zoom_rect()
+        self._clear_rect()
         if self.on_zoom_confirm:
             self.on_zoom_confirm(zoom_params)  # コールバック：MainWindow.on_zoom_confirm を呼ぶ
         self.state = ZoomState.NO_ZOOM_RECT  # _confirm_zoom：ズーム確定後：NO_ZOOM_AREA へ変更
@@ -244,8 +263,8 @@ class ZoomSelector:
         """
         マウス位置から最も近い角を選定し、固定すべき点を求める
         """
-        # 領域の現在の位置・サイズを保存
-        x, y, width, height = self._get_zoom_rect_properties()
+        # ズーム領域の現在の位置・サイズを保存
+        x, y, width, height = self._get_rect_properties()
         # 角の名前と座標を設定
         corners = {
             'bottom_left': (x, y),
@@ -283,7 +302,7 @@ class ZoomSelector:
 
     # on_motion 関連--------------------------------------------------
     def on_motion(self, event):
-        # 受け取ったイベント情報を保存
+        # 受け取ったイベント情報を直前のズーム領域として保存
         self._last_motion_event = event
 
         # _is_valid_event メソッドの返り値が true でない場合は、カーソルを矢印にしてメソッドを終了
@@ -294,27 +313,28 @@ class ZoomSelector:
         # スロットリング処理
         current_time = int(time.time() * 1000)  # 現在時刻をミリ秒単位で取得
         # 前回のモーションイベントからの経過時間がスロットリング時間を超えている場合、メソッドを終了
-        if hasattr(self, 'last_motion_time') and current_time - self.last_motion_time < self.motion_throttle_ms:
+        if (hasattr(self, 'last_motion_time') and
+            current_time - self.last_motion_time < self.motion_throttle_ms):
             return
         self.last_motion_time = current_time  # 現在時刻を更新
 
         # 状態ごとの更新処理を定義
         state_handlers = {
-            ZoomState.CREATE: self._update_zoom_rect,
-            ZoomState.MOVE: self._update_zoom_rect_position,
-            ZoomState.RESIZE: self._update_zoom_rect_size,
-            ZoomState.ROTATE: self._update_zoom_rect_rotate,
+            ZoomState.CREATE: self._update_rect,
+            ZoomState.MOVE: self._update_rect_position,
+            ZoomState.RESIZE: self._update_rect_size,
+            ZoomState.ROTATE: self._update_rect_rotate,
         }
 
-        # 矩形プロパティの取得（一度だけ）
-        old_props = self._get_zoom_rect_properties()
+        # ズーム領域のプロパティの取得（一度だけ）
+        old_props = self._get_rect_properties()
         changed = False
 
         # メイン処理
         # ズーム状態と対応する更新メソッドが存在する場合、対応する更新メソッドを実行
         if self.state in state_handlers:
             state_handlers[self.state](event)
-            new_props = self._get_zoom_rect_properties()
+            new_props = self._get_rect_properties()
             changed = old_props != new_props  # 変更があれば True を返す
         elif self.state == ZoomState.WAIT_NOKEY_ZOOM_RECT_EXISTS:
             # カーソルが角付近にある場合、ズーム状態を変更
@@ -323,7 +343,7 @@ class ZoomSelector:
                     self.state = ZoomState.WAIT_SHIFT_RESIZE
                 elif self.key_pressed['alt']:
                     self.state = ZoomState.WAIT_ALT_ROTATE
-            new_props = self._get_zoom_rect_properties()
+            new_props = self._get_rect_properties()
             changed = old_props != new_props  # 変更があれば True を返す
 
         # カーソル更新と再描画
@@ -331,11 +351,10 @@ class ZoomSelector:
         if changed:
             self.canvas.draw()
 
-    def _update_zoom_rect(self, event):
+    def _update_rect(self, event):
         """
         ズーム領域の更新
         """
-        # _is_valid_event メソッドの戻り値が true ではない場合はメソッドを終了
         if not self._is_valid_event(event):
             return
 
@@ -349,10 +368,9 @@ class ZoomSelector:
             abs(dy)
         )
 
-        # キャッシュを確実に無効化
         self._invalidate_rect_cache()
 
-    def _update_zoom_rect_position(self, event):
+    def _update_rect_position(self, event):
         """
         ズーム領域の位置の更新
         """
@@ -362,18 +380,14 @@ class ZoomSelector:
         self.rect.set_xy((orig_xy[0] + dx, orig_xy[1] + dy))
         self._invalidate_rect_cache()
 
-    def _update_zoom_rect_size(self, event):
+    def _update_rect_size(self, event):
         """
         ズーム領域のサイズ更新
         """
-        if not self._validate_resize_event(event):
-            return
-
-        if self.press is None or self.rect is None:
-            return
-
-        # 変更後（データクラスの属性にアクセス）
-        if not isinstance(self.press, ResizeOperationData):
+        if (not self._validate_resize_event(event) or
+            self.press is None or
+            self.rect is None or
+            not isinstance(self.press, ResizeOperationData)):
             return
 
         # 共通メソッドで座標計算
@@ -383,11 +397,7 @@ class ZoomSelector:
 
         x, y, width, height = rect_params
 
-        # 最小サイズ制限（絶対値で比較）
-        width = max(width, self.MIN_RECT_SIZE)
-        height = max(height, self.MIN_RECT_SIZE)
-
-        # 矩形の左下座標とサイズを設定
+        # ズーム領域の左下座標とサイズを設定
         self.rect.set_bounds(x, y, width, height)
         self._invalidate_rect_cache()
         self.canvas.draw()
@@ -420,7 +430,9 @@ class ZoomSelector:
         CREATE状態でのリリース処理
         """
         self.press = None
-        self._finalize_zoom_rect(event)
+        self._finalize_rect(event)
+        self._apply_min_size_constraints()
+        self.state = ZoomState.WAIT_NOKEY_ZOOM_RECT_EXISTS
 
     def _handle_move_release(self, event):
         """
@@ -431,10 +443,12 @@ class ZoomSelector:
 
     def _handle_resize_release(self, event):
         """
-        RESIZE状態でのリリース処理
+        リサイズ終了時の処理（最小サイズ適用）
         """
+        if self.rect is not None:
+            self._apply_min_size_constraints()
+
         self.press = None
-        # shift ON なら、WAIT_SHIFT_RESIZE に遷移
         if self.key_pressed['shift']:
             self.state = ZoomState.WAIT_SHIFT_RESIZE
         else:
@@ -451,39 +465,81 @@ class ZoomSelector:
         else:
             self.state = ZoomState.WAIT_NOKEY_ZOOM_RECT_EXISTS
 
-    def _finalize_zoom_rect(self, event):
+    def _finalize_rect(self, event):
         """
         ズーム領域の作成を確定し、最小サイズを保証する
         """
+        # 開始座標と終了座標を保存
+        self.end_x, self.end_y = event.xdata, event.ydata
+
         # 差分計算（現在の座標 - 開始座標）
-        dx = event.xdata - self.start_x
-        dy = event.ydata - self.start_y
+        dx = self.end_x - self.start_x
+        dy = self.end_y - self.start_y
 
         # ズーム領域の幅か高さが 0 の場合は、ズーム領域をクリア
         if dx == 0 or dy == 0:
-            self._clear_zoom_rect()
+            self._clear_rect()
             self.state = ZoomState.NO_ZOOM_RECT
             return
 
-        # 矩形の仮位置・サイズ計算（最小サイズ適用前）
-        new_x = self.start_x if dx > 0 else event.xdata
-        new_y = self.start_y if dy > 0 else event.ydata
+        # ズーム領域の仮位置・サイズ計算（最小サイズ適用前）
+        new_x = self.start_x if dx > 0 else self.end_x
+        new_y = self.start_y if dy > 0 else self.end_y
         width = abs(dx)
         height = abs(dy)
 
-        # 最小サイズ適用（サイズと位置を同時に調整）
-        if width < self.MIN_RECT_SIZE:
-            width = self.MIN_RECT_SIZE
-            new_x = self.start_x - width if dx < 0 else self.start_x  # 左方向ドラッグ時は開始位置から左側に拡張
-        if height < self.MIN_RECT_SIZE:
-            height = self.MIN_RECT_SIZE
-            new_y = self.start_y - height if dy < 0 else self.start_y  # 上方向ドラッグ時は開始位置から上側に拡張
-
-        # 矩形を更新
+        # ズーム領域を一時的に設定（最小サイズチェック前）
         self.rect.set_bounds(new_x, new_y, width, height)
-        self.state = ZoomState.WAIT_NOKEY_ZOOM_RECT_EXISTS
 
-    # on_key_press 関連--------------------------------------------------
+        # ドラッグ方向を保存（最小サイズ適用時に使用）
+        self.drag_direction = {
+            'x': 'right' if dx > 0 else 'left',
+            'y': 'up' if dy > 0 else 'down'
+        }
+    def _apply_min_size_constraints(self):
+        """
+        ズーム領域のサイズが最小サイズ未満の場合、最小サイズを適用する
+        Args:
+            adjust_position (bool, optional): Trueなら中心を保つように位置調整する. Defaults to False.
+        """
+        if self.rect is None:
+            return
+
+        x, y, width, height = self._get_rect_properties()
+        new_width = max(width, self.MIN_RECT_SIZE)
+        new_height = max(height, self.MIN_RECT_SIZE)
+
+        # サイズ変更が必要ない場合は終了
+        if abs(width - new_width) < 1e-6 and abs(height - new_height) < 1e-6:
+            return
+
+        # ドラッグ方向に基づいて拡張方向を決定
+        if hasattr(self, 'drag_direction'):
+            # 幅の拡張
+            if width < new_width:
+                if self.drag_direction['x'] == 'left':
+                    x -= (new_width - width)  # 左方向に拡張
+                # else: 右方向はデフォルトで拡張される
+
+            # 高さの拡張
+            if height < new_height:
+                if self.drag_direction['y'] == 'down':
+                    y -= (new_height - height)  # 下方向に拡張
+                # else: 上方向はデフォルトで拡張される
+
+        # ズーム領域を更新
+        self.rect.set_bounds(x, y, new_width, new_height)
+        self._invalidate_rect_cache()
+
+        if self._debug:
+            print(
+                f"[MinSize] Applied: {width:.2f}x{height:.2f} → "
+                f"{new_width:.2f}x{new_height:.2f} "
+                f"at ({x:.2f}, {y:.2f}) "
+                f"direction: {getattr(self, 'drag_direction', 'unknown')}"
+            )
+
+    # on_key_press 関連 --------------------------------------------------
     def on_key_press(self, event):
         # キーイベントでは event.inaxes や xdata が不要
         if event.key not in ['shift', 'alt']:  # 必要なキーのみ許可
@@ -550,18 +606,18 @@ class ZoomSelector:
         self.canvas.draw()
 
     # -------------------------------------------------------------------------
-    def _clear_zoom_rect(self):
+    def _clear_rect(self):
         """
-        ズーム矩形を完全にクリア（キャッシュ・状態もリセット）
+        ズーム領域を完全にクリア（キャッシュ・状態もリセット）
         """
-        # 矩形の削除
+        # ズーム領域の削除
         if self.rect is not None:
             self.rect.remove()
             self.rect = None
 
         # 状態の完全リセット
         self._invalidate_rect_cache()  # キャッシュクリア
-        self.last_rect = None  # 直前の矩形情報もクリア
+        self.last_rect = None  # 直前のズーム領域の情報もクリア
         self.press = None  # ドラッグ情報をリセット
         self.start_x = self.start_y = None  # 開始座標リセット
 
@@ -591,15 +647,13 @@ class ZoomSelector:
 
     def _get_pointer_near_corner(self, event):
         """
-        マウス位置が領域の角に近いかどうかを判定する
+        マウス位置がズーム領域の角に近いかどうかを判定する。
         許容範囲 tol = 0.1 * min(width, height)（ただし min が 0 の場合は 0.2）
-        :param event:
-        :return: マウス位置が領域の角に近い場合は True、そうでない場合は False
         """
         if self.rect is None:
             return False
-        # 矩形の位置とサイズを取得
-        x, y, width, height = self._get_zoom_rect_properties()
+        # ズーム領域の位置とサイズを取得
+        x, y, width, height = self._get_rect_properties()
         # 通常の許容範囲
         tol = 0.1 * min(width, height) if min(width, height) != 0 else 0.2
         # 角を特定
@@ -610,46 +664,49 @@ class ZoomSelector:
                 return True
         return False
 
-    def _get_zoom_rect_properties(self):
+    def _get_rect_properties(self):
         """
-        矩形の位置とサイズを取得する
-        矩形が存在しない場合は None を返す
-        戻り値 : 矩形の位置とサイズ
+        ズーム領域の位置とサイズを取得する。内部キャッシュを使用して、繰り返し実行されるプロパティの取得を最適化する。
+        Returns:
+            tuple_or_None: ズーム領域の位置とサイズ（x, y, width, height）。ズーム領域が存在しない場合は None
         """
-        # 矩形が存在しない場合は None を返す
+        # ズーム領域が存在しない場合は None を返す
         if self.rect is None:
             return None
 
         if self._cached_rect_props is None:  # キャッシュがない場合のみ計算
-            x, y = self.rect.get_xy()  # 矩形の位置を取得
-            self._cached_rect_props = (x, y, self.rect.get_width(), self.rect.get_height())  # 矩形の位置とサイズをキャッシュ
+            x, y = self.rect.get_xy()  # ズーム領域の位置を取得
+            self._cached_rect_props = (x, y, self.rect.get_width(), self.rect.get_height())  # ズーム領域の位置とサイズをキャッシュ
         return self._cached_rect_props  # キャッシュした情報を返す
 
-
     # -------------------------------------------------------------------------
-    def _cursor_inside_zoom_rect(self, event):
+    def _cursor_inside_rect(self, event):
         """
-        マウスカーソルが領域内部に在るかどうかを判定する
-        :param event:
-        :return: マウスカーソルが領域内部に在る場合は True、そうでない場合は False
+        マウスカーソルがズーム領域内部に在るかどうかを判定する
         """
         if self.rect is None:
-            return False  # 領域が存在しない場合は False を返す
-        contains, _ = self.rect.contains(event)  # マウスカーソルが領域に含まれるかどうかを判定
-        return contains  # マウスカーソルが領域内部に在る場合は True、そうでない場合は False を返す
+            return False  # ズーム領域が存在しない場合は False を返す
+        contains, _ = self.rect.contains(event)  # マウスカーソルがズーム領域に含まれるかどうかを判定
+        return contains  # マウスカーソルがズーム領域内部に在る場合は True、そうでない場合は False を返す
 
-    def _get_zoom_rect_center(self):
-        x, y, width, height = self._get_zoom_rect_properties()
+    def _get_rect_center(self):
+        """
+        ズーム領域の中心座標を取得する
+        """
+        x, y, width, height = self._get_rect_properties()
         return (x + width / 2.0, y + height / 2.0)
 
     def _invalidate_rect_cache(self):
+        """
+        ズーム領域のキャッシュを無効化する
+        """
         self._cached_rect_props = None  # キャッシュをクリア
 
-    def _initiate_rotation(self, event):
+    def _initiate_rect_rotation(self, event):
         """
         回転の準備
         """
-        cx, cy = self._get_zoom_rect_center()
+        cx, cy = self._get_rect_center()
         initial_angle = np.degrees(np.arctan2(event.ydata - cy, event.xdata - cx))
         self.rot_base = self.angle
         self.press = RotationOperationData(
@@ -660,14 +717,17 @@ class ZoomSelector:
 
     def _calculate_resized_rect(self, current_x: float, current_y: float) -> tuple:
         """
-        リサイズ後の矩形座標を計算（共通化されたロジック）
+        リサイズ後のズーム領域の座標を計算（共通化されたロジック）
+        Args:
+            current_x (float): 現在のマウスX座標
+            current_y (float): 現在のマウスY座標
         Returns:
             tuple: (x, y, width, height)
         """
         if not isinstance(self.press, ResizeOperationData):
             return None
 
-        # 固定点と現在の座標から矩形を計算
+        # 固定点と現在の座標からズーム領域を計算
         fixed_x, fixed_y = self.press.fixed_point
 
         if self.press.corner_name == 'bottom_left':
@@ -688,11 +748,11 @@ class ZoomSelector:
         return (x0, y0, x1 - x0, y1 - y0)
 
 
-    def _update_zoom_rect_rotate(self, event):
+    def _update_rect_rotate(self, event):
         """
         ズーム領域の回転の更新（キャッシュ対応・安全性強化版）
         """
-        # イベントと矩形の有効性チェック
+        # イベントとズーム領域の有効性チェック
         if (self.press is None or
             not isinstance(self.press, RotationOperationData) or
             self.rect is None or
@@ -783,7 +843,7 @@ class ZoomSelector:
         elif self.state in (ZoomState.WAIT_ALT_ROTATE, ZoomState.ROTATE):  # update_cursor：WAIT_ALT_ROTATE ＆ ROTATE の場合の処理
             new_cursor = "exchange" if self._get_pointer_near_corner(event) else "arrow"
         elif self.state == ZoomState.WAIT_NOKEY_ZOOM_RECT_EXISTS:  # update_cursor：WAIT_NOKEY_ZOOM_AREA_EXISTSの場合の処理
-            new_cursor = "fleur" if self._cursor_inside_zoom_rect(event) else "arrow"
+            new_cursor = "fleur" if self._cursor_inside_rect(event) else "arrow"
         else:
             new_cursor = "arrow"
 
@@ -794,6 +854,9 @@ class ZoomSelector:
     def _debug_log_transition(self, old_state, new_state):
         """
         状態遷移のログを出力する
+        Args:
+            old_state (_type_): 直前のズーム状態
+            new_state (_type_): 現在のズーム状態
         """
         # self._debug（デバッグモード）が true ではない場合、メソッドを終了
         if not self._debug:
@@ -811,8 +874,8 @@ class ZoomSelector:
             else "None"
         )
 
-        rect_props = self._get_zoom_rect_properties()  #  矩形のプロパティを取得
-        rect_str = f"{rect_props}" if rect_props else "None"  # 矩形のプロパティがあれば、それを文字列に変換
+        rect_props = self._get_rect_properties()  #  ズーム領域のプロパティを取得
+        rect_str = f"{rect_props}" if rect_props else "None"  # ズーム領域のプロパティがあれば、それを文字列に変換
         key_status = f"shift: {self.key_pressed['shift']}, alt: {self.key_pressed['alt']}"  # キーの状態を文字列に変換
 
         # リサイズ関連の追加情報
