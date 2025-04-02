@@ -57,7 +57,7 @@ class ZoomSelector:
         self.rot_base = 0.0  # 回転開始時の角度
         self.last_cursor_state = "arrow"
         self.last_motion_time = int(time.time() * 1000)  # 初期値を設定
-        self.motion_throttle_ms = 30  # 30ミリ秒ごとに処理（約33fps）
+        self.motion_throttle_ms = 50.1  # 3 フレームごとに 1 回のみ実行されるように設定（16.7ms × 3 = 50.1ms）
         self.MIN_RECT_SIZE = 0.1  # ズーム領域の最小サイズ
         self._state = ZoomState.NO_ZOOM_RECT  # 内部状態変数（アンダースコア付き）
         self._debug = True  # デバッグモードフラグ
@@ -405,7 +405,7 @@ class ZoomSelector:
         self.rect.set_bounds(x, y, width, height)
 #        print(f"[Rect Actual._update_rect_size] XY: {self.rect.get_xy()} | Width: {self.rect.get_width():.2f} | Height: {self.rect.get_height():.2f}") if self._debug else None  # デバッグ用★★★
         self._invalidate_rect_cache()
-        self.canvas.draw()
+#        self.canvas.draw()
 
     def _calculate_resized_rect(self, current_x: float, current_y: float) -> tuple:
         """
