@@ -301,6 +301,26 @@ class ZoomSelector:
             press_y=event.ydata
         )
 
+    def _initiate_rect_rotation(self, event):
+        """
+        回転の準備
+        """
+        cx, cy = self._get_rect_center()
+        initial_angle = np.degrees(np.arctan2(event.ydata - cy, event.xdata - cx))
+        self.rot_base = self.angle
+        self.press = RotationOperationData(
+            center_x=cx,
+            center_y=cy,
+            initial_angle=initial_angle
+        )
+
+    def _get_rect_center(self):
+        """
+        ズーム領域の中心座標を取得する
+        """
+        x, y, width, height = self._get_rect_properties()
+        return (x + width / 2.0, y + height / 2.0)
+
     # on_motion 関連--------------------------------------------------
     def on_motion(self, event):
 #        if self._debug and event.xdata is not None:  # デバッグ用★★★
@@ -445,6 +465,47 @@ class ZoomSelector:
 #        print(f"[_calculate_resized_rect] Calculated Rect: x={x0:.2f}, y={y0:.2f}, w={width:.2f}, h={height:.2f}") if self._debug else None  # デバッグ用★★★
 
         return (x0, y0, width, height)
+
+    def _update_rect_rotate(self, event):
+        """
+        ズーム領域の回転の更新（キャッシュ対応・安全性強化版）
+        """
+        # イベントとズーム領域の有効性チェック
+        if (self.press is None or
+            not isinstance(self.press, RotationOperationData) or
+            self.rect is None or
+            None in (event.xdata, event.ydata)):
+            return
+
+        # 回転中心と現在角度を計算
+        cx = self.press.center_x
+        cy = self.press.center_y
+        initial_angle = self.press.initial_angle
+
+        current_angle = np.degrees(np.arctan2(
+            event.ydata - cy,
+            event.xdata - cx
+        ))
+
+        # 角度差分を計算（-180°~180°に正規化）
+        angle_diff = (current_angle - initial_angle) % 360
+        if angle_diff > 180:
+            angle_diff -= 360
+
+        # 角度の急激な変化を防ぐためのスムージング
+        smoothing_factor = 0.8
+        smoothed_angle_diff = angle_diff * smoothing_factor
+
+        # 新しい角度を設定
+        self.angle = (self.rot_base + smoothed_angle_diff) % 360
+
+        # アフィン変換を適用
+        t = transforms.Affine2D().rotate_deg_around(cx, cy, self.angle)
+        self.rect.set_transform(t + self.ax.transData)
+
+        # キャッシュ無効化と再描画
+        self._invalidate_rect_cache()
+        self.canvas.draw()
 
     # on_release 関連--------------------------------------------------
     def on_release(self, event):
@@ -624,13 +685,15 @@ class ZoomSelector:
         if not self.key_pressed['shift']:
             # 状態が WAIT_SHIFT_RESIZE か RESIZE だったら、WAIT_NOKEY_ZOOM_RECT_EXISTS に戻す
             if self.state in (ZoomState.WAIT_SHIFT_RESIZE, ZoomState.RESIZE):
+                print("SHIFT OFF")
                 self.state = ZoomState.WAIT_NOKEY_ZOOM_RECT_EXISTS
                 state_changed = True
 
         # Alt キーが離された場合
-        elif not self.key_pressed['alt']:
+        if not self.key_pressed['alt']:
             # WAIT_ALT_ROTATE か ROTATE だったら、WAIT_NOKEY_ZOOM_RECT_EXISTS に戻す
             if self.state in (ZoomState.WAIT_ALT_ROTATE, ZoomState.ROTATE):
+                print("ALT OFF")
                 self.state = ZoomState.WAIT_NOKEY_ZOOM_RECT_EXISTS
                 state_changed = True
 
@@ -722,81 +785,11 @@ class ZoomSelector:
         return self._cached_rect_props  # キャッシュした情報を返す
 
     # -------------------------------------------------------------------------
-    def _cursor_inside_rect(self, event):
-        """
-        マウスカーソルがズーム領域内部に在るかどうかを判定する
-        """
-        if self.rect is None:
-            return False  # ズーム領域が存在しない場合は False を返す
-        contains, _ = self.rect.contains(event)  # マウスカーソルがズーム領域に含まれるかどうかを判定
-        return contains  # マウスカーソルがズーム領域内部に在る場合は True、そうでない場合は False を返す
-
-    def _get_rect_center(self):
-        """
-        ズーム領域の中心座標を取得する
-        """
-        x, y, width, height = self._get_rect_properties()
-        return (x + width / 2.0, y + height / 2.0)
-
     def _invalidate_rect_cache(self):
         """
         ズーム領域のキャッシュを無効化する
         """
         self._cached_rect_props = None  # キャッシュをクリア
-
-    def _initiate_rect_rotation(self, event):
-        """
-        回転の準備
-        """
-        cx, cy = self._get_rect_center()
-        initial_angle = np.degrees(np.arctan2(event.ydata - cy, event.xdata - cx))
-        self.rot_base = self.angle
-        self.press = RotationOperationData(
-            center_x=cx,
-            center_y=cy,
-            initial_angle=initial_angle
-        )
-
-    def _update_rect_rotate(self, event):
-        """
-        ズーム領域の回転の更新（キャッシュ対応・安全性強化版）
-        """
-        # イベントとズーム領域の有効性チェック
-        if (self.press is None or
-            not isinstance(self.press, RotationOperationData) or
-            self.rect is None or
-            None in (event.xdata, event.ydata)):
-            return
-
-        # 回転中心と現在角度を計算
-        cx = self.press.center_x
-        cy = self.press.center_y
-        initial_angle = self.press.initial_angle
-
-        current_angle = np.degrees(np.arctan2(
-            event.ydata - cy,
-            event.xdata - cx
-        ))
-
-        # 角度差分を計算（-180°~180°に正規化）
-        angle_diff = (current_angle - initial_angle) % 360
-        if angle_diff > 180:
-            angle_diff -= 360
-
-        # 角度の急激な変化を防ぐためのスムージング
-        smoothing_factor = 0.8
-        smoothed_angle_diff = angle_diff * smoothing_factor
-
-        # 新しい角度を設定
-        self.angle = (self.rot_base + smoothed_angle_diff) % 360
-
-        # アフィン変換を適用
-        t = transforms.Affine2D().rotate_deg_around(cx, cy, self.angle)
-        self.rect.set_transform(t + self.ax.transData)
-
-        # キャッシュ無効化と再描画
-        self._invalidate_rect_cache()
-        self.canvas.draw()
 
     def _is_valid_event(self, event):
         """
@@ -859,6 +852,15 @@ class ZoomSelector:
         if new_cursor != self.last_cursor_state:  # 変更が有る場合のみ更新
             self.canvas.get_tk_widget().config(cursor=new_cursor)  # カーソルの形状を更新
             self.last_cursor_state = new_cursor  # カーソルの形状を更新
+
+    def _cursor_inside_rect(self, event):
+        """
+        マウスカーソルがズーム領域内部に在るかどうかを判定する
+        """
+        if self.rect is None:
+            return False  # ズーム領域が存在しない場合は False を返す
+        contains, _ = self.rect.contains(event)  # マウスカーソルがズーム領域に含まれるかどうかを判定
+        return contains  # マウスカーソルがズーム領域内部に在る場合は True、そうでない場合は False を返す
 
     def _debug_log_transition(self, old_state, new_state):
         """
