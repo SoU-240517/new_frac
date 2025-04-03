@@ -602,6 +602,7 @@ class ZoomSelector:
 
         # ズーム領域の左下座標とサイズを設定
         self.rect.set_bounds(x, y, width, height)
+
         self._invalidate_rect_cache()
 
         # デバッグログ出力
@@ -774,6 +775,8 @@ class ZoomSelector:
 
         # ズーム領域を設定
         self.rect.set_bounds(new_x, new_y, width, height)
+
+        self._invalidate_rect_cache()
 
         # ドラッグ方向を保存（最小サイズ適用時に使用）
         self.drag_direction = {
