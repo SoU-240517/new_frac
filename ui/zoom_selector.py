@@ -7,7 +7,8 @@ from enum import Enum, auto
 import time  # スロットリング用の時間処理モジュール
 
 @dataclass
-class ResizeOperationData:            # リサイズ操作のデータを保持するデータクラス
+class ResizeOperationData:
+    """ ズーム領域のリサイズ時の列挙型 """
     corner_name: str                  # 操作中の角（'bottom_left'など）
     fixed_point: tuple[float, float]  # 固定される対角の座標
     original_x: float                 # ズーム領域の元のx座標
@@ -19,11 +20,13 @@ class ResizeOperationData:            # リサイズ操作のデータを保持�
 
 @dataclass
 class RotationOperationData:
+    """ ズーム領域の回転時の列挙型 """
     center_x: float
     center_y: float
     initial_angle: float
 
-class ZoomState(Enum):                    # ズーム操作の状態を表す列挙型
+class ZoomState(Enum):
+    """ ズーム操作の状態を表す列挙型 """
     NO_ZOOM_RECT = auto()                 # ズーム領域無し（ズーム領域が存在しない）
     CREATE = auto()                       # ズーム領域の新規作成モード（左ボタン ONで開始）
     WAIT_NOKEY_ZOOM_RECT_EXISTS = auto()  # ズーム領域有り（キー入力無し）
@@ -34,6 +37,8 @@ class ZoomState(Enum):                    # ズーム操作の状態を表す列
     ROTATE = auto()                       # 回転モード（alt＋左ドラッグ）
 
 class ZoomSelector:
+    """ ズームセレクタークラス """
+
     def __init__(self, ax, on_zoom_confirm, on_zoom_cancel):
         """
         ズームセレクターの初期化
@@ -50,6 +55,8 @@ class ZoomSelector:
         self.rect = None  # ズーム領域：現在（構造は matplotlib.patches.Rectangle）
         self.last_rect = None  # ズーム領域：直前
         self.press = None  # マウス押下時のデータ（構造は ResizeOperationData または RotationOperationData）
+        self._last_motion_event = None  # 直前のマウス移動イベントを保存する変数
+        self.drag_direction = None  # ドラッグ方向を保存する変数
         self.start_x = None  # 新規作成開始時の x 座標
         self.start_y = None  # 新規作成開始時の y 座標
         self.key_pressed = {'shift': False, 'alt': False}  # キー状態追跡用の変数
@@ -59,11 +66,10 @@ class ZoomSelector:
         self.last_motion_time = int(time.time() * 1000)  # 初期値を設定
         self.motion_throttle_ms = 50.1  # 3 フレームごとに 1 回のみ実行されるように設定（16.7ms × 3 = 50.1ms）
         self.MIN_RECT_SIZE = 0.1  # ズーム領域の最小サイズ
-        self._state = ZoomState.NO_ZOOM_RECT  # 内部状態変数（アンダースコア付き）
-        self._debug = True  # デバッグモードフラグ
         self._cached_rect_props = None  # ズーム領域のプロパティをキャッシュする変数
-        self._last_motion_event = None  # 直前のマウス移動イベントを保存する変数
-        self.drag_direction = None  # ドラッグ方向を保存する変数
+        self._state = ZoomState.NO_ZOOM_RECT  # 内部状態変数（アンダースコア付き）
+        self.validator = EventValidator  # バリデータークラスのインスタンス
+        self._debug = True  # デバッグモードフラグ
 
         # イベントハンドラ接続
         self.cid_press       = self.canvas.mpl_connect('button_press_event', self.on_press)
@@ -122,8 +128,7 @@ class ZoomSelector:
     # on_press 関連--------------------------------------------------
     def on_press(self, event):
 
-        # イベントが有効でない場合、メソッドを終了
-        if not self._is_valid_event(event):
+        if not self.validator.validate_basic_event(event, self):
             return
 
         # ズーム状態ごとの処理を定義
@@ -352,9 +357,7 @@ class ZoomSelector:
         # 受け取ったイベント情報を直前のズーム領域として保存
         self._last_motion_event = event
 
-        # イベントが有効でない場合は、カーソルを矢印にして、メソッドを終了
-        if not self._is_valid_event(event):
-#            self.canvas.get_tk_widget().config(cursor="arrow")
+        if not self.validator.validate_basic_event(event, self):
             return
 
         # スロットリング処理
@@ -411,7 +414,7 @@ class ZoomSelector:
     def _update_rect(self, event):
         """ 新規で作成したズーム領域の更新 """
 
-        if not self._is_valid_event(event):
+        if not self.validator.validate_basic_event(event, self):
             return
 
         # 差分計算（現在の座標 - 開始座標）
@@ -442,10 +445,7 @@ class ZoomSelector:
     def _update_rect_size(self, event):
         """ ズーム領域のサイズ更新 """
 
-        if (not self._validate_resize_event(event) or
-            self.press is None or
-            self.rect is None or
-            not isinstance(self.press, ResizeOperationData)):
+        if not self.validator.validate_resize(event, self):
             return
 
         # 共通メソッドで座標計算
@@ -502,11 +502,7 @@ class ZoomSelector:
     def _update_rect_rotate(self, event):
         """ ズーム領域の回転の更新（キャッシュ対応・安全性強化版） """
 
-        # イベントとズーム領域の有効性チェック
-        if (self.press is None or
-            not isinstance(self.press, RotationOperationData) or
-            self.rect is None or
-            None in (event.xdata, event.ydata)):
+        if not self.validator.validate_rotate(event, self):
             return
 
         # 回転中心と現在角度を計算
@@ -543,7 +539,7 @@ class ZoomSelector:
     # on_release 関連--------------------------------------------------
     def on_release(self, event):
 
-        if not self._is_valid_event(event):
+        if not self.validator.validate_basic_event(event, self):
             return
 
         # 状態ごとの処理を定義
@@ -769,70 +765,12 @@ class ZoomSelector:
 
         self.canvas.draw()
 
-    def _validate_resize_event(self, event) -> bool:
-        """ リサイズ操作の事前チェック """
-        checks = [
-            (self.rect is not None, "Zoom rectangle not exists"),
-            (isinstance(self.press, ResizeOperationData), "Invalid resize data"),  # リサイズデータが有効か
-            (event.xdata is not None, "X coordinate is None"),
-            (event.ydata is not None, "Y coordinate is None"),
-            (self.state == ZoomState.RESIZE, "Not in resize mode")
-        ]
-
-        for condition, error_msg in checks:
-            if not condition:
-                if self._debug:
-                    print(f"[Resize Validation Failed] {error_msg}")
-                return False
-
-        return True
-
     # -------------------------------------------------------------------------
     def _invalidate_rect_cache(self):
         """ ズーム領域のキャッシュを無効化する """
 
         # ズーム領域のキャッシュを無効化
         self._cached_rect_props = None
-
-    def _is_valid_event(self, event):
-        """ イベントの有効性をチェック """
-
-        # 以下の４つの条件を全て満たす場合に、True を返す
-            # event に xdata の属性がある。event に ydata の属性がある
-            # event.xdata が None ではない。event.ydata が None ではない
-        # これにより、イベントが マウスカーソルの位置を持っているかどうかを判定できる
-        # hasattr は、オブジェクトが特定の属性を持っているかを確認するための組み込み関数
-        has_valid_coords = (
-            hasattr(event, 'xdata') and hasattr(event, 'ydata') and
-            event.xdata is not None and event.ydata is not None
-        )
-
-        # ズーム領域がない場合
-        if self.state == ZoomState.NO_ZOOM_RECT:
-
-            # 以下の３つの条件を全て満たす場合に、True を返す
-                # event に inaxes（イベントが発生した軸）がある
-                # event.inaxes が self.ax（現在の描画エリア）と一致する
-                # event.xdata と event.ydata が None ではなく有効な値を持つ
-            # つまり、マウスの座標が有効で、イベントが self.ax 内で発生していれば True を返す
-            return (hasattr(event, 'inaxes') and
-                    event.inaxes == self.ax and
-                    has_valid_coords
-            )
-
-        # ズーム領域がある場合
-        else:
-
-            # 以下の４つの条件を全て満たす場合に、True を返す
-                # event に inaxes（イベントが発生した軸）がある
-                # event.inaxes が self.ax（現在の描画エリア）と一致する
-                # event.xdata と event.ydata が None ではなく有効な値を持つ
-                # self.rect が None ではなく、有効な値を持つ
-            return (hasattr(event, 'inaxes') and
-                    event.inaxes == self.ax and
-                    has_valid_coords and
-                    self.rect is not None
-            )
 
     def update_cursor(self, event):
         """ 各状態およびカーソル位置に応じたカーソル形状を設定する """
@@ -990,3 +928,74 @@ class ZoomSelector:
             if np.hypot(event.xdata - cx, event.ydata - cy) < tol:
                 return True
         return False
+
+class EventValidator:
+    """ イベントバリデーションを一元化するクラス """
+
+    @staticmethod
+    def validate_basic_event(event, selector):
+        """
+        イベントの基本的な有効性をチェック
+        Args:
+            event: 検証するイベント
+            selector: ZoomSelectorインスタンス
+        Returns:
+            bool: イベントが有効ならTrue
+        """
+
+        checks = [
+            (hasattr(event, 'xdata') and hasattr(event, 'ydata'), "Missing coordinates"),
+            (event.xdata is not None and event.ydata is not None, "None coordinates"),
+            (hasattr(event, 'inaxes') and event.inaxes == selector.ax, "Invalid axes")
+        ]
+        return all(condition for condition, _ in checks)
+
+    @staticmethod
+    def validate_rect_operation(event, selector):
+        """
+        矩形操作に必要なバリデーション
+        Args:
+            event: 検証するイベント
+            selector: ZoomSelectorインスタンス
+        Returns:
+            bool: 矩形操作が可能ならTrue
+        """
+
+        return (
+            EventValidator.validate_basic_event(event, selector) and
+            selector.rect is not None
+        )
+
+    @staticmethod
+    def validate_resize(event, selector):
+        """
+        リサイズ操作に必要なバリデーション
+        Args:
+            event: 検証するイベント
+            selector: ZoomSelectorインスタンス
+        Returns:
+            bool: リサイズ操作が可能ならTrue
+        """
+
+        return (
+            EventValidator.validate_rect_operation(event, selector) and
+            isinstance(selector.press, ResizeOperationData) and
+            selector.state == ZoomState.RESIZE
+        )
+
+    @staticmethod
+    def validate_rotate(event, selector):
+        """
+        回転操作に必要なバリデーション
+        Args:
+            event: 検証するイベント
+            selector: ZoomSelectorインスタンス
+        Returns:
+            bool: 回転操作が可能ならTrue
+        """
+
+        return (
+            EventValidator.validate_rect_operation(event, selector) and
+            isinstance(selector.press, RotationOperationData) and
+            selector.state == ZoomState.ROTATE
+        )
