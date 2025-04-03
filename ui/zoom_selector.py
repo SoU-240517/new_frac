@@ -4,7 +4,8 @@ import numpy as np
 import matplotlib.patches as patches
 import matplotlib.transforms as transforms
 from enum import Enum, auto
-import time  # スロットリング用の時間処理モジュール
+import time  # 時間処理モジュール
+from typing import Optional, Dict, Any
 
 @dataclass
 class ResizeOperationData:
@@ -24,6 +25,73 @@ class RotationOperationData:
     center_x: float
     center_y: float
     initial_angle: float
+
+class LogLevel(Enum):
+    DEBUG = auto()  # 開発中の詳細な変数確認（マウス座標の細かい変化、計算途中の値とか）
+    INFO = auto()  # 正常系の重要な状態変化（ズーム領域の確定、状態遷移とか）
+    WARNING = auto()  # 想定外だが処理は継続可能な問題（最小サイズ未満の入力、許容範囲外の座標とか）
+    ERROR = auto()  # 処理継続不可能な重大なエラー（不正な状態遷移、NULL参照エラーとか）
+
+class DebugLogger:
+    """デバッグログ出力を一元管理するクラス"""
+
+    def __init__(self, debug_enabled: bool = True):
+        self.debug_enabled = debug_enabled
+        self.last_log_time = 0
+        self.log_throttle_ms = 100  # ログのスロットリング間隔(ms)
+        self.min_level = LogLevel.DEBUG
+
+    def log(self,
+            level: LogLevel,
+            message: str,
+            context: Optional[Dict[str, Any]] = None,
+            force: bool = False) -> None:
+        """
+        デバッグログを出力する
+        Args:
+            level: ログレベル
+            message: メッセージ本文
+            context: 追加コンテキスト情報(dict)
+            force: スロットリングを無視して強制出力
+        """
+        if level.value < self.min_level.value:  # レベルが足りない場合は無視
+            return
+
+        if not self.debug_enabled and not force:
+            return
+
+        # スロットリングチェック
+        current_time = int(time.time() * 1000)
+        if not force and current_time - self.last_log_time < self.log_throttle_ms:
+            return
+        self.last_log_time = current_time
+
+        # ログのフォーマット
+        timestamp = time.strftime("%H:%M:%S", time.localtime())
+        level_str = level.name.ljust(7)
+        log_entry = f"[{timestamp}] {level_str} - {message}"
+
+        if context:
+            log_entry += "\n" + self._format_context(context)
+
+        print(log_entry)
+
+    def _format_context(self, context: Dict[str, Any]) -> str:
+        """ コンテキスト情報を整形して文字列に変換 """
+        lines = []
+        for key, value in context.items():
+            if isinstance(value, (int, float)):
+                formatted = f"{value:.2f}" if isinstance(value, float) else str(value)
+            elif isinstance(value, Enum):
+                formatted = value.name
+            elif value is None:
+                formatted = "None"
+            else:
+                formatted = str(value)
+
+            lines.append(f"  - {key}: {formatted}")
+
+        return "\n".join(lines)
 
 class ZoomState(Enum):
     """ ズーム操作の状態を表す列挙型 """
@@ -47,7 +115,7 @@ class ZoomSelector:
             on_zoom_confirm: ズーム確定時のコールバック（zoom_params を引数に取る）
             on_zoom_cancel: ズームキャンセル時のコールバック
         """
-        print("START : __init__")
+        print("START : __init__.ZoomSelector")
         self.ax = ax
         self.canvas = ax.figure.canvas
         self.on_zoom_confirm = on_zoom_confirm
@@ -70,6 +138,7 @@ class ZoomSelector:
         self._state = ZoomState.NO_ZOOM_RECT  # 内部状態変数（アンダースコア付き）
         self.validator = EventValidator  # バリデータークラスのインスタンス
         self._debug = True  # デバッグモードフラグ
+        self.debug_logger = DebugLogger(debug_enabled=self._debug)
 
         # イベントハンドラ接続
         self.cid_press       = self.canvas.mpl_connect('button_press_event', self.on_press)
@@ -91,27 +160,51 @@ class ZoomSelector:
     @state.setter
     def state(self, new_state):
         """
-        セッター：ズーム操作の状態変更時の処理を一元管理
-        Args:
-            new_state (_type_): 新しい状態
-        Raises:
-            TypeError: 新しい状態が ZoomState 型でない場合、エラーを発生させる
+        セッター：
         """
-        # new_state が ZoomState 型かどうかを確認し、違う場合はエラー（TypeError）を発生させる
+
+        # 型チェック（必須）
         if not isinstance(new_state, ZoomState):
-            raise TypeError("型 ERROR! : tate must be a ZoomState enum")
+            error_msg = f"無効な状態型: {type(new_state)} (期待: ZoomState)"
+            self._log_debug_info(error_msg, level=LogLevel.ERROR)
+            raise TypeError(error_msg)
 
         # ズーム状態が変更されたか確認し、変化がある場合のみ処理を実行
         old_state = self._state  # 現在の状態を記録
         if old_state == new_state:  # ズーム操作の状態に変化が無いなら、何もしない
-            return
+            return  # 変化なし
+
+        # 安全な座標フォーマット
+        coord_str = (
+            f"({self.start_x:.1f}, {self.start_y:.1f})"
+            if self.start_x is not None and self.start_y is not None
+            else "None"
+        )
+
+        # 状態変化時のコンテキスト情報
+        context = {
+            "前の状態": old_state.name,
+            "新しい状態": new_state.name,
+            "マウス座標": coord_str,
+            "シフトキー": self.key_pressed['shift'],
+            "Altキー": self.key_pressed['alt'],
+            "ズーム領域サイズ": self._get_rect_properties()[2:] if self.rect else None
+        }
+
+        # 特別な状態変化の場合の追加情報
+        if new_state == ZoomState.RESIZE and isinstance(self.press, ResizeOperationData):
+            context["操作中の角"] = self.press.corner_name
+            context["固定点座標"] = self.press.fixed_point
+
+        # ログ出力（INFOレベルで重要な変化を記録）
+        self._log_debug_info(
+            "状態遷移を検出",
+            context=context,
+            level=LogLevel.INFO
+        )
+
+        # 実際の状態更新
         self._state = new_state  # ズーム操作の状態に変化がある場合は、現在の状態を更新
-
-        # デバッグモードなら、状態遷移に関連するログを出力
-        if self._debug:
-            self._debug_log_transition(old_state, new_state)
-
-        # 必要に応じて追加処理
         self._on_state_changed(old_state, new_state)
 
     def _on_state_changed(self, old_state, new_state):
@@ -159,6 +252,17 @@ class ZoomSelector:
 
     def _begin_rect_creation(self, event):
         """ ズーム領域を作成するための初期化処理 """
+
+        if event.xdata is None or event.ydata is None:
+            self._log_debug_info(
+                "ズーム領域作成開始",
+            context={
+                "開始座標": (self.start_x, self.start_y),
+                "イベント種別": "左クリック"
+            },
+            level=LogLevel.INFO
+            )
+            return
 
         # ズーム領域の開始位置を記録
         self.start_x, self.start_y = event.xdata, event.ydata
@@ -218,6 +322,18 @@ class ZoomSelector:
             "rotation": self.angle
         }
 
+        # 修正箇所: デバッグログ出力
+        if self._debug:
+            self._log_debug_info(
+                "Zoom confirmed",
+                context={
+                    "center": f"({center_x:.2f}, {center_y:.2f})",
+                    "size": f"{abs(width):.2f}x{abs(height):.2f}",
+                    "rotation": f"{self.angle:.2f}°"
+                },
+                level=LogLevel.INFO
+            )
+
         self._clear_rect()
 
         if self.on_zoom_confirm:
@@ -243,9 +359,12 @@ class ZoomSelector:
 
             self.press = None
 
+            # エラーログ出力
             if self._debug:
-                print("[Resize Init Failed] Invalid initial state")
-
+                self._log_debug_info(
+                    "Resize initialization failed: Invalid initial state",
+                    level=LogLevel.ERROR
+                )
             return
 
         self.state = ZoomState.RESIZE
@@ -269,8 +388,12 @@ class ZoomSelector:
 
             self.press = None
 
+            # エラーログ出力
             if self._debug:
-                print("[Rotate Init Failed] Invalid initial state")
+                self._log_debug_info(
+                    "Rotate initialization failed: Invalid initial state",
+                    level=LogLevel.ERROR
+                )
 
             return
 
@@ -451,6 +574,14 @@ class ZoomSelector:
         # 共通メソッドで座標計算
         rect_params = self._calculate_resized_rect(event.xdata, event.ydata)
 
+        self._log_debug_info(
+            "リサイズ計算結果",
+            context={
+                "マウス座標": (event.xdata, event.ydata),
+                "新しいサイズ": f"{rect_params[2]:.1f}x{rect_params[3]:.1f}"
+            }
+        )
+
         if rect_params is None:
             return
 
@@ -458,9 +589,18 @@ class ZoomSelector:
 
         # ズーム領域の左下座標とサイズを設定
         self.rect.set_bounds(x, y, width, height)
-#        print(f"[Rect Actual._update_rect_size] XY: {self.rect.get_xy()} | Width: {self.rect.get_width():.2f} | Height: {self.rect.get_height():.2f}") if self._debug else None  # デバッグ用★★★
         self._invalidate_rect_cache()
-#        self.canvas.draw()
+
+        # デバッグログ出力
+        if self._debug:
+            self._log_debug_info(
+                "Rectangle size updated",
+                context={
+                    "position": f"({x:.2f}, {y:.2f})",
+                    "size": f"{width:.2f}x{height:.2f}"
+                },
+                level=LogLevel.DEBUG
+            )
 
     def _calculate_resized_rect(self, current_x: float, current_y: float) -> tuple:
         """
@@ -662,12 +802,17 @@ class ZoomSelector:
 
         self._invalidate_rect_cache()
 
+        # デバッグログ出力
         if self._debug:
-            print(
-                f"[MinSize] Applied: {width:.2f}x{height:.2f} → "
-                f"{new_width:.2f}x{new_height:.2f} "
-                f"at ({x:.2f}, {y:.2f}) "
-                f"direction: {getattr(self, 'drag_direction', 'unknown')}"
+            self._log_debug_info(
+                "Minimum size constraint applied",
+                context={
+                    "original_size": f"{width:.2f}x{height:.2f}",
+                    "new_size": f"{new_width:.2f}x{new_height:.2f}",
+                    "position": f"({x:.2f}, {y:.2f})",
+                    "direction": getattr(self, 'drag_direction', 'unknown')
+                },
+                level=LogLevel.DEBUG
             )
 
     # on_key_press 関連 --------------------------------------------------
@@ -759,13 +904,19 @@ class ZoomSelector:
         self.press = None  # マウスボタン押下情報をクリア
         self.start_x = self.start_y = None  # 開始座標リセット
 
+        # デバッグログ出力
+        if self._debug:
+            self._log_debug_info(
+                "Rectangle cleared",
+                level=LogLevel.INFO
+            )
+
         # GUIの更新
         self.last_cursor_state = None  # カーソル状態を完全リセット
         self.canvas.get_tk_widget().config(cursor="arrow")
 
         self.canvas.draw()
 
-    # -------------------------------------------------------------------------
     def _invalidate_rect_cache(self):
         """ ズーム領域のキャッシュを無効化する """
 
@@ -826,18 +977,33 @@ class ZoomSelector:
         # マウスカーソルがズーム領域内部に在る場合は True、そうでない場合は False を返す
         return contains
 
-    def _debug_log_transition(self, old_state, new_state):
+    def _log_debug_info(self,
+                        message: str,
+                        context: Optional[Dict[str, Any]] = None,
+                        old_state: Optional[ZoomState] = None,
+                        new_state: Optional[ZoomState] = None,
+                        level: LogLevel = LogLevel.DEBUG) -> None:
         """
-        状態遷移のログを出力する
+        デバッグ情報をログに出力
         Args:
-            old_state (_type_): 直前のズーム状態
-            new_state (_type_): 現在のズーム状態
+            message: メインのログメッセージ
+            context: 追加コンテキスト情報(オプション)
+            old_state: 変更前の状態(オプション)
+            new_state: 変更後の状態(オプション)
+            level: ログレベル
         """
-        # self._debug（デバッグモード）が true ではない場合、メソッドを終了
         if not self._debug:
             return
 
-        # None値に対応したフォーマット
+        # コンテキストがNoneの場合のデフォルト値
+        if context is None:
+            context = {}
+
+        # 状態遷移情報
+        if old_state is not None and new_state is not None:
+            context["state_change"] = f"{old_state.name} → {new_state.name}"
+
+        # マウス位置
         # start_x と start_y が None でない場合
         # 小数点1桁でフォーマット（start_x=12.3456, start_y=78.9 の場合 → "(12.3, 78.9)"）
         # どちらかが None の場合は "None" とする
@@ -848,40 +1014,39 @@ class ZoomSelector:
             if self.start_x is not None and self.start_y is not None
             else "None"
         )
+        context["mouse_pos"] = mouse_pos
 
-        rect_props = self._get_rect_properties()  #  ズーム領域のプロパティを取得
-        rect_str = f"{rect_props}" if rect_props else "None"  # ズーム領域のプロパティがあれば、それを文字列に変換
-        key_status = f"shift: {self.key_pressed['shift']}, alt: {self.key_pressed['alt']}"  # キーの状態を文字列に変換
+        # キー状態
+        context["key_status"] = f"shift: {self.key_pressed['shift']}, alt: {self.key_pressed['alt']}"
 
-        # リサイズ関連の追加情報
-        resize_info = ""  # 内容をクリア
-        if self.press and isinstance(self.press, ResizeOperationData):  # リサイズ操作中の場合
-            corner_name = self.press.corner_name
-            fixed_x, fixed_y = self.press.fixed_point
-            resize_info = (
-                f"\n  - Resize Debug:\n"
-                f"    - corner: {corner_name}\n"
-                f"    - fixed_point: ({fixed_x:.1f}, {fixed_y:.1f})\n"
-                f"    - original_size: {self.press.original_width:.1f}x{self.press.original_height:.1f}\n"
-                f"    - press_pos: ({self.press.press_x:.1f}, {self.press.press_y:.1f})"
-            )
+        # ズーム領域情報
+        rect_props = self._get_rect_properties()
+        context["rect"] = f"{rect_props}" if rect_props else "None"
 
-        # イベント座標（可能なら）
-        event_pos = ""  # 内容をクリア
-        if hasattr(self, '_last_event') and self._last_motion_event:  # イベントが存在し、かつ、最後のモーションイベントが存在する場合
+        # リサイズ操作情報
+        if self.press and isinstance(self.press, ResizeOperationData):
+            resize_info = {
+                "corner": self.press.corner_name,
+                "fixed_point": f"({self.press.fixed_point[0]:.1f}, {self.press.fixed_point[1]:.1f})",
+                "original_size": f"{self.press.original_width:.1f}x{self.press.original_height:.1f}",
+                "press_pos": f"({self.press.press_x:.1f}, {self.press.press_y:.1f})"
+            }
+            context["resize_info"] = resize_info
+
+        # 回転操作情報
+        if self.press and isinstance(self.press, RotationOperationData):
+            rotate_info = {
+                "center": f"({self.press.center_x:.1f}, {self.press.center_y:.1f})",
+                "initial_angle": f"{self.press.initial_angle:.1f}°"
+            }
+            context["rotate_info"] = rotate_info
+
+        # イベント位置
+        if hasattr(self, '_last_motion_event') and self._last_motion_event:
             e = self._last_motion_event
-            event_pos = f"\n  - event_pos: ({e.xdata:.1f}, {e.ydata:.1f})"
+            context["event_pos"] = f"({e.xdata:.1f}, {e.ydata:.1f})"
 
-        key_status = f"shift: {self.key_pressed['shift']}, alt: {self.key_pressed['alt']}"
-
-        print(
-            f"State changed: {old_state.name} → {new_state.name}\n"
-            f"  - mouse_pos: {mouse_pos}\n"
-            f"  - key_pressed: {key_status}\n"
-            f"  - Rect: {rect_str}"
-            f"{resize_info}"
-            f"{event_pos}"
-        )
+        self.debug_logger.log(level, message, context)
 
     def _get_rect_properties(self):
         """
