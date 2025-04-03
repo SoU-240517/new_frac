@@ -160,19 +160,26 @@ class ZoomSelector:
     @state.setter
     def state(self, new_state):
         """
-        セッター：
+        セッター：新しい状態（new_state）が現在の状態（self._state）と異なる場合にのみ、状態を更新する
+        Args:
+            new_state (ZoomState): 新しい状態
+        Returns:
+            None
         """
 
         # 型チェック（必須）
+            # 新しい状態 (new_state) が ZoomState 型でなければエラーを発生させる
         if not isinstance(new_state, ZoomState):
             error_msg = f"無効な状態型: {type(new_state)} (期待: ZoomState)"
             self._log_debug_info(error_msg, level=LogLevel.ERROR)
             raise TypeError(error_msg)
 
-        # ズーム状態が変更されたか確認し、変化がある場合のみ処理を実行
-        old_state = self._state  # 現在の状態を記録
-        if old_state == new_state:  # ズーム操作の状態に変化が無いなら、何もしない
-            return  # 変化なし
+        # 現在の状態を old_state に記録
+        old_state = self._state
+
+        # 現在の状態 (old_state) と新しい状態と比較し、変化が無いなら、何もしない
+        if old_state == new_state:
+            return
 
         # 安全な座標フォーマット
         coord_str = (
@@ -352,10 +359,12 @@ class ZoomSelector:
         # リサイズに必要な情報が揃っているか確認
             # 揃っていない場合はマウス押下時のデータを None に設定し、メソッドを終了
             # デバッグ中なら、エラーを出力
-        if (self.rect is None or
+        if (
+            self.rect is None or
             not isinstance(self.press, ResizeOperationData) or
             event.xdata is None or
-            event.ydata is None):
+            event.ydata is None
+        ):
 
             self.press = None
 
@@ -381,10 +390,12 @@ class ZoomSelector:
         # リサイズに必要な情報が揃っているか確認
             # 揃っていない場合はマウス押下時のデータを None に設定し、メソッドを終了
             # デバッグ中なら、エラーを出力
-        if (self.rect is None or
+        if (
+            self.rect is None or
             not isinstance(self.press, RotationOperationData) or
             event.xdata is None or
-            event.ydata is None):
+            event.ydata is None
+        ):
 
             self.press = None
 
@@ -489,8 +500,10 @@ class ZoomSelector:
 
         # 属性に last_motion_time がない場合、または、
         # 前回のモーションイベントからの経過時間がスロットリング時間を超えている場合、メソッドを終了
-        if (hasattr(self, 'last_motion_time') and
-            current_time - self.last_motion_time < self.motion_throttle_ms):
+        if (
+            hasattr(self, 'last_motion_time') and
+            current_time - self.last_motion_time < self.motion_throttle_ms
+        ):
             return
 
         # 現在時刻を更新
@@ -594,7 +607,7 @@ class ZoomSelector:
         # デバッグログ出力
         if self._debug:
             self._log_debug_info(
-                "Rectangle size updated",
+                "ズーム領域：サイズ更新",
                 context={
                     "position": f"({x:.2f}, {y:.2f})",
                     "size": f"{width:.2f}x{height:.2f}"
@@ -805,7 +818,7 @@ class ZoomSelector:
         # デバッグログ出力
         if self._debug:
             self._log_debug_info(
-                "Minimum size constraint applied",
+                "ズーム領域：最小サイズ適用",
                 context={
                     "original_size": f"{width:.2f}x{height:.2f}",
                     "new_size": f"{new_width:.2f}x{new_height:.2f}",
@@ -992,6 +1005,7 @@ class ZoomSelector:
             new_state: 変更後の状態(オプション)
             level: ログレベル
         """
+
         if not self._debug:
             return
 
@@ -1014,6 +1028,7 @@ class ZoomSelector:
             if self.start_x is not None and self.start_y is not None
             else "None"
         )
+
         context["mouse_pos"] = mouse_pos
 
         # キー状態
