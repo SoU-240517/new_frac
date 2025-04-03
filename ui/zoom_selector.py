@@ -128,8 +128,8 @@ class ZoomSelector:
 
         # ズーム状態ごとの処理を定義
         state_handlers = {
-            ZoomState.NO_ZOOM_RECT: self._handle_no_zoom_rect_press,
-            ZoomState.WAIT_NOKEY_ZOOM_RECT_EXISTS: self._handle_zoom_rect_exists_press,
+            ZoomState.NO_ZOOM_RECT: self._handle_no_rect_press,
+            ZoomState.WAIT_NOKEY_ZOOM_RECT_EXISTS: self._handle_rect_exists_press,
             ZoomState.WAIT_SHIFT_RESIZE: self._handle_resize_press,
             ZoomState.WAIT_ALT_ROTATE: self._handle_rotate_press,
         }
@@ -143,15 +143,16 @@ class ZoomSelector:
         self.update_cursor(event)
         self.canvas.draw()
 
-    def _handle_no_zoom_rect_press(self, event):
+    def _handle_no_rect_press(self, event):
         """ マウスボタンが押下された時の処理：ズーム領域が無い """
         if event.button == 1:
             self.state = ZoomState.CREATE
-            self._begin_zoom_rect_creation(event)
+            self._begin_rect_creation(event)
         elif event.button == 2:
-            self._cancel_zoom()
+            if self.on_zoom_cancel:
+                self.on_zoom_cancel()  # コールバック：MainWindow.on_zoom_cancel を呼ぶ
 
-    def _begin_zoom_rect_creation(self, event):
+    def _begin_rect_creation(self, event):
         """ ズーム領域を作成するための初期化処理 """
 
         # ズーム領域の開始位置を記録
@@ -166,42 +167,28 @@ class ZoomSelector:
         # ズーム領域をキャンバスに追加
         self.ax.add_patch(self.rect)
 
-    def _handle_zoom_rect_exists_press(self, event):
+    def _handle_rect_exists_press(self, event):
         """ マウスボタンが押下された時の処理：ズーム領域あり、かつ待機中（リサイズか回転か不特定） """
         if event.button == 1:
             self._record_drag_start(event)
             self.state = ZoomState.MOVE
         elif event.button == 2:
-            self._cancel_zoom()
-        elif event.button == 3:
-            self._confirm_zoom()
-
-    def _cancel_zoom(self):
-        """ 直前の描画情報があれば復元、無い場合はズーム領域を削除してコールバックを呼び出す """
-
-        if self.state == ZoomState.WAIT_NOKEY_ZOOM_RECT_EXISTS:
-
             if self.last_rect:
-
-                x, y, width, height = self.last_rect
-
-                self.rect.set_xy((x, y))
-                self.rect.set_width(width)
-                self.rect.set_height(height)
-
-                self.state = ZoomState.WAIT_NOKEY_ZOOM_RECT_EXISTS  # _cancel_zoom：ズームキャンセル後、直前のズーム領域あり
-
+                self._previou_rect()
             else:
                 self._clear_rect()
-
                 self.state = ZoomState.NO_ZOOM_RECT  # _cancel_zoom：ズームキャンセル後、直前のズーム領域無し
+        elif event.button == 3:
+            self._confirm_zoom()
+            self.state = ZoomState.NO_ZOOM_RECT  # _confirm_zoom：ズーム確定後：NO_ZOOM_AREA へ変更
 
-        elif self.state == ZoomState.NO_ZOOM_RECT:
+    def _previou_rect(self):
+        """ ズーム領域を直前の状態に戻す """
 
-            if self.on_zoom_cancel:
-                self.on_zoom_cancel()  # コールバック：MainWindow.on_zoom_cancel を呼ぶ
-
-                self.state = ZoomState.NO_ZOOM_RECT  # _cancel_zoom：ズームキャンセル後、ズーム領域無し
+        x, y, width, height = self.last_rect
+        self.rect.set_xy((x, y))
+        self.rect.set_width(width)
+        self.rect.set_height(height)
 
     def _record_drag_start(self, event):
         """ ズーム領域の情報を更新（矩形の左下, 現在のマウスカーソルの位置 x, y） """
@@ -230,8 +217,6 @@ class ZoomSelector:
 
         if self.on_zoom_confirm:
             self.on_zoom_confirm(zoom_params)  # コールバック：MainWindow.on_zoom_confirm を呼ぶ
-
-        self.state = ZoomState.NO_ZOOM_RECT  # _confirm_zoom：ズーム確定後：NO_ZOOM_AREA へ変更
 
     def _handle_resize_press(self, event):
         """ マウス押下時の処理：ズーム領域あり、かつ Shift 押下（リサイズ待機中） """
