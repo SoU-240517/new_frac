@@ -132,7 +132,7 @@ class ZoomSelector:
         self.rot_base = 0.0  # 回転開始時の角度
         self.last_cursor_state = "arrow"
         self.last_motion_time = int(time.time() * 1000)  # 初期値を設定
-        self.motion_throttle_ms = 50.1  # 3 フレームごとに 1 回のみ実行されるように設定（16.7ms × 3 = 50.1ms）
+        self.motion_throttle_ms = 66.8  # 3 フレームごとに 1 回のみ実行されるように設定（16.7ms × 3 = 50.1ms）（50.1：会社設定）
         self.MIN_RECT_SIZE = 0.1  # ズーム領域の最小サイズ
         self._cached_rect_props = None  # ズーム領域のプロパティをキャッシュする変数
         self._state = ZoomState.NO_ZOOM_RECT  # 内部状態変数（アンダースコア付き）
