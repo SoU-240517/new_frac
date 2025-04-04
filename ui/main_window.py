@@ -1,8 +1,8 @@
+from ui.canvas import FractalCanvas
+from ui.parameter_panel import ParameterPanel
 import tkinter as tk
 import numpy as np
 from tkinter import ttk
-from ui.canvas import FractalCanvas
-from ui.parameter_panel import ParameterPanel
 from fractal.render import render_fractal
 
 class MainWindow:
