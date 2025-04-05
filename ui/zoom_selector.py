@@ -6,6 +6,13 @@ from enum import Enum, auto
 import time  # 時間処理モジュール
 from typing import Optional, Dict, Any
 
+class LogLevel(Enum):
+    """ログレベルを表す列挙型"""
+    DEBUG = auto()  # 開発中の詳細な変数確認（マウス座標の細かい変化、計算途中の値とか）
+    INFO = auto()  # 正常系の重要な状態変化（ズーム領域の確定、状態遷移とか）
+    WARNING = auto()  # 想定外だが処理は継続可能な問題（最小サイズ未満の入力、許容範囲外の座標とか）
+    ERROR = auto()  # 処理継続不可能な重大なエラー（不正な状態遷移、NULL参照エラーとか）
+
 @dataclass
 class ResizeOperationData:
     """ズーム領域のリサイズ時の列挙型"""
@@ -24,70 +31,6 @@ class RotationOperationData:
     center_x: float       # 中心点のx座標
     center_y: float       # 中心点のy座標
     initial_angle: float  # 回転開始時の角度
-
-class LogLevel(Enum):
-    """ログレベルを表す列挙型"""
-    DEBUG = auto()  # 開発中の詳細な変数確認（マウス座標の細かい変化、計算途中の値とか）
-    INFO = auto()  # 正常系の重要な状態変化（ズーム領域の確定、状態遷移とか）
-    WARNING = auto()  # 想定外だが処理は継続可能な問題（最小サイズ未満の入力、許容範囲外の座標とか）
-    ERROR = auto()  # 処理継続不可能な重大なエラー（不正な状態遷移、NULL参照エラーとか）
-
-class DebugLogger:
-    """デバッグログ出力を一元管理するクラス"""
-    def __init__(self, debug_enabled: bool = True):
-        self.debug_enabled = debug_enabled
-        self.last_log_time = 0
-        self.log_throttle_ms = 100  # ログのスロットリング間隔(ms)
-        self.min_level = LogLevel.DEBUG
-
-    def log(self,
-            level: LogLevel,
-            message: str,
-            context: Optional[Dict[str, Any]] = None,
-            force: bool = False) -> None:
-        """
-        デバッグログを出力する
-        Args:
-            level: ログレベル
-            message: メッセージ本文
-            context: 追加コンテキスト情報(dict)
-            force: スロットリングを無視して強制出力
-        """
-        if level.value < self.min_level.value:  # ログレベルが最小レベルより低い場合、メソッドを終了
-            return
-
-        if not self.debug_enabled and not force:  # デバッグモードが無効、かつ、強制出力でない場合は、メソッドを終了
-            return
-
-        current_time = int(time.time() * 1000)  # スロットリングチェック
-        if not force and current_time - self.last_log_time < self.log_throttle_ms:
-            return
-        self.last_log_time = current_time
-
-        # デバッグログのフォーマット
-        timestamp = time.strftime("%H:%M:%S", time.localtime())
-        level_str = level.name.ljust(7)
-        log_entry = f"[{timestamp}] {level_str} - {message}"
-        if context:
-            log_entry += "\n" + self._format_context(context)
-
-        print(log_entry)
-
-    def _format_context(self, context: Dict[str, Any]) -> str:
-        """コンテキスト情報を整形して文字列に変換"""
-        lines = []
-        for key, value in context.items():
-            if isinstance(value, (int, float)):
-                formatted = f"{value:.2f}" if isinstance(value, float) else str(value)
-            elif isinstance(value, Enum):
-                formatted = value.name
-            elif value is None:
-                formatted = "None"
-            else:
-                formatted = str(value)
-            lines.append(f"  - {key}: {formatted}")
-
-        return "\n".join(lines)
 
 class ZoomState(Enum):
     """ズーム操作の状態を表す列挙型"""
@@ -131,9 +74,9 @@ class ZoomSelector:
         self.MIN_RECT_PIXELS = 10  # ピクセル基準の最小サイズ
         self.MIN_RECT_SIZE = 0.1   # ズーム領域の最小サイズの初期値（後で動的計算で上書き）
         self._state = ZoomState.NO_RECT  # 内部状態変数（アンダースコア付き）
-        self.validator = EventValidator  # バリデータークラスのインスタンス
+        self.event_validator = ZoomEventValidator  # バリデータークラスのインスタンス
         self._debug = True  # デバッグモードフラグ
-        self.debug_logger = DebugLogger(debug_enabled=self._debug)
+        self.debug_logger = ZoomDebugLogger(debug_enabled=self._debug)
 
         # イベントハンドラ接続
         self.cid_press       = self.canvas.mpl_connect('button_press_event', self.on_press)
@@ -142,7 +85,7 @@ class ZoomSelector:
         self.cid_key_press   = self.canvas.mpl_connect("key_press_event", self.on_key_press)
         self.cid_key_release = self.canvas.mpl_connect("key_release_event", self.on_key_release)
 
-    # プロパティの定義 --------------------------------------------------
+    # プロパティの定義 ----------------------------------------------------------------------------------------
     @property
     def state(self):
         """
@@ -163,16 +106,13 @@ class ZoomSelector:
         """
 
         # 型チェック（必須）
-            # 新しい状態 (new_state) が ZoomState 型でなければエラーを発生させる
-        if not isinstance(new_state, ZoomState):
+        if not isinstance(new_state, ZoomState):  # 新しい状態が ZoomState 型でなければエラー
             error_msg = f"無効な状態型.state: {type(new_state)} (期待: ZoomState)"
             self._log_debug_info(error_msg, level=LogLevel.ERROR)
             raise TypeError(error_msg)
 
-        # 現在の状態を old_state に記録
-        old_state = self._state
+        old_state = self._state  # 現在の状態を old_state に記録
 
-        # 現在の状態 (old_state) と新しい状態を比較し、変化が無いなら、何もしない
         if old_state == new_state:
             return
 
@@ -191,22 +131,20 @@ class ZoomSelector:
             "ズーム領域サイズ.state": self._get_rect_properties()[2:] if self.rect else None
         }
 
-        # ズーム状態がリサイズであり、かつズーム領域が存在する場合、ズーム領域のサイズをコンソールに出力
+        # ズーム状態がリサイズ、かつ、ズーム領域が存在する場合、ズーム領域のサイズをコンテキストに追加
         if new_state == ZoomState.RESIZE and isinstance(self.press, ResizeOperationData):
             context["操作中の角.state"] = self.press.corner_name
             context["固定点座標.state"] = self.press.fixed_point
 
-        # デバッグログ出力
         self._log_debug_info(
             "状態遷移を検出.state",
             context=context,
             level=LogLevel.INFO
         )
 
-        # 実際の状態更新
         self._state = new_state  # ズーム操作の状態に変化がある場合は、現在の状態を更新
 
-        self._on_state_changed(old_state, new_state)
+#        self._on_state_changed(old_state, new_state)
 
     def _on_state_changed(self, old_state, new_state):
         """
@@ -219,9 +157,9 @@ class ZoomSelector:
         if self._last_motion_event:  # 直前のマウス移動イベントがある場合
             self.update_cursor(self._last_motion_event)  #  カーソルを更新
 
-    # on_press 関連 ----------------------------------------------------------------------------------------------------
+    # on_press 関連 ------------------------------------------------------------------------------------------
     def on_press(self, event):
-        if not self.validator.validate_basic_event(event, self):
+        if not self.event_validator.validate_basic_event(event, self):
             return
 
         state_handlers = {
@@ -430,11 +368,11 @@ class ZoomSelector:
         x, y, width, height = self._get_rect_properties()
         return (x + width / 2.0, y + height / 2.0)
 
-    # on_motion 関連 ----------------------------------------------------------------------------------------------------
+    # on_motion 関連 ------------------------------------------------------------------------------------------
     def on_motion(self, event):
         self._last_motion_event = event  # 直前のマウス移動イベントを保存
 
-        if not self.validator.validate_basic_event(event, self):
+        if not self.event_validator.validate_basic_event(event, self):
             return
 
         # スロットリング処理
@@ -474,7 +412,7 @@ class ZoomSelector:
 
     def _update_rect(self, event):
         """新規で作成したズーム領域の更新"""
-        if not self.validator.validate_basic_event(event, self):
+        if not self.event_validator.validate_basic_event(event, self):
             return
 
         # 差分計算（現在の座標 - 開始座標）
@@ -503,7 +441,7 @@ class ZoomSelector:
 
     def _update_rect_size(self, event):
         """ズーム領域のサイズ更新"""
-        if not self.validator.validate_resize(event, self):
+        if not self.event_validator.validate_resize(event, self):
             return
 
         rect_params = self._calculate_resized_rect(event.xdata, event.ydata)
@@ -566,7 +504,7 @@ class ZoomSelector:
 
     def _update_rect_rotate(self, event):
         """回転中のズーム領域の情報を更新"""
-        if not self.validator.validate_rotate(event, self):
+        if not self.event_validator.validate_rotate(event, self):
             return
 
         cx = self.press.center_x
@@ -593,9 +531,9 @@ class ZoomSelector:
         self._invalidate_rect_cache()
         self.canvas.draw()
 
-    # on_release 関連 ----------------------------------------------------------------------------------------------------
+    # on_release 関連 -----------------------------------------------------------------------------------------
     def on_release(self, event):
-        if not self.validator.validate_basic_event(event, self):
+        if not self.event_validator.validate_basic_event(event, self):
             return
 
         state_handlers = {
@@ -745,7 +683,7 @@ class ZoomSelector:
 
         return self._min_rsct_data
 
-    # on_key_press 関連 ----------------------------------------------------------------------------------------------------
+    # on_key_press 関連 --------------------------------------------------------------------------------------
 
     def on_key_press(self, event):
         if event.key not in ['shift', 'alt']:
@@ -764,7 +702,7 @@ class ZoomSelector:
 
         self.update_cursor(self._last_motion_event)
 
-    # on_key_release 関連 ----------------------------------------------------------------------------------------------------
+    # on_key_release 関連 -------------------------------------------------------------------------------------
 
     def on_key_release(self, event):
         if self._last_motion_event is None:
@@ -798,7 +736,7 @@ class ZoomSelector:
         self.update_cursor(event)
         self.canvas.draw()
 
-    # ------------------------------------------------------------------------------------------------------------------------
+    # --------------------------------------------------------------------------------------------------------
     def _clear_rect(self):
         """ズーム領域を完全にクリア（キャッシュ・状態もリセット）"""
         if self.rect is not None:
@@ -962,83 +900,135 @@ class ZoomSelector:
                 return True
         return False
 
-class EventValidator:
+# ------------------------------------------------------------------------------------------------------------
+
+class ZoomEventValidator:
     @staticmethod
-    def validate_basic_event(event, selector):
+    def validate_basic_event(event, selector) -> bool:
         """
-        イベント有効性チェック：基本
+        マウスイベントの有効性チェック：基本
         Args:
             event: 検証するイベント
             selector: ZoomSelectorインスタンス
         Returns:
-            bool: イベントが有効ならTrue
+            bool: イベントが有効なら True
         """
         checks = [
-            (hasattr(event, 'xdata') and hasattr(event, 'ydata'), "座標が見つかりません"),
-            (event.xdata is not None and event.ydata is not None, "座標なし"),
-            (hasattr(event, 'inaxes') and event.inaxes == selector.ax, "無効な軸")
+            (hasattr(event, 'xdata') and hasattr(event, 'ydata'), "イベントに座標の属性なし"),
+            (event.xdata is not None and event.ydata is not None, "イベントの座標が None"),
+            (hasattr(event, 'inaxes') and event.inaxes == selector.ax, "無効な描画エリア")
         ]
         return all(condition for condition, _ in checks)
 
     @staticmethod
-    def validate_rect_operation(event, selector):
+    def validate_rect_operation(event, selector) -> bool:
         """
         イベント有効性チェック：矩形操作用
         Args:
             event: 検証するイベント
             selector: ZoomSelectorインスタンス
         Returns:
-            bool: 矩形操作が可能ならTrue
+            bool: 矩形操作が可能なら True
         """
         return (
-            EventValidator.validate_basic_event(event, selector) and
+            ZoomEventValidator.validate_basic_event(event, selector) and
             selector.rect is not None
         )
 
     @staticmethod
-    def validate_resize(event, selector):
+    def validate_resize(event, selector) -> bool:
         """
         イベント有効性チェック：リサイズ操作用
         Args:
             event: 検証するイベント
             selector: ZoomSelectorインスタンス
         Returns:
-            bool: リサイズ操作が可能ならTrue
+            bool: リサイズ操作が可能なら True
         """
         return (
-            EventValidator.validate_rect_operation(event, selector) and
+            ZoomEventValidator.validate_rect_operation(event, selector) and
             isinstance(selector.press, ResizeOperationData) and
             selector.state == ZoomState.RESIZE
         )
 
     @staticmethod
-    def validate_rotate(event, selector):
+    def validate_rotate(event, selector) -> bool:
         """
         イベント有効性チェック：回転操作用
         Args:
             event: 検証するイベント
             selector: ZoomSelectorインスタンス
         Returns:
-            bool: 回転操作が可能ならTrue
+            bool: 回転操作が可能なら True
         """
         return (
-            EventValidator.validate_rect_operation(event, selector) and
+            ZoomEventValidator.validate_rect_operation(event, selector) and
             isinstance(selector.press, RotationOperationData) and
             selector.state == ZoomState.ROTATE
         )
 
-    @staticmethod
-    def validate_size_constraints(selector):
-        """
-        サイズ制約のバリデーション
-        Args:
-            selector: ZoomSelectorインスタンス
-        Returns:
-            bool: サイズ制約が満たされていればTrue
-        """
-        if selector.rect is None:
-            return False
+# ------------------------------------------------------------------------------------------------------------
 
-        min_size = selector._get_min_size_in_data_coords()
-        props = selector._get_rect_properties()
-        return all(abs(p) >= min_size * 0.9 for p in props[2:])  # 10%のマージン
+class ZoomDebugLogger:
+    """デバッグログ出力を一元管理するクラス"""
+    def __init__(self, debug_enabled: bool = True):
+        self.debug_enabled = debug_enabled
+        self.last_log_time = 0
+        self.log_throttle_ms = 100  # ログのスロットリング間隔(ms)
+        self.min_level = LogLevel.DEBUG
+
+    def log(self,
+            level: LogLevel,
+            message: str,
+            context: Optional[Dict[str, Any]] = None,
+            force: bool = False) -> None:
+        """
+        デバッグログを出力する
+        Args:
+            level: ログレベル
+            message: メッセージ本文
+            context: 追加コンテキスト情報(dict)
+            force: スロットリングを無視して強制出力
+        """
+        if not self._should_log(level):
+            return
+
+        # デバッグログのフォーマット
+        timestamp = time.strftime("%H:%M:%S", time.localtime())
+        level_str = level.name.ljust(7)
+        log_entry = f"[{timestamp}] {level_str} - {message}"
+        if context:
+            log_entry += "\n" + self._format_context(context)
+
+        print(log_entry)
+
+        self.last_log_time = int(time.time() * 1000)
+
+    def _should_log(self, level: LogLevel) -> bool:
+        """ログを出力すべきか判定"""
+        return (
+            self.debug_enabled and
+            level.value >= self.min_level.value and
+            self._check_throttle()
+        )
+
+    def _check_throttle(self) -> bool:
+        """スロットリングチェック"""
+        current_time = int(time.time() * 1000)
+        return (current_time - self.last_log_time) >= self.log_throttle_ms
+
+    def _format_context(self, context: Dict[str, Any]) -> str:
+        """コンテキスト情報を整形して文字列に変換"""
+        lines = []
+        for key, value in context.items():
+            if isinstance(value, (int, float)):
+                formatted = f"{value:.2f}" if isinstance(value, float) else str(value)
+            elif isinstance(value, Enum):
+                formatted = value.name
+            elif value is None:
+                formatted = "None"
+            else:
+                formatted = str(value)
+            lines.append(f"  - {key}: {formatted}")
+
+        return "\n".join(lines)
