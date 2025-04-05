@@ -618,12 +618,12 @@ class ZoomSelector:
         self._apply_min_size_constraints()
         self.state = ZoomState.WAIT_RECT_EXISTS
 
-    def _handle_move_release(self):
+    def _handle_move_release(self, event):
         """MOVE 状態でのリリース処理"""
         self.press = None
         self.state = ZoomState.WAIT_RECT_EXISTS
 
-    def _handle_resize_release(self):
+    def _handle_resize_release(self, event):
         """RESIZE 状態でのリリース処理"""
         if self.rect is not None:
             self._apply_min_size_constraints()
@@ -633,7 +633,7 @@ class ZoomSelector:
         if self.key_pressed['alt']:
             self.state = ZoomState.WAIT_RECT_EXISTS
 
-    def _handle_rotate_release(self):
+    def _handle_rotate_release(self, event):
         """ROTATE 状態でのリリース処理"""
         self.press = None
         if self.key_pressed['shift']:
