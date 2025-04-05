@@ -74,9 +74,8 @@ class ZoomSelector:
         self.MIN_RECT_PIXELS = 10  # ピクセル基準の最小サイズ
         self.MIN_RECT_SIZE = 0.1   # ズーム領域の最小サイズの初期値（後で動的計算で上書き）
         self._state = ZoomState.NO_RECT  # 内部状態変数（アンダースコア付き）
-        self.event_validator = ZoomEventValidator  # バリデータークラスのインスタンス
-        self._debug = True  # デバッグモードフラグ
-        self.debug_logger = ZoomDebugLogger(debug_enabled=self._debug)
+        self.event_validator = ZoomEventValidator  #  イベントバリデーターのインスタンス
+        self.debug_logger = ZoomDebugLogger()  # デバッグロガーのインスタンス
 
         # イベントハンドラ接続
         self.cid_press       = self.canvas.mpl_connect('button_press_event', self.on_press)
@@ -108,7 +107,7 @@ class ZoomSelector:
         # 型チェック（必須）
         if not isinstance(new_state, ZoomState):  # 新しい状態が ZoomState 型でなければエラー
             error_msg = f"無効な状態型.state: {type(new_state)} (期待: ZoomState)"
-            self._log_debug_info(error_msg, level=LogLevel.ERROR)
+            self.debug_logger._log_debug_info(error_msg, level=LogLevel.ERROR)
             raise TypeError(error_msg)
 
         old_state = self._state  # 現在の状態を old_state に記録
@@ -136,7 +135,7 @@ class ZoomSelector:
             context["操作中の角.state"] = self.press.corner_name
             context["固定点座標.state"] = self.press.fixed_point
 
-        self._log_debug_info(
+        self.debug_logger._log_debug_info(
             "状態遷移を検出.state",
             context=context,
             level=LogLevel.INFO
@@ -186,7 +185,7 @@ class ZoomSelector:
     def _begin_rect_set(self, event):
         """ズーム領域を作成するための初期化処理"""
         if event.xdata is None or event.ydata is None:  # イベント座標が取得できない (None) 場合
-            self._log_debug_info(  # デバッグログを出力して、メソッドを終了
+            self.debug_logger._log_debug_info(  # デバッグログを出力して、メソッドを終了
                 "座標取得不可._begin_rect_creation",
             context={
                 "開始座標._begin_rect_creation": (self.start_x, self.start_y),
@@ -246,7 +245,7 @@ class ZoomSelector:
         }
 
         if self._debug:
-            self._log_debug_info(
+            self.debug_logger._log_debug_info(
                 "ズーム領域確定._confirm_zoom",
                 context={
                     "中心座標._confirm_zoom": f"({center_x:.2f}, {center_y:.2f})",
@@ -277,7 +276,7 @@ class ZoomSelector:
             self.press = None  # マウス押下時のデータを None に設定
 
             if self._debug:
-                self._log_debug_info(
+                self.debug_logger._log_debug_info(
                     "サイズ変更の初期化に失敗: 初期状態が無効です._handle_resize_press",
                     level=LogLevel.ERROR
                 )
@@ -301,7 +300,7 @@ class ZoomSelector:
             self.press = None  # マウス押下時のデータを None に設定
 
             if self._debug:
-                self._log_debug_info(
+                self.debug_logger._log_debug_info(
                     "回転の初期化に失敗: 初期状態が無効です._handle_rotate_press",
                     level=LogLevel.ERROR
                 )
@@ -446,7 +445,7 @@ class ZoomSelector:
 
         rect_params = self._calculate_resized_rect(event.xdata, event.ydata)
 
-        self._log_debug_info(
+        self.debug_logger._log_debug_info(
             "リサイズ計算結果._update_rect_size",
             context={
                 "マウス座標._update_rect_size": (event.xdata, event.ydata),
@@ -464,7 +463,7 @@ class ZoomSelector:
         self._invalidate_rect_cache()
 
         if self._debug:
-            self._log_debug_info(
+            self.debug_logger._log_debug_info(
                 "ズーム領域：サイズ更新._update_rect_size",
                 context={
                     "左下座標._update_rect_size": f"({x:.2f}, {y:.2f})",
@@ -644,7 +643,7 @@ class ZoomSelector:
             self._invalidate_rect_cache()
 
         if self._debug:
-            self._log_debug_info(
+            self.debug_logger._log_debug_info(
                 "ズーム領域：最小サイズ適用._apply_min_size_constraints",
                 context={
                     "サイズ：リサイズ前._apply_min_size_constraints": f"{width:.2f}x{height:.2f}",
@@ -671,7 +670,7 @@ class ZoomSelector:
         px_diff = transform.transform((self.MIN_RECT_PIXELS, 0))[0] - transform.transform((0, 0))[0]
         self._min_rsct_data = abs(px_diff)  # 計算結果の絶対値を self にキャッシュする
 
-        self._log_debug_info(
+        self.debug_logger._log_debug_info(
             "最小サイズ更新._get_min_size_in_data_coordsclear_rect",
             context={
                 "最小サイズのピクセル値._get_min_size_in_data_coords": self.MIN_RECT_PIXELS,
@@ -753,7 +752,7 @@ class ZoomSelector:
         self.canvas.draw()
 
         if self._debug:
-            self._log_debug_info(
+            self.debug_logger._log_debug_info(
                 "ズーム領域クリア._clear_rect",
                 level=LogLevel.INFO
             )
@@ -795,75 +794,6 @@ class ZoomSelector:
             return False
         contains, _ = self.rect.contains(event)
         return contains
-
-    def _log_debug_info(self,
-                        message: str,
-                        context: Optional[Dict[str, Any]] = None,
-                        old_state: Optional[ZoomState] = None,
-                        new_state: Optional[ZoomState] = None,
-                        level: LogLevel = LogLevel.DEBUG) -> None:
-        """
-        デバッグ情報をログに出力
-        Args:
-            message: メインのログメッセージ
-            context: 追加コンテキスト情報(オプション)
-            old_state: 変更前の状態(オプション)
-            new_state: 変更後の状態(オプション)
-            level: ログレベル
-        """
-        if not self._debug:
-            return
-
-        if context is None: # コンテキストが None の場合
-            context = {}  # 空の辞書を初期化
-
-        if old_state is not None and new_state is not None:
-            context["ズーム状態変更._log_debug_info"] = f"{old_state.name} → {new_state.name}"
-
-        # マウス位置
-        # start_x と start_y が None でない場合
-        # 小数点1桁でフォーマット（start_x=12.3456, start_y=78.9 の場合 → "(12.3, 78.9)"）
-        # どちらかが None の場合は "None" とする
-            # Python では、A if 条件 else B の形式のコードがあるとき
-            # 条件が True の場合は A が処理され、False の場合は B が処理される
-#        mouse_pos = (
-#            f"({self.start_x:.1f}, {self.start_y:.1f})"
-#            if self.start_x is not None and self.start_y is not None
-#            else "None"
-#        )
-#        context["マウス位置._log_debug_info"] = mouse_pos
-
-        # キー状態
-#        context["キーステータス._log_debug_info"] = f"SHIFT: {self.key_pressed['shift']}, ALT: {self.key_pressed['alt']}"
-
-        # ズーム領域情報
-#        rect_props = self._get_rect_properties()
-#        context["ズーム領域._log_debug_info"] = f"{rect_props}" if rect_props else "None"
-
-        # リサイズ操作情報
-        if self.press and isinstance(self.press, ResizeOperationData):
-            resize_info = {
-                "角の名前._log_debug_info": self.press.corner_name,
-                "固定点._log_debug_info": f"({self.press.fixed_point[0]:.1f}, {self.press.fixed_point[1]:.1f})",
-                "ズーム前のサイズ._log_debug_info": f"{self.press.original_width:.1f}x{self.press.original_height:.1f}",
-                "ドラッグ開始位置._log_debug_info": f"({self.press.press_x:.1f}, {self.press.press_y:.1f})"
-            }
-            context["リサイズ情報._log_debug_info"] = resize_info
-
-        # 回転操作情報
-        if self.press and isinstance(self.press, RotationOperationData):
-            rotate_info = {
-                "中心点": f"({self.press.center_x:.1f}, {self.press.center_y:.1f})",
-                "角度": f"{self.press.initial_angle:.1f}°"
-            }
-            context["回転情報._log_debug_info"] = rotate_info
-
-        # イベント位置
-        if hasattr(self, '_last_motion_event') and self._last_motion_event:
-            e = self._last_motion_event
-            context["直前のマウス座標._log_debug_info"] = f"({e.xdata:.1f}, {e.ydata:.1f})"
-
-        self.debug_logger.log(level, message, context)
 
     def _get_rect_properties(self):
         """
@@ -971,17 +901,17 @@ class ZoomEventValidator:
 
 class ZoomDebugLogger:
     """デバッグログ出力を一元管理するクラス"""
-    def __init__(self, debug_enabled: bool = True):
-        self.debug_enabled = debug_enabled
+    def __init__(self):
+        self._debug = True  # デバッグモードフラグ
+        self.min_level = LogLevel.DEBUG
+        self.zoom_selector = ZoomSelector  # ZoomSelector クラスのインスタンスを保持
         self.last_log_time = 0
         self.log_throttle_ms = 100  # ログのスロットリング間隔(ms)
-        self.min_level = LogLevel.DEBUG
 
     def log(self,
             level: LogLevel,
             message: str,
-            context: Optional[Dict[str, Any]] = None,
-            force: bool = False) -> None:
+            context: Optional[Dict[str, Any]] = None) -> None:
         """
         デバッグログを出力する
         Args:
@@ -1007,7 +937,7 @@ class ZoomDebugLogger:
     def _should_log(self, level: LogLevel) -> bool:
         """ログを出力すべきか判定"""
         return (
-            self.debug_enabled and
+            self._debug and
             level.value >= self.min_level.value and
             self._check_throttle()
         )
@@ -1032,3 +962,72 @@ class ZoomDebugLogger:
             lines.append(f"  - {key}: {formatted}")
 
         return "\n".join(lines)
+
+    def _log_debug_info(self,
+                        message: str,
+                        context: Optional[Dict[str, Any]] = None,
+                        old_state: Optional[ZoomState] = None,
+                        new_state: Optional[ZoomState] = None,
+                        level: LogLevel = LogLevel.DEBUG) -> None:
+        """
+        デバッグ情報をログに出力
+        Args:
+            message: メインのログメッセージ
+            context: 追加コンテキスト情報(オプション)
+            old_state: 変更前の状態(オプション)
+            new_state: 変更後の状態(オプション)
+            level: ログレベル
+        """
+        if not self._debug:
+            return
+
+        if context is None: # コンテキストが None の場合
+            context = {}  # 空の辞書を初期化
+
+        if old_state is not None and new_state is not None:
+            context["ズーム状態変更._log_debug_info"] = f"{old_state.name} → {new_state.name}"
+
+        # マウス位置
+        # start_x と start_y が None でない場合
+        # 小数点1桁でフォーマット（start_x=12.3456, start_y=78.9 の場合 → "(12.3, 78.9)"）
+        # どちらかが None の場合は "None" とする
+            # Python では、A if 条件 else B の形式のコードがあるとき
+            # 条件が True の場合は A が処理され、False の場合は B が処理される
+#        mouse_pos = (
+#            f"({self.start_x:.1f}, {self.start_y:.1f})"
+#            if self.start_x is not None and self.start_y is not None
+#            else "None"
+#        )
+#        context["マウス位置._log_debug_info"] = mouse_pos
+
+        # キー状態
+#        context["キーステータス._log_debug_info"] = f"SHIFT: {self.key_pressed['shift']}, ALT: {self.key_pressed['alt']}"
+
+        # ズーム領域情報
+#        rect_props = self._get_rect_properties()
+#        context["ズーム領域._log_debug_info"] = f"{rect_props}" if rect_props else "None"
+
+        # リサイズ操作情報
+        if self.press and isinstance(self.zoom_selector.press, ResizeOperationData):
+            resize_info = {
+                "角の名前._log_debug_info": self.zoom_selector.press.corner_name,
+                "固定点._log_debug_info": f"({self.zoom_selector.press.fixed_point[0]:.1f}, {self.zoom_selector.press.fixed_point[1]:.1f})",
+                "ズーム前のサイズ._log_debug_info": f"{self.zoom_selector.press.original_width:.1f}x{self.zoom_selector.press.original_height:.1f}",
+                "ドラッグ開始位置._log_debug_info": f"({self.zoom_selector.press.press_x:.1f}, {self.zoom_selector.press.press_y:.1f})"
+            }
+            context["リサイズ情報._log_debug_info"] = resize_info
+
+        # 回転操作情報
+        if self.press and isinstance(self.zoom_selector.press, RotationOperationData):
+            rotate_info = {
+                "中心点": f"({self.zoom_selector.press.center_x:.1f}, {self.zoom_selector.press.center_y:.1f})",
+                "角度": f"{self.zoom_selector.press.initial_angle:.1f}°"
+            }
+            context["回転情報._log_debug_info"] = rotate_info
+
+        # イベント位置
+        if hasattr(self, '_last_motion_event') and self.zoom_selector._last_motion_event:
+            e = self.zoom_selector._last_motion_event
+            context["直前のマウス座標._log_debug_info"] = f"({e.xdata:.1f}, {e.ydata:.1f})"
+
+        self.log(level, message, context)
