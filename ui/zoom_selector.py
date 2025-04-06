@@ -27,8 +27,8 @@ class ZoomSelector:
 
         # イベントハンドラ接続
         self.cid_press       = self.canvas.mpl_connect('button_press_event', self.on_press)
-        self.cid_release     = self.canvas.mpl_connect('button_release_event', self.on_release)
         self.cid_motion      = self.canvas.mpl_connect('motion_notify_event', self.on_motion)
+        self.cid_release     = self.canvas.mpl_connect('button_release_event', self.on_release)
 
     # プロパティの定義 -------------------------------------------------------------------------------------------------------------------
 
@@ -84,6 +84,8 @@ class ZoomSelector:
 
         self.ax.add_patch(self.rect)  # ズーム領域をキャンバスに追加
 
+    # on_motion 関連 ---------------------------------------------------------------------------------------------------------------------
+
     def on_motion(self, event):
         """マウス移動時の処理"""
         state_handlers = {
@@ -106,6 +108,8 @@ class ZoomSelector:
             abs(diff_x),
             abs(diff_y)
         )
+
+    # on_release 関連 ---------------------------------------------------------------------------------------------------------------------
 
     def on_release(self, event):
         """マウスボタン開放時の処理"""
@@ -132,7 +136,6 @@ class ZoomSelector:
 
         if diff_x == 0 or diff_y == 0:
             self._clear_rect()
-            self.state = ZoomState.NO_RECT
             return
 
         new_x = self.start_x if diff_x > 0 else end_x
@@ -148,3 +151,5 @@ class ZoomSelector:
         self.start_x = self.start_y = None  # 開始座標リセット
 
         self.canvas.draw()
+
+    # ----------------------------------------------------------------------------------------------------------------------------------
