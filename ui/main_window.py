@@ -1,15 +1,15 @@
-from ui.canvas import FractalCanvas
-from ui.parameter_panel import ParameterPanel
 import tkinter as tk
 import numpy as np
 from tkinter import ttk
+from ui.canvas import FractalCanvas
+from ui.parameter_panel import ParameterPanel
 from fractal.render import render_fractal
 
 class MainWindow:
     """ フラクタル描画アプリケーションのメインウィンドウクラス """
     def __init__(self, root):
         """ フラクタル描画アプリケーションのメインウィンドウ初期化（ズーム操作の状態管理も行う） """
-        print("初期化 : CLASS→ MainWindow : FILE→ main_window.py")
+        print("INI: CLASS→ MainWindow: FILE→ main_window.py")
 
         self.root = root  # Tkinter ルートウィンドウ
         self.root.title("フラクタル描画アプリケーション")  # ウィンドウタイトル設定
@@ -37,7 +37,7 @@ class MainWindow:
 
     def update_fractal(self, *args):
         """ 最新パラメータにズーム情報を上書きしてフラクタルを再描画 """
-        print("更新 : フラクタル : update_fractal : CLASS→ MainWindow : FILE→ main_window.py")
+        print("update_fractal: CLASS→ MainWindow: FILE→ main_window.py")
         panel_params = self.parameter_panel.get_parameters()  # パネルからパラメータを取得
         panel_params.update(self.zoom_params)  # ズーム情報を上書き
         fractal_image = render_fractal(panel_params)
@@ -45,7 +45,7 @@ class MainWindow:
 
     def on_zoom_confirm(self, new_zoom_params):
         """ ズーム確定時のコールバック（縦横比を調整し、ズームレベルに応じて反復回数を自動調整） """
-        print("on_zoom_confirm Callback : CLASS→ MainWindow : FILE→ main_window.py")
+        print("on_zoom_confirm Callback: CLASS→ MainWindow: FILE→ main_window.py")
         if new_zoom_params == self.zoom_params:
             return
 
@@ -75,7 +75,7 @@ class MainWindow:
 
     def on_zoom_cancel(self):
         """ ズームキャンセル時のコールバック """
-        print("on_zoom_cancel Callback : CLASS→ MainWindow : FILE→ main_window.py")
+        print("on_zoom_cancel Callback: CLASS→ MainWindow: FILE→ main_window.py")
         if self.prev_zoom_params is not None:  # 直前のズーム領域がある場合
             self.zoom_params = self.prev_zoom_params.copy()  # 直前のズーム領域を復元
             self.update_fractal()
@@ -85,7 +85,7 @@ class MainWindow:
 
     def reset_zoom(self):
         """ 操作パネルの「描画リセット」ボタン押下時の処理（ズームパラメータを初期状態に戻して再描画） """
-        print("リセット : 描画 : reset_zoom : CLASS→ MainWindow : FILE→ main_window.py")
+        print("reset_zoom: CLASS→ MainWindow: FILE→ main_window.py")
         self.zoom_params = {
             "center_x": 0.0,
             "center_y": 0.0,

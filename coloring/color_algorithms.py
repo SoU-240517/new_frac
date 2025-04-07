@@ -4,7 +4,7 @@ from coloring import gradient
 
 def apply_coloring_algorithm(results, params):
     """ 着色アルゴリズムを適用して結果を返す """
-    print("着色アルゴリズム適用 : apply_coloring_algorithm :: FILE→ color_algorithms.py")
+    print("apply_coloring_algorithm:: FILE→ color_algorithms.py")
     iterations = results['iterations']
     mask = results['mask']
     z_vals = results['z_vals']

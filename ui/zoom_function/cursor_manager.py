@@ -1,4 +1,3 @@
-# cursor_manager.py
 from matplotlib.backend_bases import Event
 from typing import Optional, TYPE_CHECKING
 
@@ -12,14 +11,14 @@ from .enums import ZoomState # ZoomStateはEnumなので直接インポートし
 class CursorManager:
     """ マウスカーソルの形状を管理するクラス """
     def __init__(self, canvas, state_handler: 'ZoomStateHandler'):
-        print("初期化 : CLASS→ CursorManager : FILE→ cursor_manager.py")
+        print("INI: CLASS→ CursorManager: FILE→ cursor_manager.py")
         self.canvas = canvas
         self.state_handler = state_handler
         self.last_cursor_state: Optional[str] = None # tkのカーソル名
 
     def update(self, event: Optional[Event] = None):
         """ 現在の状態に応じてカーソル形状を更新 """
-        print("更新 : update : CLASS→ CursorManager : FILE→ cursor_manager.py")
+        print("update: CLASS→ CursorManager: FILE→ cursor_manager.py")
         current_state = self.state_handler.get_state()
         new_cursor: str
 
@@ -41,7 +40,7 @@ class CursorManager:
 
     def reset(self):
         """ カーソルをデフォルト (arrow) に戻す """
-        print("リセット : reset : CLASS→ CursorManager : FILE→ cursor_manager.py")
+        print("reset: CLASS→ CursorManager: FILE→ cursor_manager.py")
         self.last_cursor_state = None # 強制的に更新させる
         try:
             widget = self.canvas.get_tk_widget()

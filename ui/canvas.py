@@ -6,7 +6,7 @@ class FractalCanvas:
     """ フラクタル描画キャンバスクラス """
     def __init__(self, parent):
         """ キャンバス初期化（MatplotlibのFigure を Tkinter ウィジェットに埋め込む）"""
-        print("初期化 : CLASS→ FractalCanvas : FILE→ canvas.py")
+        print("INI: CLASS→ FractalCanvas: FILE→ canvas.py")
         self.parent = parent
         self.fig = Figure(figsize=(6, 6), dpi=100)
         self.ax = self.fig.add_subplot(111)
@@ -23,13 +23,13 @@ class FractalCanvas:
 
     def set_zoom_callback(self, zoom_confirm_callback, zoom_cancel_callback):
         """ ズーム確定・キャンセル時のコールバックを設定 """
-        print("コールバック設定 : set_zoom_callback : CLASS→ FractalCanvas : FILE→ canvas.py")
+        print("set_zoom_callback: CLASS→ FractalCanvas: FILE→ canvas.py")
         self.zoom_confirm_callback = zoom_confirm_callback
         self.zoom_cancel_callback = zoom_cancel_callback
 
     def zoom_confirmed(self, zoom_params):
         """ ズーム確定時のコールバック """
-        print("ズーム確定 : zoom_confirmed : CLASS→ FractalCanvas : FILE→ canvas.py")
+        print("zoom_confirmed: CLASS→ FractalCanvas: FILE→ canvas.py")
         if hasattr(self, 'zoom_confirm_callback') and self.zoom_confirm_callback:
             new_zoom_params = {
                 "center_x": zoom_params[0],
@@ -42,13 +42,13 @@ class FractalCanvas:
 
     def zoom_cancelled(self):
         """ ズームキャンセル時のコールバック """
-        print("ズームキャンセル : zoom_cancelled : CLASS→ FractalCanvas : FILE→ canvas.py")
+        print("zoom_cancelled: CLASS→ FractalCanvas: FILE→ canvas.py")
         if hasattr(self, 'zoom_cancel_callback') and self.zoom_cancel_callback:
             self.zoom_cancel_callback()
 
     def update_canvas(self, fractal_image, params):
         """ キャンバスを更新し、指定されたフラクタル画像を描画 """
-        print("更新 : キャンバス : update_canvas : CLASS→ FractalCanvas : FILE→ canvas.py")
+        print("update_canvas: CLASS→ FractalCanvas: FILE→ canvas.py")
         self.ax.clear()  # キャンバスをクリア
         self.ax.axis('off')  # 座標軸は非表示
         self.fig.subplots_adjust(left=0, right=1, top=1, bottom=0)  # キャンバスのパディングを削除

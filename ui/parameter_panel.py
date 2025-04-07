@@ -6,7 +6,7 @@ class ParameterPanel:
     """ パラメータパネルクラス """
     def __init__(self, parent, update_callback, reset_callback=None):
         """ パラメータパネルの初期化 """
-        print("初期化 : パラメータパネル : CLASS→ ParameterPanel : FILE→ parameter_panel.py")
+        print("INI: CLASS→ ParameterPanel: FILE→ parameter_panel.py")
         self.parent = parent
         self.update_callback = update_callback
         self.reset_callback = reset_callback
@@ -14,7 +14,7 @@ class ParameterPanel:
 
     def setup_panel(self):
         """ パラメータパネルの設定 """
-        print("パラメータパネル設定 : setup_panel : CLASS→ ParameterPanel : FILE→ parameter_panel.py")
+        print("setup_panel: CLASS→ ParameterPanel: FILE→ parameter_panel.py")
         row = 0
 
         # フラクタルタイプ選択
@@ -147,7 +147,7 @@ class ParameterPanel:
 
     def update_formula_display(self):
         """ 漸化式を表示する関数 """
-        print("更新 : 漸化式 : update_formula_display : CLASS→ ParameterPanel : FILE→ parameter_panel.py")
+        print("update_formula_display: CLASS→ ParameterPanel: FILE→ parameter_panel.py")
         fractal_type = self.fractal_type_var.get()
         if fractal_type == "Julia":
             self.formula_var.set("Z_n+1 = Z_n² + C")
@@ -156,7 +156,7 @@ class ParameterPanel:
 
     def get_parameters(self):
         """ パラメータを取得する関数 """
-        print("パラメータ取得 : get_parameters : CLASS→ ParameterPanel : FILE→ parameter_panel.py")
+        print("get_parameters: CLASS→ ParameterPanel: FILE→ parameter_panel.py")
         # パラメータを取得する処理を実装
         try:
             panel_params = {
