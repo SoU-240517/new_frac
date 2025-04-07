@@ -28,7 +28,7 @@ class DebugLogger:
 
         elapsed_time = time.time() - self.start_time
         log_prefix = f"[{elapsed_time:.3f}s][{level.name}]"
-        log_message = f"{log_prefix} {message}"
+        log_message = f"{log_prefix} {message}: [{file_path}:{line_no}]"
         if context:
             log_message += f" | Context: {self._format_context(context)}: [{file_path}:{line_no}]"
         print(log_message)

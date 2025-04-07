@@ -24,7 +24,12 @@ class ZoomSelector:
 
         # --- 各コンポーネントの初期化 ---
         self.logger = DebugLogger(debug_enabled=debug_enabled)
-        self.state_handler = ZoomStateHandler(initial_state=ZoomState.NO_RECT, logger=self.logger)
+        self.state_handler = ZoomStateHandler(
+            initial_state=ZoomState.NO_RECT,
+            logger=self.logger,
+#            event_handler=self.event_handler,
+            canvas=self.canvas
+        )
         self.rect_manager = RectManager(ax, self.logger)
         self.cursor_manager = CursorManager(self.canvas, self.state_handler)
         self.validator = EventValidator()
@@ -34,6 +39,8 @@ class ZoomSelector:
             self, self.state_handler, self.rect_manager, self.cursor_manager,
             self.validator, self.logger, self.canvas
         )
+        # StateHandler に EventHandler の参照を設定
+        self.state_handler.event_handler = self.event_handler # この行を追加
         # --- 初期化ここまで ---
 
         # 初期状態でイベントを接続
