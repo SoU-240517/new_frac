@@ -1,4 +1,3 @@
-#test
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
 # 同じフォルダにある zoom_selector.py から ZoomSelector クラスをインポート
