@@ -56,7 +56,7 @@ class ZoomSelector:
         rect_props = self.rect_manager.get_properties()
         if rect_props:
             self.logger.log(LogLevel.INFO, f"Zoom rectangle confirmed: x={rect_props[0]:.2f}, y={rect_props[1]:.2f}, w={rect_props[2]:.2f}, h={rect_props[3]:.2f}")
-            self.on_zoom_confirm(rect_props[0], rect_props[1], rect_props[2], rect_props[3])
+            self.on_zoom_confirm(rect_props)
             self.state_handler.update_state(ZoomState.NO_RECT, {"action": "confirm"})
             self.cursor_manager.update()
         else:

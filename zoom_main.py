@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
 # 同じフォルダにある zoom_selector.py から ZoomSelector クラスをインポート
-from ui.fractal_zoom_tool.zoom_selector import ZoomSelector
+from ui.zoom_function.zoom_selector import ZoomSelector
 
 # --- コールバック関数の例 ---
 def handle_zoom_confirm(x, y, width, height):

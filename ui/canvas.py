@@ -15,7 +15,7 @@ class FractalCanvas:
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
         # ZoomSelector をインスタンス化（コールバックは後述の MainWindow から設定）
-        from ui.zoom_selector import ZoomSelector
+        from ui.zoom_function.zoom_selector import ZoomSelector
         self.zoom_selector = ZoomSelector(self.ax, on_zoom_confirm=self.zoom_confirmed, on_zoom_cancel=self.zoom_cancelled)
 
     def set_zoom_callback(self, zoom_confirm_callback, zoom_cancel_callback):

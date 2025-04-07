@@ -55,11 +55,11 @@ class MainWindow:
 
     def on_zoom_confirm(self, new_zoom_params):
         """
-        ズーム確定時のコールバック。
+        ズーム確定時のコールバック
         - 縦横比を調整
         - ズームレベルに応じて反復回数を自動調整
         """
-        print("ズーム確定 : on_zoom_confirm / main_window.py")  # debug_log(print)
+        print(f"=== Zoom Confirmed Callback : on_zoom_confirm / main_window.py ===")
         if new_zoom_params == self.zoom_params:
             return  # ズームパラメータが変わっていないなら何もしない
 
@@ -68,7 +68,7 @@ class MainWindow:
 
         # 縦横比補正
         aspect_ratio = self.fractal_canvas.fig.get_size_inches()[0] / self.fractal_canvas.fig.get_size_inches()[1]
-        new_width = new_zoom_params["width"]
+        new_width = new_zoom_params[2]
         new_height = new_width / aspect_ratio  # 縦横比を維持
 
         # ズームレベルに応じて `max_iterations` を増やす
@@ -77,11 +77,11 @@ class MainWindow:
 
         # 新しいズームパラメータを適用
         self.zoom_params = {
-            "center_x": new_zoom_params["center_x"],
-            "center_y": new_zoom_params["center_y"],
+            "center_x": new_zoom_params[0],  # [0] の部分は、以前は["center_x"]。バグる。なんで？
+            "center_y": new_zoom_params[1],  # [1] の部分は、以前は["center_y"]。バグる。なんで？
             "width": new_width,
             "height": new_height,
-            "rotation": new_zoom_params["rotation"]
+            "rotation": new_zoom_params[0]  # [0] の部分は、以前は["rotation"]。バグる。なんで？
         }
 
         # 反復回数を更新
@@ -95,7 +95,7 @@ class MainWindow:
         ズームキャンセル時のコールバック
         既にズーム確定後の場合は直前の状態に戻し、未確定の場合は単に再描画
         """
-        print("ズームキャンセル : on_zoom_cancel / main_window.py")  # debug_log(print)
+        print("=== Zoom Cancelled Callback : on_zoom_cancel / main_window.py ===")
         if self.prev_zoom_params is not None:  # ズーム確定済みの場合
             self.zoom_params = self.prev_zoom_params.copy()  # 状態を復元
             self.update_fractal()  # 再描画を実行
