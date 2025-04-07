@@ -6,7 +6,7 @@ class EventValidator:
     @staticmethod
     def validate_basic(event: Event, ax: Axes) -> bool:
         """基本的なイベント検証"""
-        print("validate_basic: CLASS→ EventValidator: FILE→ event_validator.py")
+        print('\033[32m'+'validate_basic: EventValidator: event_validator.py'+'\033[0m')
         # event.inaxes でイベントが指定されたAxes内で発生したかチェック
         # event.xdata, event.ydata が None でないことも保証される (inaxes is not Noneの場合)
         # event.button でマウスボタンが押されたイベントかチェック（Noneでない）

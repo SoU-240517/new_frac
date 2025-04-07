@@ -15,10 +15,15 @@ from .enums import ZoomState, LogLevel
 
 class EventHandler:
     """ matplotlibのイベントを処理し、各コンポーネントに指示を出すクラス """
-    def __init__(self, selector: 'ZoomSelector', state_handler: 'ZoomStateHandler',
-                 rect_manager: 'RectManager', cursor_manager: 'CursorManager',
-                 validator: 'EventValidator', logger: 'DebugLogger', canvas):
-        print("INI: CLASS→ EventHandler: FILE→ event_handler.py")
+    def __init__(self,
+                selector: 'ZoomSelector',
+                state_handler: 'ZoomStateHandler',
+                rect_manager: 'RectManager',
+                cursor_manager: 'CursorManager',
+                validator: 'EventValidator',
+                logger: 'DebugLogger',
+                canvas):
+        print('\033[34m'+'INI: EventHandler: event_handler.py'+'\033[0m')
         self.selector = selector
         self.state_handler = state_handler
         self.rect_manager = rect_manager
@@ -76,12 +81,12 @@ class EventHandler:
             self.start_x, self.start_y = event.xdata, event.ydata
             self.rect_manager.create_rect_start(self.start_x, self.start_y)
             self.state_handler.update_state(ZoomState.CREATE)
-            self.cursor_manager.update(event)
+            self.cursor_manager.cursor_update(event)
             self.canvas.draw_idle() # 再描画を要求
 
     def on_motion(self, event: Event):
         """ マウスが動いた時の処理 """
-        print("on_motion: CLASS→ EventHandler: FILE→ event_handler.py")
+        print('\033[32m'+'on_motion: EventHandler: event_handler.py'+'\033[0m')
         if event.inaxes != self.selector.ax and self.state_handler.get_state() != ZoomState.CREATE:
              return
         # ドラッグ中でも座標が取れないことがある(ウィンドウ外など)
@@ -125,7 +130,7 @@ class EventHandler:
 
             self.start_x = None
             self.start_y = None
-            self.cursor_manager.update(event)
+            self.cursor_manager.cursor_update(event)
             self.canvas.draw_idle()
 
     def on_key_press(self, event: Event):

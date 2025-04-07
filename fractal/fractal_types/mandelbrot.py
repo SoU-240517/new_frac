@@ -2,7 +2,7 @@ import numpy as np
 
 def compute_mandelbrot(Z, Z0, max_iter):
     """ マンデルブロ集合を計算 """
-    print("compute_mandelbrot:: FILE→ mandelbrot.py")
+    print('\033[32m'+'compute_mandelbrot:: mandelbrot.py'+'\033[0m')
     shape = Z.shape
     iterations = np.zeros(shape, dtype=int)
     z = np.full(shape, Z0, dtype=complex)

@@ -7,7 +7,7 @@ from .enums import LogLevel
 class DebugLogger:
     """ デバッグログを出力するクラス """
     def __init__(self, debug_enabled=True):
-        print("INI: CLASS→ DebugLogger: FILE→ debug_logger.py")
+        print('\033[34m'+'INI: DebugLogger: debug_logger.py'+'\033[0m')
         self.debug_enabled = debug_enabled
         self.start_time = time.time()
         self.project_root = os.getcwd()  # プロジェクトルートを取得
@@ -28,14 +28,14 @@ class DebugLogger:
 
         elapsed_time = time.time() - self.start_time
         log_prefix = f"[{elapsed_time:.3f}s][{level.name}]"
-        log_message = f"{log_prefix} {message}: [{file_path}:{line_no}]"
+        log_message = f"{log_prefix} {message}"
         if context:
-            log_message += f" | Context: {self._format_context(context)}"
+            log_message += f" | Context: {self._format_context(context)}: [{file_path}:{line_no}]"
         print(log_message)
 
     def _format_context(self, context: Dict[str, Any]) -> str:
         """ コンテキスト情報を整形 """
-        print("_format_context: CLASS→ DebugLogger: FILE→ debug_logger.py")
+        print('\033[32m'+'_format_context: DebugLogger: debug_logger.py'+'\033[0m')
         items = []
         for k, v in context.items():
             if isinstance(v, float):

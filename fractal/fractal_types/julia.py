@@ -2,7 +2,7 @@ import numpy as np
 
 def compute_julia(Z, C, max_iter):
     """ ジュリア集合を計算 """
-    print("compute_julia:: FILE→ julia.py")
+    print('\033[32m'+'compute_julia:: julia.py'+'\033[0m')
     shape = Z.shape
     iterations = np.zeros(shape, dtype=int)
     z = Z.copy()

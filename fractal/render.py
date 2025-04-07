@@ -4,7 +4,7 @@ from coloring import color_algorithms
 
 def render_fractal(params):
     """ 指定されたパラメータに基づいてフラクタルを描画 """
-    print("render_fractal:: FILE→ render.py")
+    print('\033[32m'+'render_fractal:: render.py'+'\033[0m')
     resolution = 500
     # ズーム情報があればそれを使用、なければ初期値
     center_x = params.get("center_x", 0.0)
