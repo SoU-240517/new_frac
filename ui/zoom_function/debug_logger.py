@@ -1,11 +1,11 @@
-# debug_logger.py
 import time
 from typing import Optional, Dict, Any
 from .enums import LogLevel # 同じフォルダのenums.pyからLogLevelをインポート
 
 class DebugLogger:
-    """ デバッグログを出力するクラス """
+    """ デバッグログを出力するクラス"""
     def __init__(self, debug_enabled=True):
+        print("初期化 : CLASS→ DebugLogger : FILE→ debug_logger.py")
         self.debug_enabled = debug_enabled
         self.start_time = time.time()
 
@@ -23,6 +23,7 @@ class DebugLogger:
 
     def _format_context(self, context: Dict[str, Any]) -> str:
         """ コンテキスト情報を整形 """
+        print("_format_context : CLASS→ DebugLogger : FILE→ debug_logger.py")
         items = []
         for k, v in context.items():
             if isinstance(v, float):

@@ -10,13 +10,12 @@ from .cursor_manager import CursorManager
 from .event_handler import EventHandler # EventHandlerをインポート
 
 class ZoomSelector:
-    """
-    マウスドラッグで矩形を描画する機能を持つクラス (機能限定版)
-    """
+    """ マウスドラッグで矩形を描画する機能を持つクラス (機能限定版) """
     def __init__(self, ax: Axes,
                  on_zoom_confirm: Callable[[float, float, float, float], None],
                  on_zoom_cancel: Callable[[], None],
                  debug_enabled: bool = True):
+        print("初期化 : CLASS→ ZoomSelector : FILE→ zoom_selector.py")
         self.ax = ax
         self.canvas = ax.figure.canvas
         self.on_zoom_confirm = on_zoom_confirm # ユーザーが指定するコールバック関数
@@ -41,18 +40,21 @@ class ZoomSelector:
 
     def connect_events(self):
         """ イベントハンドラの接続 """
+        print("接続 : ズーム機能 : connect_events : CLASS→ ZoomSelector : FILE→ zoom_selector.py")
         self.logger.log(LogLevel.DEBUG, "Connecting events via EventHandler.")
         self.event_handler.connect()
         self.cursor_manager.update()
 
     def disconnect_events(self):
         """ イベントハンドラの切断 """
+        print("切断 : ズーム機能 : disconnect_events : CLASS→ ZoomSelector : FILE→ zoom_selector.py")
         self.logger.log(LogLevel.DEBUG, "Disconnecting events via EventHandler.")
         self.event_handler.disconnect()
         self.cursor_manager.reset()
 
     def confirm_zoom(self):
         """ (内部用) 矩形が確定された時に呼ばれる """
+        print("確定 : ズーム機能 : confirm_zoom : CLASS→ ZoomSelector : FILE→ zoom_selector.py")
         rect_props = self.rect_manager.get_properties()
         if rect_props:
             self.logger.log(LogLevel.INFO, f"Zoom rectangle confirmed: x={rect_props[0]:.2f}, y={rect_props[1]:.2f}, w={rect_props[2]:.2f}, h={rect_props[3]:.2f}")
@@ -64,6 +66,7 @@ class ZoomSelector:
 
     def cancel_zoom(self):
         """ (内部用) キャンセル時に呼ばれる (主にESCキー or 外部からの呼び出し) """
+        print("キャンセル : ズーム機能 : cancel_zoom : CLASS→ ZoomSelector : FILE→ zoom_selector.py")
         self.logger.log(LogLevel.INFO, "Zoom operation cancelled.")
         self.rect_manager.clear()
         self.state_handler.update_state(ZoomState.NO_RECT, {"action": "cancel"})
@@ -73,6 +76,7 @@ class ZoomSelector:
 
     def reset(self):
         """ ZoomSelectorの状態をリセット """
+        print("リセット : ズーム機能 : reset : CLASS→ ZoomSelector : FILE→ zoom_selector.py")
         self.logger.log(LogLevel.INFO, "ZoomSelector reset.")
         self.rect_manager.clear()
         self.state_handler.update_state(ZoomState.NO_RECT, {"action": "reset"})

@@ -1,4 +1,3 @@
-# event_handler.py
 from matplotlib.backend_bases import Event, MouseButton
 from typing import Optional, TYPE_CHECKING
 
@@ -19,6 +18,7 @@ class EventHandler:
     def __init__(self, selector: 'ZoomSelector', state_handler: 'ZoomStateHandler',
                  rect_manager: 'RectManager', cursor_manager: 'CursorManager',
                  validator: 'EventValidator', logger: 'DebugLogger', canvas):
+        print("初期化 : CLASS→ EventHandler : FILE→ event_handler.py")
         self.selector = selector
         self.state_handler = state_handler
         self.rect_manager = rect_manager
@@ -39,6 +39,7 @@ class EventHandler:
 
     def connect(self):
         """ イベントハンドラを接続 """
+        print("接続 : connect : CLASS→ EventHandler : FILE→ event_handler.py")
         if self._cid_press is None:
             self._cid_press = self.canvas.mpl_connect('button_press_event', self.on_press)
             self._cid_release = self.canvas.mpl_connect('button_release_event', self.on_release)
@@ -48,6 +49,7 @@ class EventHandler:
 
     def disconnect(self):
         """ イベントハンドラを切断 """
+        print("切断 : disconnect : CLASS→ EventHandler : FILE→ event_handler.py")
         if self._cid_press is not None:
             self.canvas.mpl_disconnect(self._cid_press)
             self.canvas.mpl_disconnect(self._cid_release)
@@ -61,6 +63,7 @@ class EventHandler:
 
     def on_press(self, event: Event):
         """ マウスボタンが押された時の処理 """
+        print("マウスボタン押下 : on_press : CLASS→ EventHandler : FILE→ event_handler.py")
          # event.xdata や event.ydata が None の場合があるため、先にチェック
         if event.xdata is None or event.ydata is None:
             return
@@ -81,6 +84,7 @@ class EventHandler:
 
     def on_motion(self, event: Event):
         """ マウスが動いた時の処理 """
+        print("マウス移動 : on_motion : CLASS→ EventHandler : FILE→ event_handler.py")
         if event.inaxes != self.selector.ax and self.state_handler.get_state() != ZoomState.CREATE:
              return
         # ドラッグ中でも座標が取れないことがある(ウィンドウ外など)
@@ -97,6 +101,7 @@ class EventHandler:
 
     def on_release(self, event: Event):
         """ マウスボタンが離された時の処理 """
+        print("マウスボタン離す : on_release : CLASS→ EventHandler : FILE→ event_handler.py")
         # validate_basic はボタンチェックを含むので不要だが、念のため
         if event.button != MouseButton.LEFT:
             return
@@ -129,6 +134,7 @@ class EventHandler:
 
     def on_key_press(self, event: Event):
         """ キーボードが押された時の処理 """
+        print("キーボタン押下 : on_key_press : CLASS→ EventHandler : FILE→ event_handler.py")
         self.logger.log(LogLevel.DEBUG, "Key press detected", {"key": event.key})
         if event.key == 'escape':
             state = self.state_handler.get_state()
@@ -140,6 +146,7 @@ class EventHandler:
 
     def reset_internal_state(self):
         """ イベントハンドラ内部の状態をリセット """
+        print("イベントハンドラ内部状態リセット : reset_internal_state : CLASS→ EventHandler : FILE→ event_handler.py")
         self.start_x = None
         self.start_y = None
         self.logger.log(LogLevel.DEBUG, "EventHandler internal state reset.")

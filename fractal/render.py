@@ -3,7 +3,8 @@ from fractal.fractal_types import julia, mandelbrot
 from coloring import color_algorithms
 
 def render_fractal(params):
-    print("フラクタル描画開始 : render_fractal / render.py")  # debug_log(print)
+    """ 指定されたパラメータに基づいてフラクタルを描画 """
+    print("フラクタル描画開始 : render_fractal :: FILE→ render.py")
     resolution = 500
     # ズーム情報があればそれを使用、なければ初期値
     center_x = params.get("center_x", 0.0)

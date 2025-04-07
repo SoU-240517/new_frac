@@ -3,20 +3,18 @@ from tkinter import ttk
 import matplotlib.pyplot as plt
 
 class ParameterPanel:
+    """ パラメータパネルクラス """
     def __init__(self, parent, update_callback, reset_callback=None):
-        """
-        ParameterPanel の初期化。
-            update_callback: パラメータ変更時に呼ばれる更新関数
-            reset_callback: 「描画リセット」ボタン押下時に呼ばれる関数
-        """
-        print("初期化 : パラメータパネル : __init__ / parameter_panel.py")  # debug_log(print)
+        """ パラメータパネルの初期化 """
+        print("初期化 : パラメータパネル : CLASS→ ParameterPanel : FILE→ parameter_panel.py")
         self.parent = parent
         self.update_callback = update_callback
         self.reset_callback = reset_callback
         self.setup_panel()
 
     def setup_panel(self):
-        print("パラメータパネルの設定開始 : setup_panel / parameter_panel.py")  # debug_log(print)
+        """ パラメータパネルの設定 """
+        print("パラメータパネル設定 : setup_panel : CLASS→ ParameterPanel : FILE→ parameter_panel.py")
         row = 0
 
         # フラクタルタイプ選択
@@ -148,7 +146,8 @@ class ParameterPanel:
             reset_button.grid(row=row, column=0, columnspan=2, sticky=tk.W+tk.E, padx=10, pady=10)
 
     def update_formula_display(self):
-        print("漸化式更新 : update_formula_display / parameter_panel.py")  # debug_log(print)
+        """ 漸化式を表示する関数 """
+        print("更新 : 漸化式 : update_formula_display : CLASS→ ParameterPanel : FILE→ parameter_panel.py")
         fractal_type = self.fractal_type_var.get()
         if fractal_type == "Julia":
             self.formula_var.set("Z_n+1 = Z_n² + C")
@@ -156,9 +155,11 @@ class ParameterPanel:
             self.formula_var.set("Z_n+1 = Z_n² + C\nZ_0 = 0, C = 座標")
 
     def get_parameters(self):
-        print("パラメータ取得 : get_parameters / parameter_panel.py")  # debug_log(print)
+        """ パラメータを取得する関数 """
+        print("パラメータ取得 : get_parameters : CLASS→ ParameterPanel : FILE→ parameter_panel.py")
+        # パラメータを取得する処理を実装
         try:
-            params = {
+            panel_params = {
                 "fractal_type": self.fractal_type_var.get(),
                 "max_iterations": int(self.max_iter_var.get()),
                 "z_real": float(self.z_real_var.get()),
@@ -171,5 +172,5 @@ class ParameterPanel:
                 "non_diverge_colormap": self.non_diverge_colormap_var.get()
             }
         except ValueError:
-            params = {}
-        return params
+            panel_params = {}
+        return panel_params
