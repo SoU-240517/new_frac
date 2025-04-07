@@ -12,7 +12,7 @@ class ZoomStateHandler:
 
     def get_state(self) -> ZoomState:
         """ 現在の状態を取得 """
-        print("get_state: CLASS→ ZoomStateHandler: FILE→ zoom_state_handler.py")
+#        print("get_state: CLASS→ ZoomStateHandler: FILE→ zoom_state_handler.py")
         return self._state
 
     def update_state(self, new_state: ZoomState, context: Optional[Dict[str, Any]] = None):
