@@ -6,7 +6,7 @@ from ui.zoom_function.enums import LogLevel # LogLevel をインポート
 
 def apply_coloring_algorithm(results, params, logger: DebugLogger):
     """ 着色アルゴリズムを適用して結果を返す """
-    logger.log(LogLevel.METHOD, "apply_coloring_algorithm")
+    logger.log(LogLevel.DEBUG, "Apply coloring algorithm.")
 
     iterations = results['iterations']
     mask = results['mask']

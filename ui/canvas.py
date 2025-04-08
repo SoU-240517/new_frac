@@ -9,7 +9,7 @@ class FractalCanvas:
     def __init__(self, parent, logger: DebugLogger):
         """ キャンバス初期化（MatplotlibのFigure を Tkinter ウィジェットに埋め込む）"""
         self.logger = logger
-        self.logger.log(LogLevel.INIT, "Initializing FractalCanvas")
+        self.logger.log(LogLevel.INIT, "FractalCanvas")
         self.parent = parent
         self.fig = Figure(figsize=(6, 6), dpi=100)
         self.ax = self.fig.add_subplot(111)
@@ -27,13 +27,13 @@ class FractalCanvas:
 
     def set_zoom_callback(self, zoom_confirm_callback, zoom_cancel_callback):
         """ ズーム確定・キャンセル時のコールバックを設定 """
-        self.logger.log(LogLevel.METHOD, "set_zoom_callback")
+        self.logger.log(LogLevel.DEBUG, "Set callback")
         self.zoom_confirm_callback = zoom_confirm_callback
         self.zoom_cancel_callback = zoom_cancel_callback
 
     def zoom_confirmed(self, zoom_params):
         """ ズーム確定時のコールバック """
-        self.logger.log(LogLevel.METHOD, "zoom_confirmed")
+        self.logger.log(LogLevel.DEBUG, "Callback when zoom is confirmed.")
         if hasattr(self, 'zoom_confirm_callback') and self.zoom_confirm_callback:
             new_zoom_params = {
                 "center_x": zoom_params[0],
@@ -52,7 +52,7 @@ class FractalCanvas:
 
     def update_canvas(self, fractal_image, params):
         """ キャンバスを更新し、指定されたフラクタル画像を描画 """
-        self.logger.log(LogLevel.METHOD, "update_canvas")
+        self.logger.log(LogLevel.DEBUG, "Update the canvas.")
         self.ax.clear()  # キャンバスをクリア
         self.ax.axis('off')  # 座標軸は非表示
         self.fig.subplots_adjust(left=0, right=1, top=1, bottom=0)  # キャンバスのパディングを削除

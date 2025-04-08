@@ -5,8 +5,8 @@ from ui.zoom_function.enums import LogLevel
 
 if __name__ == "__main__":
     logger = DebugLogger() # Logger インスタンスを作成
-    logger.log(LogLevel.INIT, "Application starting")
+    logger.log(LogLevel.INIT, "App START")
     root = tk.Tk()
     app = MainWindow(root, logger)
     root.mainloop()
-    logger.log(LogLevel.INIT, "Application finished")
+    logger.log(LogLevel.INIT, "App FIN")

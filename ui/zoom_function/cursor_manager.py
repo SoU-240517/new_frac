@@ -16,7 +16,7 @@ class CursorManager:
                 state_handler: 'ZoomStateHandler',
                 logger: DebugLogger):
         self.logger = logger
-        self.logger.log(LogLevel.INIT, "Initializing CursorManager")
+        self.logger.log(LogLevel.INIT, "CursorManager")
         self.canvas = canvas
         self.state_handler = state_handler
         self.last_cursor_state: Optional[str] = None # tkのカーソル名
@@ -37,7 +37,7 @@ class CursorManager:
                 if widget:
                     widget.config(cursor=new_cursor)
                     self.last_cursor_state = new_cursor
-                    self.logger.log(LogLevel.DEBUG, f"Cursor update: Current state: {self.last_cursor_state}")
+                    self.logger.log(LogLevel.DEBUG, f"Previous cursor state.: {self.last_cursor_state}")
                 else:
                     pass
             except AttributeError:

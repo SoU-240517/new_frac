@@ -16,7 +16,7 @@ class DebugLogger:
         self.project_root = os.path.abspath(os.path.join(logger_dir, '..', '..'))
 
         # 自分自身の初期化ログを出力 (呼び出し元情報は __init__ 自身になる)
-        self._log_internal(LogLevel.INIT, "DebugLogger initialized", force=True, stacklevel=1)
+        self._log_internal(LogLevel.INIT, "DebugLogger", force=True, stacklevel=1)
 
     def log(
             self, level: LogLevel,
@@ -41,6 +41,7 @@ class DebugLogger:
         caller_frame_record = None
         file_path = "unknown"
         line_no = 0
+        func_name = "unknown" # 関数名を初期化
 
         try:
             stack = inspect.stack()
@@ -55,6 +56,7 @@ class DebugLogger:
                 except ValueError:
                     file_path = os.path.basename(abs_path)
                 line_no = caller_frame_record.lineno
+                func_name = caller_frame_record.function # 関数名を取得
 
         except Exception as e:
              print(f"[DebugLogger Error] Failed to get caller info: {e}")
@@ -78,14 +80,16 @@ class DebugLogger:
             color = "white"
             level_name = "UNKNOWN_LEVEL"
 
-        log_prefix = f"[{elapsed_time:.3f}s][{level_name}]"
-        location = f"[{file_path}:{line_no}]"
+        # log_prefix に func_name を含めるように修正
+        log_prefix = f"[{elapsed_time:.3f}s] {level_name}:"
+        # location からは func_name を削除 (元の状態に戻す)
+        location = f"[{func_name}: {file_path}:{line_no}]"
         escaped_message = escape(message)
         escaped_location = escape(location)
 
-        log_message = f"[{color}]{log_prefix} {escaped_message}: {escaped_location}[/{color}]"
+        log_message = f"[{color}]{log_prefix} {escaped_message} {escaped_location}[/{color}]"
         if context:
-            log_message += f" [{color}]| Context: {self._format_context(context)}[/{color}]"
+            log_message = f"[{color}]{log_prefix} {escaped_message} | Context: {self._format_context(context)} {escaped_location}[/{color}]"
 
         rprint(log_message)
 

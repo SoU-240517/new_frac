@@ -9,7 +9,7 @@ class ParameterPanel:
     def __init__(self, parent, update_callback, reset_callback, logger: DebugLogger):
         """ パラメータパネルの初期化 """
         self.logger = logger
-        self.logger.log(LogLevel.INIT, "Initializing ParameterPanel")
+        self.logger.log(LogLevel.INIT, "ParameterPanel")
         self.parent = parent
         self.update_callback = update_callback
         self.reset_callback = reset_callback
@@ -17,7 +17,7 @@ class ParameterPanel:
 
     def setup_panel(self):
         """ パラメータパネルの設定 """
-        self.logger.log(LogLevel.METHOD, "setup_panel")
+        self.logger.log(LogLevel.DEBUG, "Parameter panel settings")
         row = 0
 
         # フラクタルタイプ選択
@@ -33,7 +33,7 @@ class ParameterPanel:
         self.formula_var = tk.StringVar()
         self.formula_label = ttk.Label(self.parent, textvariable=self.formula_var, font=("Courier", 12))
         self.formula_label.grid(row=row, column=0, columnspan=2, sticky=tk.W, padx=10, pady=5)
-        self.update_formula_display()
+        self.show_formula_display()
         row += 1
 
         # 最大反復回数
@@ -148,9 +148,9 @@ class ParameterPanel:
             reset_button = ttk.Button(self.parent, text="描画リセット", command=self.reset_callback)
             reset_button.grid(row=row, column=0, columnspan=2, sticky=tk.W+tk.E, padx=10, pady=10)
 
-    def update_formula_display(self):
+    def show_formula_display(self):
         """ 漸化式を表示する関数 """
-        self.logger.log(LogLevel.METHOD, "update_formula_display")
+        self.logger.log(LogLevel.DEBUG, "Show recurrence formula.")
         fractal_type = self.fractal_type_var.get()
         if fractal_type == "Julia":
             self.formula_var.set("Z_n+1 = Z_n² + C")
@@ -159,7 +159,7 @@ class ParameterPanel:
 
     def get_parameters(self):
         """ パラメータを取得する関数 """
-        self.logger.log(LogLevel.METHOD, "get_parameters")
+        self.logger.log(LogLevel.DEBUG, "Get parameters.")
         # パラメータを取得する処理を実装
         try:
             panel_params = {

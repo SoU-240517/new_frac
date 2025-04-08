@@ -6,7 +6,7 @@ class ZoomStateHandler:
     """ ZoomSelectorの状態を管理するクラス """
     def __init__(self, initial_state: ZoomState, logger: DebugLogger, event_handler=None, canvas=None):
         self.logger = logger
-        self.logger.log(LogLevel.INIT, "Initializing ZoomStateHandler")
+        self.logger.log(LogLevel.INIT, "ZoomStateHandler")
         self._state: ZoomState = initial_state
         self.logger = logger
         self.event_handler = event_handler
@@ -14,18 +14,19 @@ class ZoomStateHandler:
 
     def get_state(self) -> ZoomState:
         """ 現在の状態を取得 """
-        self.logger.log(LogLevel.METHOD, "get_state")
+        self.logger.log(LogLevel.DEBUG, "Get status.")
         return self._state
 
     def update_state(self, new_state: ZoomState, context: Optional[Dict[str, Any]] = None):
         """ 状態を更新 """
-        self.logger.log(LogLevel.METHOD, "update_state")
+        self.logger.log(LogLevel.DEBUG, "Update status.")
         # 状態が変わらない場合は何もしない
         if self._state == new_state:
             return
 
         old_state_name = self._state.name
         self._state = new_state
+
         log_context = {"old_state": old_state_name, "new_state": new_state.name}
         if context:
             log_context.update(context)

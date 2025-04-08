@@ -25,7 +25,7 @@ class EventHandler:
                 logger: 'DebugLogger',
                 canvas):
         self.logger = logger # Logger インスタンスを作成
-        self.logger.log(LogLevel.INIT, "Initializing EventHandler")
+        self.logger.log(LogLevel.INIT, "EventHandler")
         self.selector = selector
         self.state_handler = state_handler
         self.rect_manager = rect_manager
@@ -48,14 +48,14 @@ class EventHandler:
         """ motion_notify_event を接続 """
         if self._cid_motion is None:
             self._cid_motion = self.canvas.mpl_connect('motion_notify_event', self.on_motion)
-            self.logger.log(LogLevel.DEBUG, "motion_notify_event connected.")
+            self.logger.log(LogLevel.INFO, "motion_notify_event connected.")
 
     def _disconnect_motion(self):
         """ motion_notify_event を切断 """
         if self._cid_motion is not None:
             self.canvas.mpl_disconnect(self._cid_motion)
             self._cid_motion = None
-            self.logger.log(LogLevel.DEBUG, "motion_notify_event disconnected.")
+            self.logger.log(LogLevel.INFO, "motion_notify_event disconnected.")
 
     def connect(self):
         """ イベントハンドラを接続 """
@@ -87,7 +87,7 @@ class EventHandler:
         if event.xdata is None or event.ydata is None:
             return
         # validate_basic の中で event.button is not None はチェック済み
-        if not self.validator.validate_basic(event, self.selector.ax) or event.button != MouseButton.LEFT:
+        if not self.validator.validate_basic(event, self.selector.ax, self.logger) or event.button != MouseButton.LEFT:
             return # 対象Axes外、または左ボタン以外は無視
 
         state = self.state_handler.get_state()
@@ -139,7 +139,7 @@ class EventHandler:
                 self.selector.cancel_zoom() # キャンセル処理を呼ぶ
             return
 
-        self.logger.log(LogLevel.DEBUG, "Mouse release detected", {"button": event.button, "x": event.xdata, "y": event.ydata, "state": state})
+        self.logger.log(LogLevel.DEBUG, "Mouse release detected.", {"button": event.button, "x": event.xdata, "y": event.ydata, "state": state})
 
         if state == ZoomState.CREATE:
             self._disconnect_motion() # <<<--- motion イベントを切断

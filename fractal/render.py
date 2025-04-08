@@ -6,7 +6,7 @@ from ui.zoom_function.enums import LogLevel # LogLevel をインポート
 
 def render_fractal(params, logger: DebugLogger):
     """ 指定されたパラメータに基づいてフラクタルを描画 """
-    logger.log(LogLevel.INFO, "Rendering fractal with parameters")
+    logger.log(LogLevel.INFO, "Rendering fractal with parameters.")
 
     resolution = 500
     # ズーム情報があればそれを使用、なければ初期値
