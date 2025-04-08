@@ -1,10 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from coloring import gradient
+from ui.zoom_function.debug_logger import DebugLogger
+from ui.zoom_function.enums import LogLevel # LogLevel をインポート
 
-def apply_coloring_algorithm(results, params):
+def apply_coloring_algorithm(results, params, logger: DebugLogger):
     """ 着色アルゴリズムを適用して結果を返す """
-    print('\033[32m'+'apply_coloring_algorithm:: color_algorithms.py'+'\033[0m')
+    logger.log(LogLevel.METHOD, "apply_coloring_algorithm")
+
     iterations = results['iterations']
     mask = results['mask']
     z_vals = results['z_vals']

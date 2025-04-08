@@ -1,5 +1,6 @@
 from matplotlib.backend_bases import Event, MouseButton
 from typing import Optional, TYPE_CHECKING
+from .enums import LogLevel
 
 # 他のクラスの型ヒントのためにインポート (循環参照回避)
 if TYPE_CHECKING:
@@ -23,7 +24,8 @@ class EventHandler:
                 validator: 'EventValidator',
                 logger: 'DebugLogger',
                 canvas):
-        print('\033[34m'+'INI: EventHandler: event_handler.py'+'\033[0m')
+        self.logger = logger # Logger インスタンスを作成
+        self.logger.log(LogLevel.INIT, "Initializing EventHandler")
         self.selector = selector
         self.state_handler = state_handler
         self.rect_manager = rect_manager
@@ -102,7 +104,7 @@ class EventHandler:
 
     def on_motion(self, event: Event):
         """ マウスが動いた時の処理 """
-        print('\033[32m'+'on_motion: EventHandler: event_handler.py'+'\033[0m')
+        self.logger.log(LogLevel.METHOD, "on_motion")
         # 状態がNO_RECTの場合は、メソッド終了
 #        if self.state_handler.get_state() == ZoomState.NO_RECT:
 #            return

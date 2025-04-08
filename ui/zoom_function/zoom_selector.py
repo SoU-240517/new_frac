@@ -1,12 +1,11 @@
 from matplotlib.axes import Axes
-from typing import Callable, Optional
-# --- 以下、他の自作クラスやEnumをインポート ---
+from typing import Callable
 from .enums import ZoomState, LogLevel
-from .debug_logger import DebugLogger
 from .event_validator import EventValidator
 from .zoom_state_handler import ZoomStateHandler
 from .rect_manager import RectManager
 from .cursor_manager import CursorManager
+from .debug_logger import DebugLogger
 from .event_handler import EventHandler # EventHandlerをインポート
 
 class ZoomSelector:
@@ -15,29 +14,33 @@ class ZoomSelector:
                 ax: Axes,
                 on_zoom_confirm: Callable[[float, float, float, float], None],
                 on_zoom_cancel: Callable[[], None],
-                debug_enabled: bool = True):
-        print('\033[34m'+'INI: ZoomSelector: zoom_selector.py'+'\033[0m')
+                logger: DebugLogger, # logger を引数で受け取る
+                debug_enabled: bool = True # debug_enabled は logger の設定に使われるべきだが、ここでは一旦無視
+                ):
+        # 引数で受け取った logger をそのまま使う
+        self.logger = logger
+        self.logger.log(LogLevel.INIT, "Initializing ZoomSelector")
         self.ax = ax
         self.canvas = ax.figure.canvas
         self.on_zoom_confirm = on_zoom_confirm # ユーザーが指定するコールバック関数
         self.on_zoom_cancel = on_zoom_cancel   # ユーザーが指定するコールバック関数
 
         # --- 各コンポーネントの初期化 ---
-        self.logger = DebugLogger(debug_enabled=debug_enabled)
         self.state_handler = ZoomStateHandler(
             initial_state=ZoomState.NO_RECT,
-            logger=self.logger,
+            logger=self.logger, # 引数で受け取った logger を渡す
 #            event_handler=self.event_handler,
             canvas=self.canvas
         )
-        self.rect_manager = RectManager(ax, self.logger)
-        self.cursor_manager = CursorManager(self.canvas, self.state_handler)
+        self.rect_manager = RectManager(ax, self.logger) # 引数で受け取った logger を渡す
+        # CursorManager に logger を渡す
+        self.cursor_manager = CursorManager(self.canvas, self.state_handler, self.logger)
         self.validator = EventValidator()
 
         # EventHandlerに他のコンポーネントへの参照を渡す
         self.event_handler = EventHandler(
             self, self.state_handler, self.rect_manager, self.cursor_manager,
-            self.validator, self.logger, self.canvas
+            self.validator, self.logger, self.canvas # 引数で受け取った logger を渡す
         )
         # StateHandler に EventHandler の参照を設定
         self.state_handler.event_handler = self.event_handler # この行を追加
@@ -72,7 +75,6 @@ class ZoomSelector:
 
     def cancel_zoom(self):
         """ (内部用) キャンセル時に呼ばれる (主にESCキー or 外部からの呼び出し) """
-        print('\033[32m'+'cancel_zoom: ZoomSelector: zoom_selector.py'+'\033[0m')
         self.logger.log(LogLevel.INFO, "Zoom operation cancelled.")
         self.rect_manager.clear()
         self.state_handler.update_state(ZoomState.NO_RECT, {"action": "cancel"})
@@ -82,7 +84,6 @@ class ZoomSelector:
 
     def reset(self):
         """ ZoomSelectorの状態をリセット """
-        print('\033[32m'+'reset: ZoomSelector: zoom_selector.py'+'\033[0m')
         self.logger.log(LogLevel.INFO, "ZoomSelector reset.")
         self.rect_manager.clear()
         self.state_handler.update_state(ZoomState.NO_RECT, {"action": "reset"})

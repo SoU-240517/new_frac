@@ -1,10 +1,13 @@
 import numpy as np
-from fractal.fractal_types import julia, mandelbrot
 from coloring import color_algorithms
+from fractal.fractal_types import julia, mandelbrot
+from ui.zoom_function.debug_logger import DebugLogger
+from ui.zoom_function.enums import LogLevel # LogLevel をインポート
 
-def render_fractal(params):
+def render_fractal(params, logger: DebugLogger):
     """ 指定されたパラメータに基づいてフラクタルを描画 """
-    print('\033[32m'+'render_fractal:: render.py'+'\033[0m')
+    logger.log(LogLevel.INFO, "Rendering fractal with parameters")
+
     resolution = 500
     # ズーム情報があればそれを使用、なければ初期値
     center_x = params.get("center_x", 0.0)
@@ -29,11 +32,14 @@ def render_fractal(params):
     # フラクタルの種類に応じた計算
     if params["fractal_type"] == "Julia":
         C = complex(params["c_real"], params["c_imag"])
-        results = julia.compute_julia(Z, C, params["max_iterations"])
+        # compute_julia に logger を渡す
+        results = julia.compute_julia(Z, C, params["max_iterations"], logger)
     else:
         Z0 = complex(params["z_real"], params["z_imag"])
-        results = mandelbrot.compute_mandelbrot(Z, Z0, params["max_iterations"])
+        # compute_mandelbrot に logger を渡す
+        results = mandelbrot.compute_mandelbrot(Z, Z0, params["max_iterations"], logger)
 
     # 着色アルゴリズムの適用
-    colored = color_algorithms.apply_coloring_algorithm(results, params)
+    # apply_coloring_algorithm に logger を渡す
+    colored = color_algorithms.apply_coloring_algorithm(results, params, logger)
     return colored

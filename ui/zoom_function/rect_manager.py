@@ -1,25 +1,25 @@
 import matplotlib.patches as patches
 from matplotlib.axes import Axes
 from typing import Optional, Tuple
-from .debug_logger import DebugLogger # 同じフォルダのdebug_logger.pyからインポート
-from .enums import LogLevel # 同じフォルダのenums.pyからインポート
+from .debug_logger import DebugLogger
+from .enums import LogLevel
 
 class RectManager:
     """ 矩形(Rectangle)の描画と管理を行うクラス """
     def __init__(self, ax: Axes, logger: DebugLogger):
-        print('\033[34m'+'INI: RectManager: rect_manager.py'+'\033[0m')
-        self.ax = ax
         self.logger = logger
+        self.logger.log(LogLevel.INIT, "Initializing RectManager")
+        self.ax = ax
         self.rect: Optional[patches.Rectangle] = None # 現在描画中の矩形オブジェクト
 
     def get_rect(self) -> Optional[patches.Rectangle]:
         """ 現在の矩形オブジェクトを取得 """
-        print('\033[32m'+'get_rect: RectManager: rect_manager.py'+'\033[0m')
+        self.logger.log(LogLevel.METHOD, "get_rect")
         return self.rect
 
     def create_rect_start(self, x: float, y: float):
         """ 新しい矩形の描画を開始 """
-        print('\033[32m'+'create_rect_start: RectManager: rect_manager.py'+'\033[0m')
+        self.logger.log(LogLevel.METHOD, "create_rect_start")
         if self.rect: # もし古い矩形が残っていたら消す
             self.clear()
         # 見た目を点線にする例
@@ -29,7 +29,7 @@ class RectManager:
 
     def update_creation(self, start_x: float, start_y: float, current_x: float, current_y: float):
         """ ドラッグ中に矩形のサイズと位置を更新 """
-        print('\033[32m'+'update_creation: RectManager: rect_manager.py'+'\033[0m')
+        self.logger.log(LogLevel.METHOD, "update_creation")
         if not self.rect:
             return
         width = current_x - start_x
@@ -39,7 +39,7 @@ class RectManager:
 
     def finalize_creation(self, start_x: float, start_y: float, end_x: float, end_y: float) -> bool:
         """ 矩形の作成を完了 (マウスボタンを離した時) """
-        print('\033[32m'+'finalize_creation: RectManager: rect_manager.py'+'\033[0m')
+        self.logger.log(LogLevel.METHOD, "finalize_creation")
         if not self.rect:
             return False
 
@@ -62,7 +62,7 @@ class RectManager:
 
     def clear(self):
         """ 矩形を削除 """
-        print('\033[32m'+'clear: RectManager: rect_manager.py'+'\033[0m')
+        self.logger.log(LogLevel.METHOD, "clear")
         if self.rect:
             self.rect.remove()
             self.rect = None
@@ -70,7 +70,7 @@ class RectManager:
 
     def get_properties(self) -> Optional[Tuple[float, float, float, float]]:
         """ 現在の矩形のプロパティ (x, y, width, height) を取得 """
-        print('\033[32m'+'get_properties: RectManager: rect_manager.py'+'\033[0m')
+        self.logger.log(LogLevel.METHOD, "get_properties")
         if self.rect:
             return (self.rect.get_x(), self.rect.get_y(),
                     self.rect.get_width(), self.rect.get_height())

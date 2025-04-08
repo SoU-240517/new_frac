@@ -1,12 +1,15 @@
 import tkinter as tk
 from tkinter import ttk
 import matplotlib.pyplot as plt
+from .zoom_function.debug_logger import DebugLogger # DebugLogger をインポート
+from .zoom_function.enums import LogLevel # LogLevel をインポート
 
 class ParameterPanel:
     """ パラメータパネルクラス """
-    def __init__(self, parent, update_callback, reset_callback=None):
+    def __init__(self, parent, update_callback, reset_callback, logger: DebugLogger):
         """ パラメータパネルの初期化 """
-        print('\033[34m'+'INI: ParameterPanel: parameter_panel.py'+'\033[0m')
+        self.logger = logger
+        self.logger.log(LogLevel.INIT, "Initializing ParameterPanel")
         self.parent = parent
         self.update_callback = update_callback
         self.reset_callback = reset_callback
@@ -14,7 +17,7 @@ class ParameterPanel:
 
     def setup_panel(self):
         """ パラメータパネルの設定 """
-        print('\033[32m'+'setup_panel: ParameterPanel: parameter_panel.py'+'\033[0m')
+        self.logger.log(LogLevel.METHOD, "setup_panel")
         row = 0
 
         # フラクタルタイプ選択
@@ -147,7 +150,7 @@ class ParameterPanel:
 
     def update_formula_display(self):
         """ 漸化式を表示する関数 """
-        print('\033[32m'+'update_formula_display: ParameterPanel: parameter_panel.py'+'\033[0m')
+        self.logger.log(LogLevel.METHOD, "update_formula_display")
         fractal_type = self.fractal_type_var.get()
         if fractal_type == "Julia":
             self.formula_var.set("Z_n+1 = Z_n² + C")
@@ -156,7 +159,7 @@ class ParameterPanel:
 
     def get_parameters(self):
         """ パラメータを取得する関数 """
-        print('\033[32m'+'get_parameters: ParameterPanel: parameter_panel.py'+'\033[0m')
+        self.logger.log(LogLevel.METHOD, "get_parameters")
         # パラメータを取得する処理を実装
         try:
             panel_params = {

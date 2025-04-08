@@ -14,12 +14,12 @@ class CursorManager:
     def __init__(self,
                 canvas,
                 state_handler: 'ZoomStateHandler',
-                debug_enabled: bool = True):
-        print('\033[34m'+'INI: CursorManager: cursor_manager.py'+'\033[0m')
+                logger: DebugLogger):
+        self.logger = logger
+        self.logger.log(LogLevel.INIT, "Initializing CursorManager")
         self.canvas = canvas
         self.state_handler = state_handler
         self.last_cursor_state: Optional[str] = None # tkのカーソル名
-        self.logger = DebugLogger(debug_enabled=debug_enabled)
 
     def cursor_update(self, event: Optional[Event] = None):
         """ 現在の状態に応じてカーソル形状を更新 """
@@ -45,7 +45,7 @@ class CursorManager:
 
     def cursor_reset(self):
         """ カーソルをデフォルト (arrow) に戻す """
-        print('\033[32m'+'cursor_reset: CursorManager: cursor_manager.py'+'\033[0m')
+        self.logger.log(LogLevel.METHOD, "cursor_reset")
         self.last_cursor_state = None # 強制的に更新させる
         try:
             widget = self.canvas.get_tk_widget()

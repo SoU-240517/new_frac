@@ -1,8 +1,12 @@
 import tkinter as tk
 from ui.main_window import MainWindow
+from ui.zoom_function.debug_logger import DebugLogger
+from ui.zoom_function.enums import LogLevel
 
 if __name__ == "__main__":
-    print('\033[34m'+'START : main.py'+'\033[0m')
-    root = tk.Tk()  # Tkinter のルートウィンドウを作成
-    app = MainWindow(root)  # MainWindow のインスタンスを作成
-    root.mainloop()  # Tkinter のメインループを開始
+    logger = DebugLogger() # Logger インスタンスを作成
+    logger.log(LogLevel.INIT, "Application starting")
+    root = tk.Tk()
+    app = MainWindow(root, logger)
+    root.mainloop()
+    logger.log(LogLevel.INIT, "Application finished")
