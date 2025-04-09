@@ -62,13 +62,13 @@ class ZoomSelector:
         """ (内部用) 矩形が確定された時に呼ばれる """
         rect_props = self.rect_manager.get_properties()
         if rect_props:
-            self.logger.log(LogLevel.INFO, f"Zoom rectangle confirmed.: x={rect_props[0]:.2f}, y={rect_props[1]:.2f}, w={rect_props[2]:.2f}, h={rect_props[3]:.2f}")
+            self.logger.log(LogLevel.INFO, "Zoom rectangle confirmed.", {
+                "x": rect_props[0], "y": rect_props[1], "w": rect_props[2], "h": rect_props[3]})
             self.on_zoom_confirm(rect_props)
             self.state_handler.update_state(ZoomState.NO_RECT, {"action": "confirm"})
             self.cursor_manager.cursor_update()
         else:
             self.logger.log(LogLevel.WARNING, "Confirm attempted but no valid rectangle exists.")
-
     def cancel_zoom(self):
         """ (内部用) キャンセル時に呼ばれる (主にESCキー or 外部からの呼び出し) """
         self.logger.log(LogLevel.INFO, "Zoom operation cancelled.")

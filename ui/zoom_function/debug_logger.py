@@ -14,7 +14,6 @@ class DebugLogger:
         self.start_time = time.time()
         logger_dir = os.path.dirname(__file__)
         self.project_root = os.path.abspath(os.path.join(logger_dir, '..', '..'))
-
         # 自分自身の初期化ログを出力 (呼び出し元情報は __init__ 自身になる)
         self._log_internal(LogLevel.INIT, "DebugLogger", force=True, stacklevel=1)
 
@@ -87,20 +86,20 @@ class DebugLogger:
         escaped_message = escape(message)
         escaped_location = escape(location)
 
-        log_message = f"[{color}]{log_prefix} {escaped_message} {escaped_location}[/{color}]"
+        log_message = f"[grey50]{log_prefix}[/grey50][{color}] {escaped_message} [/{color}][grey50]{escaped_location}[/grey50]"
         if context:
-            log_message = f"[{color}]{log_prefix} {escaped_message} | Context: {self._format_context(context)} {escaped_location}[/{color}]"
+            log_message = f"[grey50]{log_prefix}[/grey50][{color}] {escaped_message} | Context: {self._format_context(context)} [/{color}][grey50]{escaped_location}[/grey50]"
 
         rprint(log_message)
 
     def _format_context(self, context: Dict[str, Any]) -> str:
         """ コンテキスト情報を整形 """
-        items = []
-        for k, v in context.items():
-            if isinstance(v, float):
-                items.append(f"{k}={v:.3f}")
-            elif isinstance(v, Enum):
-                items.append(f"{k}={v.name}") # Enum の場合は .name を使用
+        items = [] # 空のリスト items を初期化
+        for k, v in context.items(): # context のキー（k）と値（v）を1つずつ取得し、それぞれ処理する
+            if isinstance(v, float): # 値 v が浮動小数点型（float）の場合
+                items.append(f"{k} = {v:.3f}") # 小数点以下3桁までのフォーマットに整形
+            elif isinstance(v, Enum): # 値 v が列挙型（Enum）の場合
+                items.append(f"{k} = {v.name}") # v.name プロパティ（列挙値の名前）を使用して整形
             else:
-                items.append(f"{k}={v}")
-        return ", ".join(items)
+                items.append(f"{k} = {v}") # 浮動小数点型や列挙型でない場合、そのまま文字列として追加
+        return ", ".join(items) # items リスト内のすべての文字列をカンマ区切りで結合、1つの文字列として返す

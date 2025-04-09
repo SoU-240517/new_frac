@@ -17,7 +17,7 @@ class ParameterPanel:
 
     def setup_panel(self):
         """ パラメータパネルの設定 """
-        self.logger.log(LogLevel.DEBUG, "Parameter panel settings")
+        self.logger.log(LogLevel.DEBUG, "Parameter panel settings.")
         row = 0
 
         # フラクタルタイプ選択
@@ -150,7 +150,7 @@ class ParameterPanel:
 
     def show_formula_display(self):
         """ 漸化式を表示する関数 """
-        self.logger.log(LogLevel.DEBUG, "Show recurrence formula.")
+        self.logger.log(LogLevel.DEBUG, "Show display formula.")
         fractal_type = self.fractal_type_var.get()
         if fractal_type == "Julia":
             self.formula_var.set("Z_n+1 = Z_n² + C")

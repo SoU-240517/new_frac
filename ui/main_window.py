@@ -40,13 +40,19 @@ class MainWindow:
         """ 最新パラメータにズーム情報を上書きしてフラクタルを再描画 """
         self.logger.log(LogLevel.DEBUG, "Updating fractal.")
         panel_params = self.parameter_panel.get_parameters() # パネルからパラメータを取得
-        panel_params.update(self.zoom_params)  # ズーム情報を上書き
+        panel_params.update(self.zoom_params) # ズーム情報を上書き
         fractal_image = render_fractal(panel_params, self.logger) # render_fractal に logger を渡す
-        self.fractal_canvas.update_canvas(fractal_image, panel_params)  # キャンバスを更新
+        self.fractal_canvas.update_canvas(fractal_image, panel_params) # キャンバスを更新
 
     def on_zoom_confirm(self, new_zoom_params):
         """ ズーム確定時のコールバック（縦横比を調整し、ズームレベルに応じて反復回数を自動調整） """
-        self.logger.log(LogLevel.DEBUG, "Zoom confirmed.", context={"new_zoom_params": new_zoom_params})
+        self.logger.log(LogLevel.DEBUG, "Zoom confirmed.", {
+            "center_x": new_zoom_params.get("center_x"),
+            "center_y": new_zoom_params.get("center_y"),
+            "width": new_zoom_params.get("width"),
+            "height": new_zoom_params.get("height")
+        })
+
         if new_zoom_params == self.zoom_params:
             return
 
@@ -56,7 +62,7 @@ class MainWindow:
         # 縦横比補正
         aspect_ratio = self.fractal_canvas.fig.get_size_inches()[0] / self.fractal_canvas.fig.get_size_inches()[1]
         new_width = new_zoom_params["width"]
-        new_height = new_width / aspect_ratio  # 縦横比を維持
+        new_height = new_width / aspect_ratio # 縦横比を維持
 
         # ズームレベルに応じて `max_iterations` を増やす
         zoom_factor = self.zoom_params["width"] / new_width
@@ -67,7 +73,7 @@ class MainWindow:
         else:
              new_max_iterations = current_max_iter # ズームアウト時は変更しない
 
-        self.logger.log(LogLevel.DEBUG, "Adjusting zoom parameters.", context={
+        self.logger.log(LogLevel.DEBUG, "Adjusting zoom parameters.", {
             "aspect_ratio": aspect_ratio,
             "new_width": new_width,
             "new_height": new_height,
@@ -110,16 +116,3 @@ class MainWindow:
         }
         self.prev_zoom_params = None
         self.update_fractal()
-
-# 注意: FractalCanvas や ParameterPanel の __init__ も logger を受け取れるように修正が必要になる場合があります。
-# 例: FractalCanvas の __init__
-# def __init__(self, parent, logger=None):
-#     self.logger = logger if logger else DebugLogger() # logger が渡されなければデフォルトで作成
-#     self.logger.log(LogLevel.INIT, "Initializing FractalCanvas")
-#     # ... rest of the init code ...
-
-# 例: ParameterPanel の __init__
-# def __init__(self, parent, update_callback, reset_callback, logger=None):
-#     self.logger = logger if logger else DebugLogger()
-#     self.logger.log(LogLevel.INIT, "Initializing ParameterPanel")
-#     # ... rest of the init code ...

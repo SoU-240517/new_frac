@@ -8,19 +8,16 @@ class ZoomStateHandler:
         self.logger = logger
         self.logger.log(LogLevel.INIT, "ZoomStateHandler")
         self._state: ZoomState = initial_state
-        self.logger = logger
         self.event_handler = event_handler
         self.canvas = canvas
 
     def get_state(self) -> ZoomState:
         """ 現在の状態を取得 """
-        self.logger.log(LogLevel.DEBUG, "Get status.")
+        self.logger.log(LogLevel.INFO, "Get status.", {"state": self._state.name})
         return self._state
 
     def update_state(self, new_state: ZoomState, context: Optional[Dict[str, Any]] = None):
         """ 状態を更新 """
-        self.logger.log(LogLevel.DEBUG, "Update status.")
-        # 状態が変わらない場合は何もしない
         if self._state == new_state:
             return
 
@@ -30,7 +27,7 @@ class ZoomStateHandler:
         log_context = {"old_state": old_state_name, "new_state": new_state.name}
         if context:
             log_context.update(context)
-        self.logger.log(LogLevel.INFO, "State changed", log_context)
+        self.logger.log(LogLevel.INFO, "State changed.", log_context)
 
         # NO_RECT状態になったらモーションイベントを切断
 #        if new_state == ZoomState.NO_RECT:

@@ -27,7 +27,7 @@ class FractalCanvas:
 
     def set_zoom_callback(self, zoom_confirm_callback, zoom_cancel_callback):
         """ ズーム確定・キャンセル時のコールバックを設定 """
-        self.logger.log(LogLevel.DEBUG, "Set callback")
+        self.logger.log(LogLevel.DEBUG, "Set callback.")
         self.zoom_confirm_callback = zoom_confirm_callback
         self.zoom_cancel_callback = zoom_cancel_callback
 
@@ -52,7 +52,7 @@ class FractalCanvas:
 
     def update_canvas(self, fractal_image, params):
         """ キャンバスを更新し、指定されたフラクタル画像を描画 """
-        self.logger.log(LogLevel.DEBUG, "Update the canvas.")
+        self.logger.log(LogLevel.INFO, "Update canvas.")
         self.ax.clear()  # キャンバスをクリア
         self.ax.axis('off')  # 座標軸は非表示
         self.fig.subplots_adjust(left=0, right=1, top=1, bottom=0)  # キャンバスのパディングを削除
@@ -60,7 +60,6 @@ class FractalCanvas:
         aspect_ratio = fractal_image.shape[1] / fractal_image.shape[0]  # 画像のアスペクト比を取得
         width = params["width"]  # 幅を取得
         height = width / aspect_ratio  # アスペクト比を維持するために高さを計算
-
         self.ax.set_aspect("auto")  # 縦横比を自動調整
         self.ax.imshow(fractal_image, extent=[
             params["center_x"] - width / 2,

@@ -37,7 +37,7 @@ class CursorManager:
                 if widget:
                     widget.config(cursor=new_cursor)
                     self.last_cursor_state = new_cursor
-                    self.logger.log(LogLevel.DEBUG, f"Previous cursor state.: {self.last_cursor_state}")
+                    self.logger.log(LogLevel.INFO, "Previous cursor state.", {"cursor": self.last_cursor_state})
                 else:
                     pass
             except AttributeError:

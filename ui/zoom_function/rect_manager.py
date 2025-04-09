@@ -25,7 +25,7 @@ class RectManager:
         # 見た目を点線にする例
         self.rect = patches.Rectangle((x, y), 0, 0, linewidth=1, edgecolor='red', facecolor='none', linestyle='--')
         self.ax.add_patch(self.rect)
-        self.logger.log(LogLevel.DEBUG, "Rectangle creation started", {"x": x, "y": y})
+        self.logger.log(LogLevel.DEBUG, "Rectangle creation started.", {"x": x, "y": y})
 
     def update_creation(self, start_x: float, start_y: float, current_x: float, current_y: float):
         """ ドラッグ中に矩形のサイズと位置を更新 """
@@ -66,7 +66,7 @@ class RectManager:
         if self.rect:
             self.rect.remove()
             self.rect = None
-            self.logger.log(LogLevel.DEBUG, "Rectangle cleared")
+            self.logger.log(LogLevel.DEBUG, "Rectangle cleared.")
 
     def get_properties(self) -> Optional[Tuple[float, float, float, float]]:
         """ 現在の矩形のプロパティ (x, y, width, height) を取得 """

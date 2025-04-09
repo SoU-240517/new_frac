@@ -63,7 +63,8 @@ class EventHandler:
             self._cid_press = self.canvas.mpl_connect('button_press_event', self.on_press)
             self._cid_release = self.canvas.mpl_connect('button_release_event', self.on_release)
             self._cid_key_press = self.canvas.mpl_connect('key_press_event', self.on_key_press)
-            self.logger.log(LogLevel.INFO, "Connection completed.")
+            self.logger.log(LogLevel.INFO, "Connection completed.", {
+                "cid_press": self._cid_press, "cid_release": self._cid_release, "cid_key_press": self._cid_key_press})
 
     def disconnect(self):
         """ イベントハンドラを切断 """
@@ -85,7 +86,7 @@ class EventHandler:
             return
 
         state = self.state_handler.get_state()
-        self.logger.log(LogLevel.DEBUG, "Mouse press detected", {"button": event.button, "x": event.xdata, "y": event.ydata, "state": state})
+        self.logger.log(LogLevel.INFO, "Mouse press detected.", {"button": event.button, "x": event.xdata, "y": event.ydata, "state": state})
 
         if state == ZoomState.NO_RECT:
             # 矩形作成開始
