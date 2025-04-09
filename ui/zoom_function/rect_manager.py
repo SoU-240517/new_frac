@@ -23,7 +23,7 @@ class RectManager:
         if self.rect: # もし古い矩形が残っていたら消す
             self.clear()
         # 見た目を点線にする例
-        self.rect = patches.Rectangle((x, y), 0, 0, linewidth=1, edgecolor='red', facecolor='none', linestyle='--')
+        self.rect = patches.Rectangle((x, y), 0, 0, linewidth=1, edgecolor='white', facecolor='none', linestyle='--')
         self.ax.add_patch(self.rect)
         self.logger.log(LogLevel.DEBUG, "Rectangle creation started.", {"x": x, "y": y})
 

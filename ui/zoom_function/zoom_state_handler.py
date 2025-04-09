@@ -26,7 +26,7 @@ class ZoomStateHandler:
 
         log_context = {"old_state": old_state_name, "new_state": new_state.name}
         if context:
-            log_context.update(context)
+            log_context.update(context) # コンテキストをログコンテキストに追加
         self.logger.log(LogLevel.INFO, "State changed.", log_context)
 
         # NO_RECT状態になったらモーションイベントを切断

@@ -115,28 +115,32 @@ class EventHandler:
         if event.button != MouseButton.LEFT:
             return
 
-        state = self.state_handler.get_state() # 切断前に状態を確認
+        state = self.state_handler.get_state() # 現在の状態を取得しておく
 
         # 座標が取れない場合の処理
         if event.xdata is None or event.ydata is None:
             if state == ZoomState.CREATE:
                 self.logger.log(LogLevel.WARNING, "Mouse released outside axes during creation, cancelling.")
-                self._disconnect_motion() # <<<--- motion イベントを切断
+                self._disconnect_motion() # motion イベントを切断
                 self.selector.cancel_zoom()
             return
 
-        self.logger.log(LogLevel.DEBUG, "Mouse release detected.", {"button": event.button, "x": event.xdata, "y": event.ydata, "state": state})
+        self.logger.log(LogLevel.DEBUG, "Mouse release detected.", {
+            "button": event.button, "x": event.xdata, "y": event.ydata, "state": state})
 
         if state == ZoomState.CREATE:
-            self._disconnect_motion() # <<<--- motion イベントを切断
+            self._disconnect_motion() # motion イベントを切断
             if self.start_x is not None and self.start_y is not None:
-                success = self.rect_manager.finalize_creation(self.start_x, self.start_y, event.xdata, event.ydata)
-                if success:
+                self.rect_manager.finalize_creation(self.start_x, self.start_y, event.xdata, event.ydata)
+                self.state_handler.update_state(ZoomState.EDIT, {"action": "preparation"})
+
+#                success = self.rect_manager.finalize_creation(self.start_x, self.start_y, event.xdata, event.ydata)
+#                if success:
                     # confirm_zoom の中で状態が NO_RECT に更新される
-                    self.selector.confirm_zoom()
-                else:
+#                    self.selector.confirm_zoom()
+#                else:
                     # finalize_creation が False を返した場合 (例: 小さすぎる矩形)
-                    self.state_handler.update_state(ZoomState.NO_RECT) # 状態を直接更新
+#                    self.state_handler.update_state(ZoomState.NO_RECT) # 状態を直接更新
 
             self.start_x = None
             self.start_y = None
