@@ -28,8 +28,10 @@ class ZoomSelector:
                                 initial_state=ZoomState.NO_RECT,
                                 logger=self.logger,
                                 canvas=self.canvas)
-        self.rect_manager = RectManager(ax, self.logger) # 引数で受け取った logger を渡す
-        self.cursor_manager = CursorManager(self.canvas, self.state_handler, self.logger) # CursorManager に logger を渡す
+
+        self.rect_manager = RectManager(ax, self.logger)
+        # 修正: CursorManager の初期化時に self を渡す
+        self.cursor_manager = CursorManager(self.canvas, self.state_handler, self, self.logger)
         self.validator = EventValidator()
 
         # EventHandlerに他のコンポーネントへの参照を渡す
@@ -40,6 +42,7 @@ class ZoomSelector:
                                         self.validator,
                                         self.logger, # 引数で受け取った logger を渡す
                                         self.canvas)
+
         self.state_handler.event_handler = self.event_handler # StateHandler に EventHandler の参照を設定
         # --- 初期化ここまで ---
 
@@ -50,7 +53,7 @@ class ZoomSelector:
         """ イベントハンドラの接続 """
         self.event_handler.connect() # EventHandlerに他のコンポーネントへの参照を渡す
         self.cursor_manager.cursor_update() # カーソルの初期化
-        self.logger.log(LogLevel.INFO, "Connecting events.")
+        self.logger.log(LogLevel.DEBUG, "Connecting events.")
 
     def disconnect_events(self):
         """ イベントハンドラの切断 """
@@ -58,8 +61,14 @@ class ZoomSelector:
         self.event_handler.disconnect() # EventHandlerに他のコンポーネントへの参照を渡す
         self.cursor_manager.cursor_reset() # カーソルのリセット
 
+    def cursor_inside_rect(self, event) -> bool:
+        """ マウスカーソル位置がズーム領域内か判定する """
+        rect_props = self.rect_manager.get_rect()
+        contains, _ = rect_props.contains(event)
+        return contains
+
     def confirm_zoom(self):
-        """ (内部用) 矩形が確定された時に呼ばれる """
+        """ ズーム領域決定 """
         rect_props = self.rect_manager.get_properties()
         if rect_props:
             self.logger.log(LogLevel.INFO, "Zoom rectangle confirmed.", {
@@ -69,6 +78,7 @@ class ZoomSelector:
             self.cursor_manager.cursor_update()
         else:
             self.logger.log(LogLevel.WARNING, "Confirm attempted but no valid rectangle exists.")
+
     def cancel_zoom(self):
         """ (内部用) キャンセル時に呼ばれる (主にESCキー or 外部からの呼び出し) """
         self.logger.log(LogLevel.INFO, "Zoom operation cancelled.")

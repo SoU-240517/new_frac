@@ -10,6 +10,5 @@ class EventValidator:
         """基本的なイベント検証"""
         logger.log(LogLevel.DEBUG, "validation: Basic event")
         # event.inaxes でイベントが指定されたAxes内で発生したかチェック
-        # event.xdata, event.ydata が None でないことも保証される (inaxes is not Noneの場合)
         # event.button でマウスボタンが押されたイベントかチェック（Noneでない）
         return event.inaxes == ax and event.button is not None

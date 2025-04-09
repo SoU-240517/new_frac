@@ -63,7 +63,7 @@ class EventHandler:
             self._cid_press = self.canvas.mpl_connect('button_press_event', self.on_press)
             self._cid_release = self.canvas.mpl_connect('button_release_event', self.on_release)
             self._cid_key_press = self.canvas.mpl_connect('key_press_event', self.on_key_press)
-            self.logger.log(LogLevel.INFO, "Connection completed.", {
+            self.logger.log(LogLevel.DEBUG, "Connection completed.", {
                 "cid_press": self._cid_press, "cid_release": self._cid_release, "cid_key_press": self._cid_key_press})
 
     def disconnect(self):
@@ -89,26 +89,25 @@ class EventHandler:
         self.logger.log(LogLevel.INFO, "Mouse press detected.", {"button": event.button, "x": event.xdata, "y": event.ydata, "state": state})
 
         if state == ZoomState.NO_RECT:
-            # 矩形作成開始
+            # ズーム領域作成開始
             self.start_x, self.start_y = event.xdata, event.ydata
             self.rect_manager.create_rect_start(self.start_x, self.start_y)
             self.state_handler.update_state(ZoomState.CREATE)
-            self._connect_motion() # <<<--- motion イベントを接続
+            self._connect_motion() # motion イベントを接続
             self.cursor_manager.cursor_update(event)
-            self.canvas.draw_idle()
+            self.canvas.draw_idle() # 再描画を要求（matplotlib の FigureCanvas オブジェクトに存在するメソッド）
 
     def on_motion(self, event: Event):
         """ マウスが動いた時の処理 """
-        self.logger.log(LogLevel.METHOD, "on_motion")
-        if event.inaxes != self.selector.ax and self.state_handler.get_state() != ZoomState.CREATE:
+        if event.inaxes != self.selector.ax:
             return
         if event.xdata is None or event.ydata is None:
             return
 
-        if self.start_x is not None and self.start_y is not None:
-            self.rect_manager.update_creation( # 矩形を作成中なら更新
-                self.start_x, self.start_y, event.xdata, event.ydata)
-            self.canvas.draw_idle() # 再描画を要求
+        if self.state_handler.get_state() == ZoomState.CREATE:
+            self.logger.log(LogLevel.DEBUG, "Creating a new rectangle.")
+            self.rect_manager.update_creation(self.start_x, self.start_y, event.xdata, event.ydata)
+            self.canvas.draw_idle()
 
     def on_release(self, event: Event):
         """ マウスボタンが離された時の処理 """
@@ -129,10 +128,9 @@ class EventHandler:
             "button": event.button, "x": event.xdata, "y": event.ydata, "state": state})
 
         if state == ZoomState.CREATE:
-            self._disconnect_motion() # motion イベントを切断
-            if self.start_x is not None and self.start_y is not None:
-                self.rect_manager.finalize_creation(self.start_x, self.start_y, event.xdata, event.ydata)
-                self.state_handler.update_state(ZoomState.EDIT, {"action": "preparation"})
+#            self._disconnect_motion() # motion イベントを切断
+            self.rect_manager.temporary_creation(self.start_x, self.start_y, event.xdata, event.ydata)
+            self.state_handler.update_state(ZoomState.EDIT, {"action": "waiting"})
 
 #                success = self.rect_manager.finalize_creation(self.start_x, self.start_y, event.xdata, event.ydata)
 #                if success:
