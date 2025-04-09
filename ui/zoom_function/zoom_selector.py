@@ -51,13 +51,13 @@ class ZoomSelector:
 
     def connect_events(self):
         """ イベントハンドラの接続 """
+        self.logger.log(LogLevel.INFO, "Connecting events.")
         self.event_handler.connect() # EventHandlerに他のコンポーネントへの参照を渡す
         self.cursor_manager.cursor_update() # カーソルの初期化
-        self.logger.log(LogLevel.DEBUG, "Connecting events.")
 
     def disconnect_events(self):
         """ イベントハンドラの切断 """
-        self.logger.log(LogLevel.DEBUG, "Disconnecting events.")
+        self.logger.log(LogLevel.INFO, "Disconnecting events.")
         self.event_handler.disconnect() # EventHandlerに他のコンポーネントへの参照を渡す
         self.cursor_manager.cursor_reset() # カーソルのリセット
 

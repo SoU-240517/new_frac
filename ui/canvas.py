@@ -27,7 +27,7 @@ class FractalCanvas:
 
     def set_zoom_callback(self, zoom_confirm_callback, zoom_cancel_callback):
         """ ズーム確定・キャンセル時のコールバックを設定 """
-        self.logger.log(LogLevel.DEBUG, "Set callback.")
+        self.logger.log(LogLevel.DEBUG, "Set callbacks for confirming and canceling zoom.")
         self.zoom_confirm_callback = zoom_confirm_callback
         self.zoom_cancel_callback = zoom_cancel_callback
 
@@ -46,7 +46,7 @@ class FractalCanvas:
 
     def zoom_cancelled(self):
         """ ズームキャンセル時のコールバック """
-        self.logger.log(LogLevel.METHOD, "zoom_cancelled")
+        self.logger.log(LogLevel.DEBUG, "Callback when zoom is cancelled.")
         if hasattr(self, 'zoom_cancel_callback') and self.zoom_cancel_callback:
             self.zoom_cancel_callback()
 

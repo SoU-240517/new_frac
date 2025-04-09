@@ -29,7 +29,7 @@ class CursorManager:
         if current_state == ZoomState.CREATE:
             new_cursor = 'crosshair'
         elif current_state == ZoomState.EDIT:
-            new_cursor = "arrow" if self.zoom_selector.cursor_inside_rect(event) else "fleur"
+            new_cursor = "fleur" if self.zoom_selector.cursor_inside_rect(event) else "arrow"
         else: # NO_RECT または他の状態
             new_cursor = 'arrow'
 
@@ -48,11 +48,12 @@ class CursorManager:
 
     def cursor_reset(self):
         """ カーソルをデフォルト (arrow) に戻す """
-        self.logger.log(LogLevel.METHOD, "cursor_reset")
+
         self.last_cursor_state = None # 強制的に更新させる
         try:
             widget = self.canvas.get_tk_widget()
             if widget:
+                self.logger.log(LogLevel.INFO, "Change cursor back to arrow.")
                 widget.config(cursor='arrow')
             else:
                 pass

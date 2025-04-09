@@ -65,7 +65,7 @@ class DebugLogger:
         elapsed_time = time.time() - self.start_time
         color_map = {
             LogLevel.INIT: "grey50",
-            LogLevel.METHOD: "green",
+            LogLevel.TEST: "green",
             LogLevel.DEBUG: "blue",
             LogLevel.INFO: "white",
             LogLevel.WARNING: "yellow",
@@ -88,7 +88,7 @@ class DebugLogger:
 
         log_message = f"[grey50]{log_prefix}[/grey50][{color}] {escaped_message} [/{color}][grey50]{escaped_location}[/grey50]"
         if context:
-            log_message = f"[grey50]{log_prefix}[/grey50][{color}] {escaped_message} | Context: {self._format_context(context)} [/{color}][grey50]{escaped_location}[/grey50]"
+            log_message = f"[grey50]{log_prefix}[/grey50][{color}] {escaped_message} | {self._format_context(context)} [/{color}][grey50]{escaped_location}[/grey50]"
 
         rprint(log_message)
 

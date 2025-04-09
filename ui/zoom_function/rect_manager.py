@@ -14,25 +14,25 @@ class RectManager:
 
     def get_rect(self) -> Optional[patches.Rectangle]:
         """ 現在のズーム領域を取得 """
-        self.logger.log(LogLevel.METHOD, "get_rect")
+        self.logger.log(LogLevel.DEBUG, "Gets the current rectangle information.")
         return self.rect
 
-    def create_rect_start(self, x: float, y: float):
-        """ 新しいズーム領域の描画を開始 """
+    def setup_rect(self, x: float, y: float):
+        """ 新しいズーム領域の初期状態をセットアップ """
         self.rect = patches.Rectangle(
             (x, y), 0, 0,
             linewidth=1, edgecolor='white', facecolor='none', linestyle='--') # 点線
         self.ax.add_patch(self.rect)
-        self.logger.log(LogLevel.DEBUG, "Rectangle creation started.", {"x": x, "y": y})
+        self.logger.log(LogLevel.DEBUG, "Setup initial state of rectangle.", {"x": x, "y": y})
 
-    def update_creation(self, start_x: float, start_y: float, current_x: float, current_y: float):
-        """ ドラッグ中にズーム領域のサイズと位置を更新 """
+    def update_rect_size(self, start_x: float, start_y: float, current_x: float, current_y: float):
+        """ ドラッグ中にズーム領域のサイズを更新 """
         if not self.rect:
             return
         width = current_x - start_x
         height = current_y - start_y
         self.rect.set_bounds(start_x, start_y, width, height) # 左上起点で幅と高さを設定
-        self.logger.log(LogLevel.DEBUG, "Rectangle update in progress.")
+        self.logger.log(LogLevel.DEBUG, "Update the size of the rectangle.")
 
     def temporary_creation(self, start_x: float, start_y: float, end_x: float, end_y: float) -> bool:
         """ 仮のズーム領域を暫定 """
@@ -49,12 +49,11 @@ class RectManager:
         else:
             self.rect.set_bounds(x, y, width, height)
             self.rect.set_linestyle('-') # 実線に変更
-            self.logger.log(LogLevel.INFO, "Create a temporary rectangle.", {"x": x, "y": y, "w": width, "h": height})
+            self.logger.log(LogLevel.DEBUG, "Create a temporary rectangle.", {"x": x, "y": y, "w": width, "h": height})
             return True
 
     def clear(self):
         """ ズーム領域を削除 """
-        self.logger.log(LogLevel.METHOD, "clear")
         if self.rect:
             self.rect.remove()
             self.rect = None

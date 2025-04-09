@@ -8,7 +8,7 @@ class EventValidator:
     @staticmethod
     def validate_basic(event: Event, ax: Axes, logger: DebugLogger) -> bool:
         """基本的なイベント検証"""
-        logger.log(LogLevel.DEBUG, "validation: Basic event")
+        logger.log(LogLevel.DEBUG, "Verification: Apply basic event")
         # event.inaxes でイベントが指定されたAxes内で発生したかチェック
         # event.button でマウスボタンが押されたイベントかチェック（Noneでない）
         return event.inaxes == ax and event.button is not None
