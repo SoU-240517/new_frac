@@ -122,7 +122,7 @@ class EventHandler:
                 self.logger.log(LogLevel.DEBUG, "Rectangle cache clear.")
                 self.zoom_selector.invalidate_rect_cache() # キャッシュを無効化
 
-                self._connect_motion()
+                self._connect_motion() # 移動中のマウス追跡を開始
 
                 self.logger.log(LogLevel.INFO, "Cursor update.")
                 self.cursor_manager.cursor_update(event)
@@ -145,7 +145,7 @@ class EventHandler:
                 if rect_props:
                     self.rect_start_pos = (rect_props[0], rect_props[1]) # (x, y)
 
-                self._connect_motion() # 移動中のマウス追跡を開始
+                self._connect_motion()
 
                 self.logger.log(LogLevel.INFO, "Cursor update.")
                 self.cursor_manager.cursor_update(event) # カーソル形状を更新 (fleurなど)
@@ -303,6 +303,7 @@ class EventHandler:
                 self.logger.log(LogLevel.INFO, "State changed to EDIT.")
                 self.state_handler.update_state(ZoomState.EDIT, {"action": "move_end"})
 
+                self.logger.log(LogLevel.DEBUG, "Resets internal state related to movement.")
                 self._reset_move_state() # 移動関連の変数をリセット
 
                 self.logger.log(LogLevel.INFO, "Cursor update.")
@@ -316,11 +317,12 @@ class EventHandler:
     def on_key_press(self, event: MouseEvent):
         """ キーボードが押された時の処理 """
         self.logger.log(LogLevel.INFO, "Key press detected", {"key": event.key})
+
         if event.key == 'escape': # ESCキーが押された場合
             state = self.state_handler.get_state()
             self.logger.log(LogLevel.DEBUG, "Current state.", {"state": state.name})
 
-            if state in [ZoomState.CREATE, ZoomState.MOVE, ZoomState.EDIT]:
+            if state is ZoomState.EDIT:
                 self.logger.log(LogLevel.INFO, f"Operation cancelled by ESC key in state: {state.name}.")
 
                 self._disconnect_motion()
@@ -330,6 +332,9 @@ class EventHandler:
 
                 self.logger.log(LogLevel.DEBUG, "Resets internal state related to movement.")
                 self._reset_move_state() # 移動状態もリセット
+
+                self.logger.log(LogLevel.INFO, "State changed to NO_RECT.")
+                self.state_handler.update_state(ZoomState.NO_RECT, {"action": "create_end"})
 
                 self.canvas.draw_idle()
 
