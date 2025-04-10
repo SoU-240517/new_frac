@@ -1,5 +1,6 @@
 from matplotlib.axes import Axes
 from typing import Callable
+import numpy as np
 from .enums import ZoomState, LogLevel
 from .event_validator import EventValidator
 from .zoom_state_handler import ZoomStateHandler
@@ -71,15 +72,16 @@ class ZoomSelector:
         """ マウスカーソル位置がズーム領域内か判定する (キャッシュを使用) """
         if self._cached_rect_props is None:
             self.logger.log(LogLevel.DEBUG, "Rectangle cache miss. Fetching rectangle properties.")
+            self.logger.log(LogLevel.DEBUG, "Gets the current rectangle information.")
             self._cached_rect_props = self.rect_manager.get_rect()
 
         if self._cached_rect_props is not None:
             contains, _ = self._cached_rect_props.contains(event)
             return contains
-        else:
-            # キャッシュ更新後も None の場合 (get_rect() が None を返した場合)
-            # self.logger.log(LogLevel.WARNING, "No rectangle properties available even after cache update.")
-            return False
+
+        # キャッシュ更新後も None の場合 (get_rect() が None を返した場合)
+        self.logger.log(LogLevel.WARNING, "No rectangle properties available even after cache update.")
+        return False
 
     def confirm_zoom(self):
         """ ズーム領域決定 """
@@ -127,7 +129,7 @@ class ZoomSelector:
         self.rect_manager.clear()
 
         self.logger.log(LogLevel.DEBUG, "Rectangle cache clear.")
-        self.invalidate_rect_cache() # 矩形がクリアされたのでキャッシュをクリア
+        self.invalidate_rect_cache() # 矩形がクリアされたので、キャッシュもクリア
 
         self.logger.log(LogLevel.INFO, "State changed to NO_RECT.")
         self.state_handler.update_state(ZoomState.NO_RECT, {"action": "reset"})
@@ -145,3 +147,22 @@ class ZoomSelector:
         """ 矩形情報のキャッシュを無効化する """
         if self._cached_rect_props is not None:
             self._cached_rect_props = None
+
+    def pointer_near_corner(self, event):
+        """
+        マウスカーソルがズーム領域の角に近いかどうかを判定する
+        許容範囲 tol = 0.1 * min(width, height)（ただし min が 0 の場合は 0.2）
+        """
+        self.logger.log(LogLevel.DEBUG, "Get rectangle properties.")
+        rect_props_tuple = self.rect_manager.get_properties()
+        if rect_props_tuple is None:
+            return False
+
+        x, y, width, height = rect_props_tuple
+        tol = 0.1 * min(width, height) if min(width, height) != 0 else 0.2  # 通常の許容範囲
+        corners = [(x, y), (x + width, y), (x, y + height), (x + width, y + height)]  # 角の座標をリストに格納
+
+        for cx, cy in corners:  # 各角についてマウス位置との距離を計算
+            if np.hypot(event.xdata - cx, event.ydata - cy) < tol:  # マウス位置と角の距離が許容範囲内なら
+                return True
+        return False

@@ -16,7 +16,6 @@ class RectManager:
 
     def get_rect(self) -> Optional[patches.Rectangle]:
         """ 現在のズーム領域を取得 """
-        self.logger.log(LogLevel.DEBUG, "Gets the current rectangle information.")
         return self.rect
 
     def setup_rect(self, x: float, y: float):

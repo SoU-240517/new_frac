@@ -132,8 +132,7 @@ class EventHandler:
 
         elif state == ZoomState.EDIT:
             if event.button == MouseButton.LEFT and self.zoom_selector.cursor_inside_rect(event):
-                # 矩形移動開始
-                # ... (移動開始時には矩形自体は変更されないので、キャッシュ無効化は不要) ...
+                # 矩形移動開始（移動開始直後は矩形自体は変更されないので、キャッシュ無効化は不要）
                 self.logger.log(LogLevel.INFO, "State changed to MOVE.")
                 self.state_handler.update_state(ZoomState.MOVE, {"action": "move_start"})
 
@@ -180,10 +179,12 @@ class EventHandler:
                     self.zoom_selector.invalidate_rect_cache() # キャッシュを無効化
 
                 self.canvas.draw_idle()
+
         elif state == ZoomState.EDIT:
             # 編集モード中はカーソル形状の更新のみ
             self.logger.log(LogLevel.INFO, "Cursor update.")
             self.cursor_manager.cursor_update(event)
+
         elif state == ZoomState.MOVE:
             if event.button == MouseButton.LEFT:
                 # 矩形移動中の処理
