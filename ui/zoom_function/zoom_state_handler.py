@@ -13,7 +13,6 @@ class ZoomStateHandler:
 
     def get_state(self) -> ZoomState:
         """ 現在の状態を取得 """
-        self.logger.log(LogLevel.INFO, "Get status.", {"state": self._state.name})
         return self._state
 
     def update_state(self, new_state: ZoomState, context: Optional[Dict[str, Any]] = None):
@@ -27,7 +26,7 @@ class ZoomStateHandler:
         log_context = {"old_state": old_state_name, "new_state": new_state.name}
         if context:
             log_context.update(context) # コンテキストをログコンテキストに追加
-        self.logger.log(LogLevel.DEBUG, "State changed.", log_context)
+        self.logger.log(LogLevel.DEBUG, "success.", log_context)
 
         # NO_RECT状態になったらモーションイベントを切断
 #        if new_state == ZoomState.NO_RECT:

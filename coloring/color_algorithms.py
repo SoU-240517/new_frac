@@ -1,33 +1,36 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.colors import Normalize # Normalize を直接インポート
 from coloring import gradient
 from ui.zoom_function.debug_logger import DebugLogger
 from ui.zoom_function.enums import LogLevel # LogLevel をインポート
 
 def apply_coloring_algorithm(results, params, logger: DebugLogger):
     """ 着色アルゴリズムを適用して結果を返す """
-    logger.log(LogLevel.DEBUG, "Apply coloring algorithm.")
+
 
     iterations = results['iterations']
     mask = results['mask']
     z_vals = results['z_vals']
 
     # RGBA画像用の配列
-    colored = np.zeros((*iterations.shape, 4))
+    colored = np.zeros((*iterations.shape, 4), dtype=np.float32)
     divergent = iterations > 0
 
     if np.any(divergent):
         # 発散する場合の処理
         algo = params["diverge_algorithm"]
         if algo == "反復回数線形マッピング":
-            norm = plt.Normalize(1, params["max_iterations"])
+            # 修正: plt.Normalize -> Normalize
+            norm = Normalize(1, params["max_iterations"])
             colored[divergent] = plt.cm.get_cmap(params["diverge_colormap"])(norm(iterations[divergent]))
         elif algo == "スムージングカラーリング":
             log_zn = np.log(np.abs(z_vals))
             nu = np.log(log_zn/np.log(2)) / np.log(2)
             smooth_iter = iterations - nu
             smooth_iter[mask] = 0
-            norm = plt.Normalize(0, params["max_iterations"])
+            # 修正: plt.Normalize -> Normalize
+            norm = Normalize(0, params["max_iterations"])
             colored[divergent] = plt.cm.get_cmap(params["diverge_colormap"])(norm(smooth_iter[divergent]))
         elif algo == "ヒストグラム平坦化法":
             hist, bins = np.histogram(iterations[divergent], bins=params["max_iterations"], density=True)
@@ -42,7 +45,8 @@ def apply_coloring_algorithm(results, params, logger: DebugLogger):
         elif algo == "距離カラーリング":
             dist = np.abs(z_vals)
             dist[mask] = 0
-            norm = plt.Normalize(0, 10)
+            # 修正: plt.Normalize -> Normalize
+            norm = Normalize(0, 10)
             colored[divergent] = plt.cm.get_cmap(params["diverge_colormap"])(norm(dist[divergent]))
         elif algo == "角度カラーリング":
             angles = np.angle(z_vals) / (2 * np.pi) + 0.5
@@ -54,7 +58,8 @@ def apply_coloring_algorithm(results, params, logger: DebugLogger):
         elif algo == "軌道トラップ法":
             trap_dist = np.abs(z_vals - 1.0)
             trap_dist[mask] = float('inf')
-            norm = plt.Normalize(0, 2)
+            # 修正: plt.Normalize -> Normalize
+            norm = Normalize(0, 2)
             colored[divergent] = plt.cm.get_cmap(params["diverge_colormap"])(norm(trap_dist[divergent]))
 
     non_divergent = ~divergent
@@ -64,7 +69,7 @@ def apply_coloring_algorithm(results, params, logger: DebugLogger):
         if non_algo == "単色":
             colored[non_divergent] = [0, 0, 0, 1]
         elif non_algo == "グラデーション":
-            grad = gradient.compute_gradient(iterations.shape)
+            grad = gradient.compute_gradient(iterations.shape, logger)
             colored[non_divergent] = plt.cm.get_cmap(params["non_diverge_colormap"])(grad[non_divergent])
         elif non_algo == "パラメータ(C)":
             if params["fractal_type"] == "Julia":

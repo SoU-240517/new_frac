@@ -4,7 +4,7 @@ from ui.zoom_function.enums import LogLevel # LogLevel をインポート
 
 def compute_julia(Z, C, max_iter, logger: DebugLogger):
     """ ジュリア集合を計算 """
-    logger.log(LogLevel.DEBUG, "Compute Julia sets.")
+
 
     shape = Z.shape
     iterations = np.zeros(shape, dtype=int)

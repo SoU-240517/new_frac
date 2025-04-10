@@ -31,17 +31,23 @@ class MainWindow:
         self.control_frame = ttk.Frame(self.main_frame) # パラメータパネルフレームを作成
         self.main_frame.add(self.control_frame, weight=1) # パネルウィンドウにパラメータパネルフレームを追加
         self.fractal_canvas = FractalCanvas(self.canvas_frame, self.logger) # Logger を渡す
+        self.logger.log(LogLevel.DEBUG, "Set callbacks for confirming and canceling zoom.")
         self.fractal_canvas.set_zoom_callback(self.on_zoom_confirm, self.on_zoom_cancel)
         self.parameter_panel = ParameterPanel(self.control_frame, self.update_fractal, reset_callback=self.reset_zoom, logger=self.logger) # Logger を渡す
 
+        self.logger.log(LogLevel.DEBUG, "Updating fractal.")
         self.update_fractal()
 
     def update_fractal(self, *args):
         """ 最新パラメータにズーム情報を上書きしてフラクタルを再描画 """
-        self.logger.log(LogLevel.DEBUG, "Updating fractal.")
+        self.logger.log(LogLevel.DEBUG, "Get parameters.")
         panel_params = self.parameter_panel.get_parameters() # パネルからパラメータを取得
         panel_params.update(self.zoom_params) # ズーム情報を上書き
+
+        self.logger.log(LogLevel.DEBUG, "Rendering fractal with parameters.")
         fractal_image = render_fractal(panel_params, self.logger) # render_fractal に logger を渡す
+
+        self.logger.log(LogLevel.INFO, "Update canvas.")
         self.fractal_canvas.update_canvas(fractal_image, panel_params) # キャンバスを更新
 
     def on_zoom_confirm(self, new_zoom_params):

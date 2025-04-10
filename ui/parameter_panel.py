@@ -13,6 +13,7 @@ class ParameterPanel:
         self.parent = parent
         self.update_callback = update_callback
         self.reset_callback = reset_callback
+        self.logger.log(LogLevel.DEBUG, "Parameter panel settings.")
         self.setup_panel()
 
     def setup_panel(self):
@@ -33,6 +34,7 @@ class ParameterPanel:
         self.formula_var = tk.StringVar()
         self.formula_label = ttk.Label(self.parent, textvariable=self.formula_var, font=("Courier", 12))
         self.formula_label.grid(row=row, column=0, columnspan=2, sticky=tk.W, padx=10, pady=5)
+        self.logger.log(LogLevel.DEBUG, "Show display formula.")
         self.show_formula_display()
         row += 1
 
@@ -150,7 +152,6 @@ class ParameterPanel:
 
     def show_formula_display(self):
         """ 漸化式を表示する関数 """
-        self.logger.log(LogLevel.DEBUG, "Show display formula.")
         fractal_type = self.fractal_type_var.get()
         if fractal_type == "Julia":
             self.formula_var.set("Z_n+1 = Z_n² + C")
@@ -159,8 +160,6 @@ class ParameterPanel:
 
     def get_parameters(self):
         """ パラメータを取得する関数 """
-        self.logger.log(LogLevel.DEBUG, "Get parameters.")
-        # パラメータを取得する処理を実装
         try:
             panel_params = {
                 "fractal_type": self.fractal_type_var.get(),

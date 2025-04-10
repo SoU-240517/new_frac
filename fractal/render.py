@@ -6,8 +6,6 @@ from ui.zoom_function.enums import LogLevel # LogLevel をインポート
 
 def render_fractal(params, logger: DebugLogger):
     """ 指定されたパラメータに基づいてフラクタルを描画 """
-    logger.log(LogLevel.INFO, "Rendering fractal with parameters.")
-
     resolution = 500
     # ズーム情報があればそれを使用、なければ初期値
     center_x = params.get("center_x", 0.0)
@@ -32,14 +30,16 @@ def render_fractal(params, logger: DebugLogger):
     # フラクタルの種類に応じた計算
     if params["fractal_type"] == "Julia":
         C = complex(params["c_real"], params["c_imag"])
-        # compute_julia に logger を渡す
-        results = julia.compute_julia(Z, C, params["max_iterations"], logger)
+
+        logger.log(LogLevel.DEBUG, "Compute Julia sets.")
+        results = julia.compute_julia(Z, C, params["max_iterations"], logger) # logger を渡す
     else:
         Z0 = complex(params["z_real"], params["z_imag"])
         # compute_mandelbrot に logger を渡す
         results = mandelbrot.compute_mandelbrot(Z, Z0, params["max_iterations"], logger)
 
     # 着色アルゴリズムの適用
-    # apply_coloring_algorithm に logger を渡す
-    colored = color_algorithms.apply_coloring_algorithm(results, params, logger)
+    logger.log(LogLevel.DEBUG, "Apply coloring algorithm.")
+    colored = color_algorithms.apply_coloring_algorithm(results, params, logger) # logger を渡す
+
     return colored
