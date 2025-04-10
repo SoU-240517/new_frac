@@ -39,7 +39,7 @@ class CursorManager:
                 if widget:
                     widget.config(cursor=new_cursor)
                     self.last_cursor_state = new_cursor
-                    self.logger.log(LogLevel.DEBUG, "success.", {"to": new_cursor, "previous_cursor": self.last_cursor_state})
+                    self.logger.log(LogLevel.DEBUG, "success.", {"previous_cursor": self.last_cursor_state, "to": new_cursor})
                 else:
                     self.logger.log(LogLevel.WARNING, "Failed. Could not get Tk widget to update cursor.")
             except AttributeError: # Tkinterのバックエンドを使用していない場合、AttributeErrorが発生することがあります

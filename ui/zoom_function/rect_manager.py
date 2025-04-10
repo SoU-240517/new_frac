@@ -34,7 +34,7 @@ class RectManager:
         width = current_x - start_x
         height = current_y - start_y
         self.rect.set_bounds(start_x, start_y, width, height) # 左上起点で幅と高さを設定
-        self.logger.log(LogLevel.DEBUG, "Update: Rect size.")
+        self.logger.log(LogLevel.DEBUG, "Update: Rect size...")
 
     def is_valid_size(self, width: float, height: float) -> bool:
         """ 矩形の幅と高さが有効か (小さすぎないか) をチェック """

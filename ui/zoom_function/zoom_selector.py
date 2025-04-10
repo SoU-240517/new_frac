@@ -22,6 +22,7 @@ class ZoomSelector:
         self.canvas = ax.figure.canvas # 描画対象の Figure の Canvas オブジェクト
         self.on_zoom_confirm = on_zoom_confirm # ユーザーが指定するコールバック関数
         self.on_zoom_cancel = on_zoom_cancel # ユーザーが指定するコールバック関数
+        self._cached_rect_props = None # 矩形情報のキャッシュ
 
         # --- 各コンポーネントの初期化 ---
         self.state_handler = ZoomStateHandler(
@@ -67,30 +68,36 @@ class ZoomSelector:
         self.cursor_manager.cursor_reset()
 
     def cursor_inside_rect(self, event) -> bool:
-        """ マウスカーソル位置がズーム領域内か判定する """
-        rect_props = self.rect_manager.get_rect()
-        if rect_props is not None:
-            contains, _ = rect_props.contains(event)
+        """ マウスカーソル位置がズーム領域内か判定する (キャッシュを使用) """
+        if self._cached_rect_props is None:
+            self.logger.log(LogLevel.DEBUG, "Rectangle cache miss. Fetching rectangle properties.")
+            self._cached_rect_props = self.rect_manager.get_rect()
+
+        if self._cached_rect_props is not None:
+            contains, _ = self._cached_rect_props.contains(event)
             return contains
         else:
-            self.logger.log(LogLevel.WARNING, "No rectangle properties available.")
+            # キャッシュ更新後も None の場合 (get_rect() が None を返した場合)
+            # self.logger.log(LogLevel.WARNING, "No rectangle properties available even after cache update.")
             return False
 
     def confirm_zoom(self):
         """ ズーム領域決定 """
         self.logger.log(LogLevel.DEBUG, "Get property.")
-        rect_props = self.rect_manager.get_properties()
+        # rect_managerから最新のプロパティを取得
+        rect_props_tuple = self.rect_manager.get_properties()
 
-        if rect_props:
+        if rect_props_tuple:
             self.logger.log(LogLevel.INFO, "Zoom rectangle confirmed.", {
-                "x": rect_props[0], "y": rect_props[1], "w": rect_props[2], "h": rect_props[3]})
-            self.on_zoom_confirm(rect_props[0], rect_props[1], rect_props[2], rect_props[3])
+                "x": rect_props_tuple[0], "y": rect_props_tuple[1], "w": rect_props_tuple[2], "h": rect_props_tuple[3]})
+            self.on_zoom_confirm(rect_props_tuple[0], rect_props_tuple[1], rect_props_tuple[2], rect_props_tuple[3])
 
             self.logger.log(LogLevel.INFO, "State changed to NO_RECT.")
             self.state_handler.update_state(ZoomState.NO_RECT, {"action": "confirm"})
 
-            self.logger.log(LogLevel.DEBUG, "Cursor update.")
+            self.logger.log(LogLevel.INFO, "Cursor update.")
             self.cursor_manager.cursor_update()
+            self.invalidate_rect_cache() # 矩形がなくなったのでキャッシュをクリア
         else:
             self.logger.log(LogLevel.WARNING, "Confirm attempted but no valid rectangle exists.")
 
@@ -98,11 +105,13 @@ class ZoomSelector:
         """ (内部用) キャンセル時に呼ばれる (主にESCキー or 外部からの呼び出し) """
         self.logger.log(LogLevel.INFO, "Zoom operation cancelled.")
         self.rect_manager.clear()
+        self.invalidate_rect_cache() # 矩形がクリアされたのでキャッシュをクリア
 
         self.logger.log(LogLevel.INFO, "State changed to NO_RECT.")
         self.state_handler.update_state(ZoomState.NO_RECT, {"action": "cancel"})
 
         self.event_handler.reset_internal_state() # 開始座標などもリセット
+        self.logger.log(LogLevel.INFO, "Cursor update.")
         self.cursor_manager.cursor_update()
         self.on_zoom_cancel()
 
@@ -110,8 +119,16 @@ class ZoomSelector:
         """ ZoomSelectorの状態をリセット """
         self.logger.log(LogLevel.INFO, "ZoomSelector reset.")
         self.rect_manager.clear()
+        self.invalidate_rect_cache() # 矩形がクリアされたのでキャッシュをクリア
         self.state_handler.update_state(ZoomState.NO_RECT, {"action": "reset"})
         self.event_handler.reset_internal_state()
+        self.logger.log(LogLevel.INFO, "Cursor update.")
         self.cursor_manager.cursor_update()
         # reset時もキャンセルコールバックを呼ぶか、あるいは別のコールバックを用意するかは設計次第
         # self.on_zoom_cancel()
+
+    def invalidate_rect_cache(self):
+        """ 矩形情報のキャッシュを無効化する """
+        if self._cached_rect_props is not None:
+            self.logger.log(LogLevel.DEBUG, "Invalidating rectangle cache.")
+            self._cached_rect_props = None

@@ -27,7 +27,7 @@ class EventHandler:
 
         self.logger = logger
         self.logger.log(LogLevel.INIT, "EventHandler")
-        self.zoom_selector = zoom_selector
+        self.zoom_selector = zoom_selector # ZoomSelectorのインスタンスを保持
         self.state_handler = state_handler
         self.rect_manager = rect_manager
         self.cursor_manager = cursor_manager
@@ -118,10 +118,11 @@ class EventHandler:
 
                 self.logger.log(LogLevel.DEBUG, "Setup initial state of rectangle.", {"x": self.start_x, "y": self.start_y})
                 self.rect_manager.setup_rect(self.start_x, self.start_y)
+                self.zoom_selector.invalidate_rect_cache() # キャッシュを無効化
 
                 self._connect_motion()
 
-                self.logger.log(LogLevel.DEBUG, "Cursor update.")
+                self.logger.log(LogLevel.INFO, "Cursor update.")
                 self.cursor_manager.cursor_update(event)
 
                 self._create_logged = False # 新規作成ログフラグをリセット
@@ -130,6 +131,7 @@ class EventHandler:
         elif state == ZoomState.EDIT:
             if event.button == MouseButton.LEFT and self.zoom_selector.cursor_inside_rect(event):
                 # 矩形移動開始
+                # ... (移動開始時には矩形自体は変更されないので、キャッシュ無効化は不要) ...
                 self.logger.log(LogLevel.INFO, "State changed to MOVE.")
                 self.state_handler.update_state(ZoomState.MOVE, {"action": "move_start"})
                 self.move_start_x, self.move_start_y = event.xdata, event.ydata # 移動開始時のマウス座標
@@ -159,9 +161,11 @@ class EventHandler:
                         self.logger.log(LogLevel.INFO, "Rectangle updating during creation.")
                         self._create_logged = True
                     self.rect_manager.update_rect_size(self.start_x, self.start_y, event.xdata, event.ydata)
+                    self.zoom_selector.invalidate_rect_cache() # キャッシュを無効化
                 self.canvas.draw_idle()
         elif state == ZoomState.EDIT:
             # 編集モード中はカーソル形状の更新のみ
+            self.logger.log(LogLevel.INFO, "Cursor update.")
             self.cursor_manager.cursor_update(event)
         elif state == ZoomState.MOVE:
             if event.button == MouseButton.LEFT:
@@ -180,6 +184,7 @@ class EventHandler:
                     new_rect_y = self.rect_start_pos[1] + dy
                     # 矩形を移動
                     self.rect_manager.move_rect_to(new_rect_x, new_rect_y)
+                    self.zoom_selector.invalidate_rect_cache() # キャッシュを無効化
                     self.canvas.draw_idle()
 
     def on_release(self, event: MouseEvent) -> None:
@@ -199,7 +204,9 @@ class EventHandler:
                 self.state_handler.update_state(ZoomState.EDIT, {"action": "move_end"})
                 self._disconnect_motion()
                 self.reset_move_state() # 移動関連の変数をリセット
+                self.logger.log(LogLevel.INFO, "Cursor update.")
                 self.cursor_manager.cursor_update(event) # カーソルを更新
+                # self.zoom_selector.invalidate_rect_cache() # 必要であれば追加
             return
 
         # 通常のリリース処理
@@ -217,6 +224,7 @@ class EventHandler:
                         self.logger.log(LogLevel.INFO, "Temporary rectangle creation completed.", {
                             "button": event.button, "x": event.xdata, "y": event.ydata, "state": state})
                         self.rect_manager.temporary_creation(self.start_x, self.start_y, event.xdata, event.ydata)
+                        self.zoom_selector.invalidate_rect_cache() # キャッシュを無効化
 
                         self.logger.log(LogLevel.INFO, "State changed to EDIT.")
                         self.state_handler.update_state(ZoomState.EDIT, {"action": "create_end"})
@@ -227,6 +235,7 @@ class EventHandler:
                         self.state_handler.update_state(ZoomState.NO_RECT, {"action": "create_fail"})
                         self.logger.log(LogLevel.INFO, "Clearing rectangle due to invalid size.")
                         self.rect_manager.clear()
+                        self.zoom_selector.invalidate_rect_cache() # キャッシュを無効化
 
                 else:
                      # 開始座標がない異常系 (通常は起こらないはず)
@@ -250,6 +259,7 @@ class EventHandler:
                 self.state_handler.update_state(ZoomState.EDIT, {"action": "move_end"})
                 self.reset_move_state() # 移動関連の変数をリセット
                 self.cursor_manager.cursor_update(event) # カーソルを更新 (EDIT状態のカーソルへ)
+                # self.zoom_selector.invalidate_rect_cache() # 必要であれば追加
                 self.canvas.draw_idle()
 
     def on_key_press(self, event: MouseEvent):
@@ -274,6 +284,7 @@ class EventHandler:
         self._move_logged = False
         self._disconnect_motion() # 念のため motion も切断
         self.logger.log(LogLevel.DEBUG, "EventHandler internal state reset.")
+        pass
 
     def reset_move_state(self):
         """ 移動関連の内部状態をリセット """
