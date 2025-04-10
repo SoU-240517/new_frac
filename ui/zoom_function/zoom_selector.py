@@ -88,7 +88,7 @@ class ZoomSelector:
         rect_props_tuple = self.rect_manager.get_properties()
 
         if rect_props_tuple:
-            self.logger.log(LogLevel.INFO, "Zoom rectangle confirmed.", {
+            self.logger.log(LogLevel.INFO, "Zoom rectangle confirmed. Callback Invocation.", {
                 "x": rect_props_tuple[0], "y": rect_props_tuple[1], "w": rect_props_tuple[2], "h": rect_props_tuple[3]})
             self.on_zoom_confirm(rect_props_tuple[0], rect_props_tuple[1], rect_props_tuple[2], rect_props_tuple[3])
 
@@ -103,32 +103,45 @@ class ZoomSelector:
 
     def cancel_zoom(self):
         """ (内部用) キャンセル時に呼ばれる (主にESCキー or 外部からの呼び出し) """
-        self.logger.log(LogLevel.INFO, "Zoom operation cancelled.")
+        self.logger.log(LogLevel.DEBUG, "Rectangle cleared.")
         self.rect_manager.clear()
+
+        self.logger.log(LogLevel.DEBUG, "Rectangle cache clear.")
         self.invalidate_rect_cache() # 矩形がクリアされたのでキャッシュをクリア
 
         self.logger.log(LogLevel.INFO, "State changed to NO_RECT.")
         self.state_handler.update_state(ZoomState.NO_RECT, {"action": "cancel"})
 
+        self.logger.log(LogLevel.DEBUG, "EventHandler internal state reset.")
         self.event_handler.reset_internal_state() # 開始座標などもリセット
+
         self.logger.log(LogLevel.INFO, "Cursor update.")
         self.cursor_manager.cursor_update()
+
+        self.logger.log(LogLevel.INFO, "Zoom rectangle canceled. Callback Invocation.")
         self.on_zoom_cancel()
 
     def reset(self):
         """ ZoomSelectorの状態をリセット """
-        self.logger.log(LogLevel.INFO, "ZoomSelector reset.")
+        self.logger.log(LogLevel.DEBUG, "Rectangle cleared.")
         self.rect_manager.clear()
+
+        self.logger.log(LogLevel.DEBUG, "Rectangle cache clear.")
         self.invalidate_rect_cache() # 矩形がクリアされたのでキャッシュをクリア
+
+        self.logger.log(LogLevel.INFO, "State changed to NO_RECT.")
         self.state_handler.update_state(ZoomState.NO_RECT, {"action": "reset"})
+
+        self.logger.log(LogLevel.INFO, "Resets the internal state of the event handler.")
         self.event_handler.reset_internal_state()
+
         self.logger.log(LogLevel.INFO, "Cursor update.")
         self.cursor_manager.cursor_update()
+
         # reset時もキャンセルコールバックを呼ぶか、あるいは別のコールバックを用意するかは設計次第
         # self.on_zoom_cancel()
 
     def invalidate_rect_cache(self):
         """ 矩形情報のキャッシュを無効化する """
         if self._cached_rect_props is not None:
-            self.logger.log(LogLevel.DEBUG, "Invalidating rectangle cache.")
             self._cached_rect_props = None
