@@ -253,16 +253,15 @@ class EventHandler:
             if event.button == MouseButton.LEFT:
                 # 矩形作成中のサイズ更新
                 if self.start_x is not None and self.start_y is not None:
-                    self.rect_manager.update_rect_size(self.start_x, self.start_y, event.xdata, event.ydata)
                     self.logger.log(LogLevel.CALL, "新規作成中...")
-
+                    self.rect_manager.update_rect_size(self.start_x, self.start_y, event.xdata, event.ydata)
                     self.logger.log(LogLevel.CALL, "ズーム領域：キャッシュ無効化開始")
                     self.zoom_selector.invalidate_rect_cache() # キャッシュを無効化
 
                 self.canvas.draw_idle()
 
         elif state == ZoomState.EDIT:
-            self.logger.log(LogLevel.CALL, "ニアコーナーチェック開始")
+            self.logger.log(LogLevel.CALL, "近い角チェック開始")
             corner_index = self.zoom_selector.pointer_near_corner(event)
             self.logger.log(LogLevel.INFO, "カーソル更新")
             # 修正: state 引数を追加 (EDIT 状態)
@@ -270,15 +269,48 @@ class EventHandler:
 
         elif state == ZoomState.MOVE:
             if event.button == MouseButton.LEFT:
-                # ... (矩形移動中の処理) ...
-                # カーソルは MOVE のままなので、ここでは更新不要
-                self.canvas.draw_idle()
+                # 矩形移動中の処理
+                if not self._move_logged:
+                    self.logger.log(LogLevel.INFO, "ズーム領域移動開始", {
+                        "ボタン": event.button, "x": event.xdata, "y": event.ydata, "状態": state})
+                    self._move_logged = True
+
+                if self.move_start_x is not None and self.move_start_y is not None and self.rect_start_pos is not None:
+                    # マウスの移動量を計算
+                    dx = event.xdata - self.move_start_x
+                    dy = event.ydata - self.move_start_y
+                    # 新しい矩形の左下座標を計算
+                    new_rect_x = self.rect_start_pos[0] + dx
+                    new_rect_y = self.rect_start_pos[1] + dy
+                    # 矩形を移動
+                    self.rect_manager.move_rect_to(new_rect_x, new_rect_y)
+                    self.logger.log(LogLevel.CALL, "移動中...", {"x": new_rect_x, "y": new_rect_y})
+
+                    self.logger.log(LogLevel.CALL, "ズーム領域：キャッシュ無効化開始")
+                    self.zoom_selector.invalidate_rect_cache()
+
+                    self.canvas.draw_idle()
 
         elif state == ZoomState.RESIZING:
             if event.button == MouseButton.LEFT:
-                # ... (矩形リサイズ中の処理) ...
-                # カーソルは RESIZING のままなので、ここでは更新不要
-                self.canvas.draw_idle()
+                # 矩形リサイズ中の処理
+                if not self._resize_logged:
+                    self.logger.log(LogLevel.INFO, "ズーム領域リサイズ開始", {
+                        "button": event.button, "x": event.xdata, "y": event.ydata, "state": state, "corner": self.resize_corner_index})
+                    self._resize_logged = True
+
+                if self.fixed_corner_pos is not None:
+                    fixed_x, fixed_y = self.fixed_corner_pos
+                    current_x, current_y = event.xdata, event.ydata
+
+                    # 固定点と現在のマウス位置から矩形を更新
+                    self.rect_manager.update_rect_from_corners(fixed_x, fixed_y, current_x, current_y)
+                    self.logger.log(LogLevel.CALL, f"固定角 ({fixed_x:.2f}, {fixed_y:.2f}) to mouse ({current_x:.2f}, {current_y:.2f})")
+
+                    self.logger.log(LogLevel.CALL, "ズーム領域：キャッシュ無効化開始")
+                    self.zoom_selector.invalidate_rect_cache()
+
+                    self.canvas.draw_idle()
 
         elif state == ZoomState.ROTATING: # 回転中の処理を追加
             if event.button == MouseButton.LEFT:
@@ -288,35 +320,125 @@ class EventHandler:
 
     def on_release(self, event: MouseEvent) -> None:
         """ マウスボタンが離された時の処理 """
-        state_before_release = self.state_handler.get_state() # 処理前の状態を保持
-        self.logger.log(LogLevel.CALL, "ボタンリリース処理前に状態取得完了", {"状態": state_before_release.name})
+        state = self.state_handler.get_state() # 処理前の状態を保持
+        self.logger.log(LogLevel.CALL, "ボタンリリース処理前に状態取得完了", {"状態": state})
 
-        # ... (座標が取れない場合の処理 is_outside) ...
+        # 座標が取れない場合の処理
         is_outside = event.xdata is None or event.ydata is None
 
-        if state_before_release == ZoomState.CREATE:
+        if state == ZoomState.CREATE:
             self.logger.log(LogLevel.INFO, "ズーム領域作成完了処理開始：作成関連の内部状態をリセット")
             self.logger.log(LogLevel.INFO, "リセット：作成関連の内部状態")
-            self._reset_create_state() # 作成関連の状態をリセット
 
-        elif state_before_release == ZoomState.MOVE:
+            if is_outside:
+                self.logger.log(LogLevel.WARNING, "キャンセル：作成中に軸の外側でマウスボタンリリース")
+                self.logger.log(LogLevel.CALL, "切断：motion_notify_event")
+                self._disconnect_motion()
+                self.logger.log(LogLevel.INFO, "キャンセル：ズーム領域作成")
+                self.zoom_selector.cancel_zoom()
+                return
+
             if event.button == MouseButton.LEFT:
-                # ... (MOVE 完了処理) ...
+                if self.start_x is not None and self.start_y is not None:
+                    # リリースポイントが有効かどうかを確認します（is_outside チェックで既に実行されていますが、型チェッカーに必要です）
+                    if event.xdata is not None and event.ydata is not None:
+                        # 最終的なサイズを計算する
+                        potential_width = abs(event.xdata - self.start_x)
+                        potential_height = abs(event.ydata - self.start_y)
+
+                        # 最終的なサイズが有効かどうかを確認します
+                        if self.rect_manager.is_valid_size(potential_width, potential_height):
+                            self.logger.log(LogLevel.INFO, "ズーム領域作成終了", {
+                                "button": event.button, "x": event.xdata, "y": event.ydata, "state": state})
+                            # 最後の座標でサイズを確定させる（すでにmotionで更新されているが念のため）
+                            self.rect_manager.temporary_creation(self.start_x, self.start_y, event.xdata, event.ydata) # Now safe
+                            self.logger.log(LogLevel.CALL, "ズーム領域：キャッシュ無効化開始")
+                            self.zoom_selector.invalidate_rect_cache()
+                            self.logger.log(LogLevel.INFO, "状態変更 to EDIT.")
+                            self.state_handler.update_state(ZoomState.EDIT, {"action": "作成終了"})
+                        else:
+                            # 最終サイズが無効なので作成をキャンセル
+                            self.logger.log(LogLevel.WARNING, "ズーム領域作成失敗：最終サイズが無効")
+                            self.logger.log(LogLevel.INFO, "状態変更 to NO_RECT.")
+                            self.state_handler.update_state(ZoomState.NO_RECT, {"action": "作成失敗"})
+                            self.rect_manager.clear()
+                            self.logger.log(LogLevel.CALL, "ズーム領域：キャッシュ無効化開始")
+                            self.zoom_selector.invalidate_rect_cache()
+                    else:
+                        # この else は、event.xdata/ydata が None であることに対応します。
+                        # is_outside チェックは先ほど返されるはずです。作成をキャンセルします。
+                        self.logger.log(LogLevel.WARNING, "ズーム領域作成失敗：解放座標が無効")
+                        self.logger.log(LogLevel.INFO, "状態変更 to NO_RECT.")
+                        self.state_handler.update_state(ZoomState.NO_RECT, {"action": "作成失敗"})
+                        self.rect_manager.clear()
+                        self.logger.log(LogLevel.CALL, "ズーム領域：キャッシュ無効化開始")
+                        self.zoom_selector.invalidate_rect_cache()
+                else:
+                    self.logger.log(LogLevel.ERROR, "ズーム領域作成不可：開始座標なし")
+                    self.logger.log(LogLevel.INFO, "状態変更 to NO_RECT.")
+                    self.state_handler.update_state(ZoomState.NO_RECT, {"action": "作成失敗"})
+                    # 存在する可能性のある四角形をクリアします
+                    if self.rect_manager.get_properties():
+                        self.rect_manager.clear()
+                        self.logger.log(LogLevel.CALL, "ズーム領域：キャッシュ無効化開始")
+                        self.zoom_selector.invalidate_rect_cache()
+
+                self._reset_create_state() # 作成関連の状態をリセット
+                self.logger.log(LogLevel.INFO, "カーソル更新")
+                self.cursor_manager.cursor_update(event, state=self.state_handler.get_state())
+                self.canvas.draw_idle()
+
+        elif state == ZoomState.MOVE:
+            if event.button == MouseButton.LEFT:
+                self.logger.log(LogLevel.INFO, "ズーム領域移動終了", {
+                    "ボタン": event.button, "x": event.xdata, "y": event.ydata, "状態": state})
+                self.logger.log(LogLevel.INFO, "状態変更 to EDIT.")
+                self.state_handler.update_state(ZoomState.EDIT, {"action": "移動終了"})
+                self.logger.log(LogLevel.CALL, "切断：motion_notify_event")
+                self.logger.log(LogLevel.CALL, "リセット：移動関連の内部状態")
+                self._reset_move_state()
+                self.logger.log(LogLevel.INFO, "カーソル更新")
+                self.cursor_manager.cursor_update(event, state=self.state_handler.get_state())
+                self.logger.log(LogLevel.CALL, "ズーム領域：キャッシュ無効化開始")
+                self.zoom_selector.invalidate_rect_cache()
+                self.canvas.draw_idle()
                 self._reset_move_state()
 
-        elif state_before_release == ZoomState.RESIZING:
+        elif state == ZoomState.RESIZING:
             if event.button == MouseButton.LEFT:
-                # ... (RESIZING 完了またはキャンセル処理) ...
+                self.logger.log(LogLevel.INFO, "ズーム領域リサイズ終了", {
+                    "ボタン": event.button, "x": event.xdata, "y": event.ydata, "状態": state})
+
+                # リサイズ完了後も矩形が有効かチェック（小さくなりすぎなど）
+                rect_props = self.rect_manager.get_properties()
+                if rect_props and self.rect_manager.is_valid_size(rect_props[2], rect_props[3]):
+                    self.logger.log(LogLevel.INFO, "リサイズ成功：状態変更 to EDIT")
+                    self.state_handler.update_state(ZoomState.EDIT, {"action": "リサイズ終了"})
+                else:
+                    # リサイズの結果、矩形が無効になった場合はキャンセル扱いとするか、前の状態に戻すかは要検討
+                    # ここではキャンセル（NO_RECT）にしている
+                    self.logger.log(LogLevel.WARNING, "リサイズ中断：無効なサイズ")
+                    self.logger.log(LogLevel.INFO, "状態変更 to NO_RECT.")
+                    self.state_handler.update_state(ZoomState.NO_RECT, {"action": "リサイズ失敗"})
+                    self.rect_manager.clear() # 矩形をクリア
+
+                self.logger.log(LogLevel.CALL, "リセット：サイズ変更関連の内部状態")
+                self._reset_resize_state() # リサイズ関連の状態をリセット
+                self.logger.log(LogLevel.CALL, "ズーム領域：キャッシュ無効化開始")
+                self.zoom_selector.invalidate_rect_cache() # キャッシュクリア
+                self.logger.log(LogLevel.INFO, "カーソル更新")
+                self.cursor_manager.cursor_update(event, state=self.state_handler.get_state())
+                self.canvas.draw_idle()
                 self._reset_resize_state() # リサイズ関連の状態をリセット
 
-        elif state_before_release == ZoomState.ROTATING: # 回転終了処理を追加
+        elif state == ZoomState.ROTATING: # 回転終了処理を追加
             if event.button == MouseButton.LEFT:
                 # ... (ROTATING 完了処理) ...
                 self._reset_rotate_state() # 回転関連の状態をリセット
 
         # --- 共通の後処理 ---
         # motion イベントを切断 (MOVE, RESIZE, ROTATE, CREATE で接続されていた場合)
-        if state_before_release in [ZoomState.CREATE, ZoomState.MOVE, ZoomState.RESIZING, ZoomState.ROTATING]:
+        if state in [ZoomState.CREATE, ZoomState.MOVE, ZoomState.RESIZING, ZoomState.ROTATING]:
              self._disconnect_motion()
 
         # 最終的な状態でカーソルを更新
@@ -329,10 +451,29 @@ class EventHandler:
 
     def on_key_press(self, event: KeyEvent):
         """ キーボードが押された時の処理 """
-        # ... (キー処理、状態変更の可能性あり) ...
         # キーイベントではマウス位置が不定なため、カーソル更新は on_motion に任せる
         # ESC でキャンセルした場合、ZoomSelector.cancel_zoom 内で set_default_cursor が呼ばれる
-        pass
+        self.logger.log(LogLevel.INFO, "キー押下検出", {"キー": event.key})
+
+        if event.key == 'escape': # ESCキーが押された場合
+            state = self.state_handler.get_state()
+            self.logger.log(LogLevel.CALL, "状態取得", {"状態": state.name})
+
+            if state is ZoomState.EDIT:
+                self.logger.log(LogLevel.INFO, f"ESCキー：操作キャンセル: {state.name}.")
+
+                self._disconnect_motion()
+
+                self.logger.log(LogLevel.INFO, "ズーム操作中断")
+                self.zoom_selector.cancel_zoom() # cancel_zoom で状態リセットと矩形クリア
+
+                self.logger.log(LogLevel.CALL, "リセット：移動関連の内部状態")
+                self._reset_move_state() # 移動状態もリセット
+
+                self.logger.log(LogLevel.INFO, "状態変更 to NO_RECT.")
+                self.state_handler.update_state(ZoomState.NO_RECT, {"action": "作成終了"})
+
+                self.canvas.draw_idle()
 
     def on_key_release(self, event: KeyEvent):
         """ キーボードのキーが離された時の処理 """

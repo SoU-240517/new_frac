@@ -46,7 +46,7 @@ def render_fractal(params, logger: DebugLogger):
     # 回転後のグリッドを中心座標にシフト
     Z = Z_rotated_centered_origin + complex(center_x, center_y)
     logger.log(LogLevel.DEBUG, "グリッドの作成と変換完了",
-               context={"中心_x": center_x, "中心_y": center_y, "幅": width, "高さ": height, "角度": rotation_deg})
+               context={"中心_x": center_x, "中心_y": center_y, "w": width, "h": height, "角度": rotation_deg})
 
 
     # フラクタルの種類に応じた計算

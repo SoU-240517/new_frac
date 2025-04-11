@@ -28,11 +28,11 @@ class RectManager:
         return self.rect
 
     def setup_rect(self, x: float, y: float):
-        """ 新しい矩形の初期設定 (サイズ0で作成) """
+        """ 新しい矩形の初期設定 (サイズ 0 で作成) """
 #        self.clear() # 既存の矩形があればクリア（矩形ありの状態で新規作成ま認めないのでクリア不要）
 #        self._angle = 0.0 # 角度をリセット（初期化で設定済みなので、ここでの設定は不要）
         # 初期状態ではサイズ0、回転なしで作成
-        self.rect = patches.Rectangle((x, y), 0, 0, linewidth=1, edgecolor='gray', facecolor='none', visible=True)
+        self.rect = patches.Rectangle((x, y), 0, 0, linewidth=1, edgecolor='gray', facecolor='none', linestyle='--', visible=True)
         self.ax.add_patch(self.rect)
         self.logger.log(LogLevel.DEBUG, "初期のズーム領域設置完了", {"x": x, "y": y})
 
@@ -54,7 +54,7 @@ class RectManager:
         self.rect.set_visible(True) # サイズが決まったら表示
         # 回転は適用しない (作成中は回転なし)
         self.rect.set_transform(self.ax.transData)
-        # self.logger.log(LogLevel.CALL, "Rectangle size/position updated.", {"x": x, "y": y, "w": width, "h": height}) # 頻繁すぎるログ
+        self.logger.log(LogLevel.DEBUG, "ズーム領域のサイズ/位置更新完了", {"x": x, "y": y, "w": width, "h": height})
 
     def update_rect_from_corners(self, fixed_x: float, fixed_y: float, current_x: float, current_y: float):
         """ 固定された角と現在のマウス位置から矩形を更新 (リサイズ中) """
@@ -101,6 +101,7 @@ class RectManager:
         self.rect.set_xy((x, y))
         self._angle = 0.0 # 作成完了時は角度0
         self.rect.set_transform(self.ax.transData) # 回転なし
+        self.rect.set_linestyle('-') # 実線に変更
         self.rect.set_visible(True)
         self.logger.log(LogLevel.INFO, "ズーム領域情報：作成完了時", {"x": x, "y": y, "w": width, "h": height})
         return True # Indicate success
