@@ -13,12 +13,11 @@ class ParameterPanel:
         self.parent = parent
         self.update_callback = update_callback
         self.reset_callback = reset_callback
-        self.logger.log(LogLevel.DEBUG, "Parameter panel settings.")
+        self.logger.log(LogLevel.DEBUG, "セットアップ開始：Parameter panel")
         self.setup_panel()
 
     def setup_panel(self):
         """ パラメータパネルの設定 """
-        self.logger.log(LogLevel.DEBUG, "Parameter panel settings.")
         row = 0
 
         # フラクタルタイプ選択
@@ -34,7 +33,7 @@ class ParameterPanel:
         self.formula_var = tk.StringVar()
         self.formula_label = ttk.Label(self.parent, textvariable=self.formula_var, font=("Courier", 12))
         self.formula_label.grid(row=row, column=0, columnspan=2, sticky=tk.W, padx=10, pady=5)
-        self.logger.log(LogLevel.DEBUG, "Show display formula.")
+        self.logger.log(LogLevel.DEBUG, "漸化式表示開始")
         self.show_formula_display()
         row += 1
 

@@ -20,7 +20,7 @@ class FractalCanvas:
         from ui.zoom_function.zoom_selector import ZoomSelector
         self.zoom_selector = ZoomSelector(
             self.ax,
-            on_zoom_confirm=lambda x, y, w, h: self.zoom_confirmed((x, y, w, h)),
+            on_zoom_confirm=lambda x, y, w, h, _: self.zoom_confirmed((x, y, w, h)), # Accept 5 args, pass 4
             on_zoom_cancel=self.zoom_cancelled,
             logger=self.logger # logger を渡す
         )
@@ -45,7 +45,7 @@ class FractalCanvas:
 
     def zoom_cancelled(self):
         """ ズームキャンセル時のコールバック """
-        self.logger.log(LogLevel.DEBUG, "Callback when zoom is cancelled.")
+        self.logger.log(LogLevel.DEBUG, "ズームキャンセル時のコールバック開始")
         if hasattr(self, 'zoom_cancel_callback') and self.zoom_cancel_callback:
             self.zoom_cancel_callback()
 

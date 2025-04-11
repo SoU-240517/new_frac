@@ -7,6 +7,7 @@ class ZoomState(Enum):
     EDIT = auto() # 矩形を編集中
     MOVE = auto() # 矩形を移動中
     RESIZING = auto() # 矩形をリサイズ中
+    ROTATING = auto() # 矩形を回転中
     # DISABLED = auto() # 将来的に無効状態を追加する場合
 
 class LogLevel(Enum):

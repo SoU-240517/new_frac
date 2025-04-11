@@ -23,10 +23,10 @@ class ZoomStateHandler:
         old_state_name = self._state.name
         self._state = new_state
 
-        log_context = {"old_state": old_state_name, "new_state": new_state.name}
+        log_context = {"旧": old_state_name, "新": new_state.name}
         if context:
             log_context.update(context) # コンテキストをログコンテキストに追加
-        self.logger.log(LogLevel.SUCCESS, "success.", log_context)
+        self.logger.log(LogLevel.SUCCESS, "成功", log_context)
 
         # NO_RECT状態になったらモーションイベントを切断
 #        if new_state == ZoomState.NO_RECT:
