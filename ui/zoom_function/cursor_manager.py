@@ -24,10 +24,10 @@ class CursorManager:
 
         # 角インデックスとTkカーソル名のマッピング
         self._resize_cursors = {
-            0: "size_nw_se", # 左上(NW)
-            1: "size_ne_sw", # 右上(NE)
-            2: "size_ne_sw", # 左下(SW)
-            3: "size_nw_se"  # 右下(SE)
+            0: "size_ne_sw", # 左上(NW)
+            1: "size_nw_se", # 右上(NE)
+            2: "size_nw_se", # 左下(SW)
+            3: "size_ne_sw"  # 右下(SE)
         }
 
     def cursor_update(self, event: Optional[Event] = None, near_corner_index: Optional[int] = None):
