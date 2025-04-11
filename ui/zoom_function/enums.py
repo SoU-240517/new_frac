@@ -6,13 +6,15 @@ class ZoomState(Enum):
     CREATE = auto() # 矩形を作成中 (ドラッグ中)
     EDIT = auto() # 矩形を編集中
     MOVE = auto() # 矩形を移動中
+    RESIZING = auto() # 矩形をリサイズ中
     # DISABLED = auto() # 将来的に無効状態を追加する場合
 
 class LogLevel(Enum):
     """ ログレベル """
     INIT = auto() # 初期化処理
-    TEST = auto() # メソッド呼び出し
+    CALL = auto() # メソッド呼出し元
     DEBUG = auto()
+    SUCCESS = auto()
     INFO = auto()
     WARNING = auto()
     ERROR = auto()

@@ -65,8 +65,9 @@ class DebugLogger:
         elapsed_time = time.time() - self.start_time
         color_map = {
             LogLevel.INIT: "grey50",
-            LogLevel.TEST: "green",
-            LogLevel.DEBUG: "blue",
+            LogLevel.DEBUG: "grey50",
+            LogLevel.CALL: "green",
+            LogLevel.SUCCESS: "blue",
             LogLevel.INFO: "white",
             LogLevel.WARNING: "yellow",
             LogLevel.ERROR: "red",
