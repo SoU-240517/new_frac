@@ -140,16 +140,18 @@ class RectManager:
         self._apply_rotation()
         # self.logger.log(LogLevel.CALL, "Rectangle moved.", {"new_x": new_x, "new_y": new_y, "angle": self._angle}) # 頻繁すぎるログ
 
-    def clear(self):
-        """ 矩形を削除 """
+    def clear_rect(self):
+        """ ズーム領域を削除 """
         if self.rect:
-            try:
-                self.rect.remove()
-            except ValueError:
-                self.logger.log(LogLevel.WARNING, "すでに削除されたズーム領域を削除しようとした")
+            # remove() の代わりに、Axesから削除する正しい方法を使用
+            if self.rect in self.ax.patches:
+                self.ax.patches.remove(self.rect)
+            # または単に非表示にする
+            self.rect.set_visible(False)
             self.rect = None
-            self._angle = 0.0 # 角度もリセット
-            self.logger.log(LogLevel.CALL, "ズーム領域削除完了")
+            self.logger.log(LogLevel.DEBUG, "ズーム領域を削除しました")
+        else:
+            self.logger.log(LogLevel.DEBUG, "ズーム領域なし：削除スキップ")
 
     def get_properties(self) -> Optional[Tuple[float, float, float, float]]:
         """ 矩形のプロパティ (x, y, width, height) を取得 (回転前の値) """

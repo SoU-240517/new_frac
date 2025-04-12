@@ -37,7 +37,17 @@ class MainWindow:
         self.control_frame = ttk.Frame(self.main_frame) # コントロールフレームを作成
         self.main_frame.add(self.control_frame, weight=1) # パネルウィンドウに配置
 
-        self.fractal_canvas = FractalCanvas(self.canvas_frame, self.logger)
+#        self.fractal_canvas = FractalCanvas(self.canvas_frame, self.logger)
+
+        self.fractal_canvas = FractalCanvas(
+            self.canvas_frame,
+            width=800,  # 適切な幅を指定
+            height=600,  # 適切な高さを指定
+            logger=self.logger,
+            zoom_confirm_callback=self.on_zoom_confirm,
+            zoom_cancel_callback=self.on_zoom_cancel
+        )
+
         self.parameter_panel = ParameterPanel(self.control_frame, self.update_fractal, reset_callback=self.reset_zoom, logger=self.logger)
 
         self.logger.log(LogLevel.DEBUG, "コールバック初期化開始：on_zoom_confirm、on_zoom_cancel")
@@ -60,7 +70,7 @@ class MainWindow:
         fractal_image = render_fractal(current_params, self.logger)
 
         self.logger.log(LogLevel.INFO, "キャンバス更新開始")
-        self.fractal_canvas.update_canvas(fractal_image, current_params) # キャンバスを更新
+        self.fractal_canvas.update_canvas(fractal_image, current_params)
 
     # on_zoom_confirm のシグネチャを (x, y, w, h, angle) に変更
     def on_zoom_confirm(self, x: float, y: float, w: float, h: float, angle: float):
@@ -121,7 +131,6 @@ class MainWindow:
 
     def on_zoom_cancel(self):
         """ ズームキャンセル時のコールバック """
-        #self.logger.log(LogLevel.DEBUG, "Zoom cancelled")
         # キャンセル時は特に何もしない（ZoomSelector側で矩形はクリアされる）
         # 必要であれば prev_zoom_params を使って前の描画状態に戻すことも可能。
         # ズームキャンセルは、ズーム領域編集のキャンセルと、ズーム領域確定後のキャンセルの2種類がある。

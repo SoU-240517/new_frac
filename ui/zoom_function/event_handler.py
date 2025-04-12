@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from .debug_logger import DebugLogger
 
 class EventHandler:
-    """ matplotlibのイベントを処理し、各コンポーネントに指示を出すクラス """
+    """ matplotlib のイベントを処理し、各コンポーネントに指示を出すクラス """
     def __init__(self,
                 zoom_selector: 'ZoomSelector',
                 state_handler: 'ZoomStateHandler',
@@ -70,19 +70,6 @@ class EventHandler:
         self.rect_initial_angle: Optional[float] = None # 回転開始時の矩形の角度
         self.rotate_center: Optional[Tuple[float, float]] = None # 回転中心座標
 
-    def _connect_motion(self):
-        """ motion_notify_event を接続 """
-        if self._cid_motion is None: # モーションが切断されている場合は接続
-            self._cid_motion = self.canvas.mpl_connect('motion_notify_event', self.on_motion)
-            self.logger.log(LogLevel.CALL, "接続完了：motion_notify_event")
-
-    def _disconnect_motion(self):
-        """ motion_notify_event を切断 """
-        if self._cid_motion is not None: # モーションが接続されている場合は切断
-            self.canvas.mpl_disconnect(self._cid_motion)
-            self._cid_motion = None
-            self.logger.log(LogLevel.CALL, "切断完了：motion_notify_event")
-
     def connect(self):
         """ イベントハンドラを接続 """
         if self._cid_press is None: # すでに接続されている場合は何もしない
@@ -97,40 +84,42 @@ class EventHandler:
         if self._cid_press is not None: # マウスボタン押下イベントが接続されている場合は切断
             self.canvas.mpl_disconnect(self._cid_press)
             self._cid_press = None
-
         if self._cid_release is not None: # マウスボタンリリースイベントが接続されている場合は切断
             self.canvas.mpl_disconnect(self._cid_release)
             self._cid_release = None
-
-        self.logger.log(LogLevel.CALL, "切断開始：motion_notify_event")
         self._disconnect_motion()
-
         if self._cid_key_press is not None: # キーボード押下イベントが接続されている場合は切断
             self.canvas.mpl_disconnect(self._cid_key_press)
             self._cid_key_press = None
-
         if self._cid_key_release is not None: # キーリリース切断を追加
             self.canvas.mpl_disconnect(self._cid_key_release)
             self._cid_key_release = None
-
-        self._disconnect_motion()
-        self.logger.log(LogLevel.CALL, "切断終了：Event handlers")
         self._alt_pressed = False # 切断時にAltキー状態をリセット
+        self.logger.log(LogLevel.CALL, "イベントハンドラ切断完了")
 
-    def _calculate_angle(self, cx: float, cy: float, px: float, py: float) -> float:
-        """ 中心点(cx, cy)から点(px, py)へのベクトル角度を計算（度単位） """
-        return math.degrees(math.atan2(py - cy, px - cx))
+    def _connect_motion(self):
+        """ motion_notify_event を接続 """
+        if self._cid_motion is None: # モーションが切断されている場合は接続
+            self._cid_motion = self.canvas.mpl_connect('motion_notify_event', self.on_motion)
+            self.logger.log(LogLevel.CALL, "接続完了：motion_notify_event")
+
+    def _disconnect_motion(self):
+        """ motion_notify_event を切断 """
+        if self._cid_motion is not None: # モーションが接続されている場合は切断
+            self.canvas.mpl_disconnect(self._cid_motion)
+            self._cid_motion = None
+            self.logger.log(LogLevel.CALL, "切断完了：motion_notify_event")
 
     def on_press(self, event: MouseEvent):
         """ マウスボタンが押された時の処理 """
         # ... (基本的な検証は変更なし) ...
         if not self.validator.validate_basic(event, self.zoom_selector.ax, self.logger):
-            self.logger.log(LogLevel.DEBUG, "検証失敗: validate_basic")
+            self.logger.log(LogLevel.ERROR, "検証失敗: validate_basic")
             return
         self.logger.log(LogLevel.DEBUG, "検証成功：validate_basic")
 
         if event.xdata is None or event.ydata is None:
-            self.logger.log(LogLevel.CALL, "座標データなし：マウスプレスイベントを却下")
+            self.logger.log(LogLevel.ERROR, "座標データなし：マウスプレスイベントを却下")
             return
         self.logger.log(LogLevel.CALL, "座標データ利用可能：処理続行")
 
@@ -161,7 +150,6 @@ class EventHandler:
 
                 self._create_logged = False # 新規作成ログフラグをリセット
                 self.canvas.draw_idle()
-
 
         elif state == ZoomState.EDIT:
             if event.button == MouseButton.LEFT:
@@ -242,6 +230,11 @@ class EventHandler:
                     # 修正: state 引数を追加 (MOVE 状態)
                     self.cursor_manager.cursor_update(event, state=self.state_handler.get_state(), is_rotating=False) # 移動カーソル
                     self._move_logged = False
+
+            elif event.button == MouseButton.RIGHT:
+                # 右クリックでズーム確定
+                self.logger.log(LogLevel.INFO, "右クリック検出：ズーム確定処理開始")
+                self.zoom_selector.confirm_zoom()
 
     def on_motion(self, event: MouseEvent) -> None:
         """ マウスが動いた時の処理 """
@@ -367,7 +360,7 @@ class EventHandler:
                             self.logger.log(LogLevel.WARNING, "ズーム領域作成失敗：最終サイズが無効")
                             self.logger.log(LogLevel.INFO, "状態変更 to NO_RECT.")
                             self.state_handler.update_state(ZoomState.NO_RECT, {"action": "作成失敗"})
-                            self.rect_manager.clear()
+                            self.rect_manager.clear_rect()
                             self.logger.log(LogLevel.CALL, "ズーム領域：キャッシュ無効化開始")
                             self.zoom_selector.invalidate_rect_cache()
                     else:
@@ -376,7 +369,7 @@ class EventHandler:
                         self.logger.log(LogLevel.WARNING, "ズーム領域作成失敗：解放座標が無効")
                         self.logger.log(LogLevel.INFO, "状態変更 to NO_RECT.")
                         self.state_handler.update_state(ZoomState.NO_RECT, {"action": "作成失敗"})
-                        self.rect_manager.clear()
+                        self.rect_manager.clear_rect()
                         self.logger.log(LogLevel.CALL, "ズーム領域：キャッシュ無効化開始")
                         self.zoom_selector.invalidate_rect_cache()
                 else:
@@ -385,7 +378,7 @@ class EventHandler:
                     self.state_handler.update_state(ZoomState.NO_RECT, {"action": "作成失敗"})
                     # 存在する可能性のある四角形をクリアします
                     if self.rect_manager.get_properties():
-                        self.rect_manager.clear()
+                        self.rect_manager.clear_rect()
                         self.logger.log(LogLevel.CALL, "ズーム領域：キャッシュ無効化開始")
                         self.zoom_selector.invalidate_rect_cache()
 
@@ -429,7 +422,7 @@ class EventHandler:
                     self.logger.log(LogLevel.WARNING, "リサイズ中断：無効なサイズ")
                     self.logger.log(LogLevel.INFO, "状態変更 to NO_RECT.")
                     self.state_handler.update_state(ZoomState.NO_RECT, {"action": "リサイズ失敗"})
-                    self.rect_manager.clear() # 矩形をクリア
+                    self.rect_manager.clear_rect() # 矩形をクリア
 
                 self.logger.log(LogLevel.CALL, "リセット：サイズ変更関連の内部状態")
                 self._reset_resize_state() # リサイズ関連の状態をリセット
@@ -461,26 +454,19 @@ class EventHandler:
         """ キーボードが押された時の処理 """
         # キーイベントではマウス位置が不定なため、カーソル更新は on_motion に任せる
         # ESC でキャンセルした場合、ZoomSelector.cancel_zoom 内で set_default_cursor が呼ばれる
-        self.logger.log(LogLevel.INFO, "キー押下検出", {"キー": event.key})
-
-        if event.key == 'escape': # ESCキーが押された場合
+        if event.key == 'escape':
             state = self.state_handler.get_state()
-            self.logger.log(LogLevel.CALL, "状態取得", {"状態": state.name})
+            self.logger.log(LogLevel.CALL, "キー押下時の状態取得完了", {"状態": state.name})
 
             if state is ZoomState.EDIT:
-                self.logger.log(LogLevel.INFO, f"ESCキー：操作キャンセル: {state.name}.")
-
+                self.logger.log(LogLevel.INFO, f"ESC キー押下検出：ズーム領域キャンセル処理開始")
                 self._disconnect_motion()
-
-                self.logger.log(LogLevel.INFO, "ズーム操作中断")
-                self.zoom_selector.cancel_zoom() # cancel_zoom で状態リセットと矩形クリア
-
-                self.logger.log(LogLevel.CALL, "リセット：移動関連の内部状態")
-                self._reset_move_state() # 移動状態もリセット
-
+                self.zoom_selector.cancel_zoom()
+                self.zoom_selector.invalidate_rect_cache()
+                self.reset_internal_state()
                 self.logger.log(LogLevel.INFO, "状態変更 to NO_RECT.")
-                self.state_handler.update_state(ZoomState.NO_RECT, {"action": "作成終了"})
-
+                self.state_handler.update_state(ZoomState.NO_RECT, {"action": "ズーム領域キャンセル完了"})
+                self.cursor_manager.set_default_cursor()
                 self.canvas.draw_idle()
 
     def on_key_release(self, event: KeyEvent):
@@ -489,23 +475,24 @@ class EventHandler:
         # キーイベントではマウス位置が不定なため、カーソル更新は on_motion に任せる
         pass
 
+    def _calculate_angle(self, cx: float, cy: float, px: float, py: float) -> float:
+        """ 中心点(cx, cy)から点(px, py)へのベクトル角度を計算（度単位） """
+        return math.degrees(math.atan2(py - cy, px - cx))
+
     def reset_internal_state(self):
-        """ イベントハンドラ内部の状態をリセット """
+        """ 全ての内部状態をリセット """
+        self._reset_create_state() # 移動関連の状態をリセット
+        self._reset_move_state() # 移動関連の状態をリセット
+        self._reset_resize_state() # リサイズ関連の状態をリセット
+        self._reset_rotate_state() # 回転関連の状態をリセット
+        self._alt_pressed = False # Altキーの状態をリセット
+        self._disconnect_motion() # マウスモーションイベント切断
+
+    def _reset_create_state(self):
+        """ 作成関連の内部状態をリセット """
         self.start_x = None
         self.start_y = None
-        self.logger.log(LogLevel.CALL, "内部状態リセット：移動関連")
-        self._reset_move_state() # 移動関連の状態もリセット
-        self.logger.log(LogLevel.CALL, "内部状態リセット：サイズ関連")
-        self._reset_resize_state() # リサイズ関連の状態もリセット
-        self.logger.log(LogLevel.CALL, "内部状態リセット：回転関連")
-        self._reset_rotate_state() # 回転状態リセットを追加
         self._create_logged = False
-        self._move_logged = False
-        self._resize_logged = False
-        self._rotate_logged = False # 回転ログフラグリセットを追加
-        self._alt_pressed = False # Altキー状態リセットを追加
-        self._disconnect_motion() # 念のため motion も切断
-        self.logger.log(LogLevel.CALL, "内部状態のリセット完了")
 
     def _reset_move_state(self):
         """ 移動関連の内部状態をリセット """
@@ -520,13 +507,7 @@ class EventHandler:
         self.fixed_corner_pos = None
         self._resize_logged = False
 
-    def _reset_create_state(self):
-        """ 作成関連の内部状態をリセット """
-        self.start_x = None
-        self.start_y = None
-        self._create_logged = False
-
-    def _reset_rotate_state(self): # 回転状態リセットメソッドを追加
+    def _reset_rotate_state(self):
         """ 回転関連の内部状態をリセット """
         self.rotate_start_mouse_pos = None
         self.rotate_start_angle_vector = None

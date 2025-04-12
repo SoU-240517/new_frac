@@ -6,23 +6,26 @@ from .zoom_function.enums import LogLevel # LogLevel をインポート
 
 class FractalCanvas:
     """ フラクタル描画キャンバスクラス """
-    def __init__(self, parent, logger: DebugLogger):
+    def __init__(self, master, width, height, logger, zoom_confirm_callback, zoom_cancel_callback):
         """ キャンバス初期化（MatplotlibのFigure を Tkinter ウィジェットに埋め込む）"""
         self.logger = logger
         self.logger.log(LogLevel.INIT, "FractalCanvas")
-        self.parent = parent
+        self.parent = master
         self.fig = Figure(figsize=(6, 6), dpi=100)
         self.ax = self.fig.add_subplot(111)
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.parent)
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
+        self.zoom_confirm_callback = zoom_confirm_callback # MainWindow.on_zoom_confirm を保持
+
         # ZoomSelector をインスタンス化（コールバック MainWindow から設定）
         from ui.zoom_function.zoom_selector import ZoomSelector
         self.zoom_selector = ZoomSelector(
             self.ax,
-            on_zoom_confirm=lambda x, y, w, h, _: self.zoom_confirmed((x, y, w, h)), # Accept 5 args, pass 4
+            on_zoom_confirm=lambda x, y, w, h, angle: self.zoom_confirmed(x, y, w, h, angle), # Accept 5 args, pass 5
             on_zoom_cancel=self.zoom_cancelled,
-            logger=self.logger # logger を渡す
+            logger=self.logger
+#            canvas=self.canvas
         )
 
     def set_zoom_callback(self, zoom_confirm_callback, zoom_cancel_callback):
@@ -30,18 +33,12 @@ class FractalCanvas:
         self.zoom_confirm_callback = zoom_confirm_callback
         self.zoom_cancel_callback = zoom_cancel_callback
 
-    def zoom_confirmed(self, zoom_params):
-        """ ズーム確定時のコールバック """
-        self.logger.log(LogLevel.DEBUG, "Callback when zoom is confirmed.")
-        if hasattr(self, 'zoom_confirm_callback') and self.zoom_confirm_callback:
-            new_zoom_params = {
-                "center_x": zoom_params[0],
-                "center_y": zoom_params[1],
-                "width": zoom_params[2],
-                "height": zoom_params[3],
-#                "rotation": zoom_params[4]
-            }
-            self.zoom_confirm_callback(new_zoom_params)
+    def zoom_confirmed(self, x, y, w, h, angle):
+        """ズームが確定されたときに呼び出される"""
+        self.logger.log(LogLevel.DEBUG, f"Canvas zoom_confirmed called with x={x}, y={y}, w={w}, h={h}, angle={angle}")
+        # MainWindow の on_zoom_confirm を5つの引数で呼び出す
+        if self.zoom_confirm_callback:
+            self.zoom_confirm_callback(x, y, w, h, angle)
 
     def zoom_cancelled(self):
         """ ズームキャンセル時のコールバック """

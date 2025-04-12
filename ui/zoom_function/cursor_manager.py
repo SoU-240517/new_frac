@@ -118,9 +118,8 @@ class CursorManager:
             try:
                 self.widget.config(cursor=CURSOR_DEFAULT)
                 self._current_cursor = CURSOR_DEFAULT
-                self._log(LogLevel.CALL, "デフォルトのカーソルに戻す")
             except tk.TclError as e:
-                self._log(LogLevel.ERROR, f"カーソルをデフォルトにリセットできない: {e}")
+                self._log(LogLevel.ERROR, f"カーソルをデフォルトにできない: {e}")
 
     # ZoomSelector への参照を保持するためのメソッド
     def set_zoom_selector(self, zoom_selector: 'ZoomSelector'): # 型ヒントを追加

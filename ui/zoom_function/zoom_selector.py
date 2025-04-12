@@ -37,12 +37,11 @@ class ZoomSelector:
         self.rect_manager = RectManager(ax, self.logger)
         # CursorManager の初期化を修正: canvas ウィジェットと logger のみを渡す
         # canvas.get_tk_widget() で Tkinter ウィジェットを取得
-        # Safely get the Tk widget using getattr, default to None if not available
+        # getattr を使用して Tk ウィジェットを安全に取得する。利用できない場合はデフォルトで None になる。
         tk_widget = getattr(self.canvas, 'get_tk_widget', lambda: None)()
         self.cursor_manager = CursorManager(tk_widget, self.logger)
         self.validator = EventValidator()
 
-        # EventHandler の初期化は変更なし
         self.event_handler = EventHandler(self,
                                         self.state_handler,
                                         self.rect_manager,
@@ -56,19 +55,18 @@ class ZoomSelector:
         self.state_handler.event_handler = self.event_handler
         # --- 初期化ここまで ---
 
-        self.logger.log(LogLevel.CALL, "イベント接続：初期化開始")
+        self.logger.log(LogLevel.INIT, "イベント接続")
         self.connect_events()
 
     def connect_events(self):
-        """ イベントハンドラの接続 """
+        """ イベントハンドラの接続（マウスモーション以外の全て） """
         self.logger.log(LogLevel.CALL, "接続開始：全イベントハンドラ")
         self.event_handler.connect()
         # 接続時にカーソルをデフォルトに設定 (イベントがないため)
-        self.logger.log(LogLevel.CALL, "カーソル：デフォルト設定適用開始")
-        self.cursor_manager.set_default_cursor() # 修正: set_default_cursor を使用
+        self.cursor_manager.set_default_cursor()
 
     def disconnect_events(self):
-        """ イベントハンドラの切断 """
+        """ 全イベントハンドラの切断 """
         self.logger.log(LogLevel.CALL, "切断開始：全イベントハンドラ")
         self.event_handler.disconnect()
         # 切断時にもカーソルをデフォルトに戻す
@@ -112,7 +110,7 @@ class ZoomSelector:
             self.on_zoom_confirm(x, y, w, h, rotation_angle)
 
             # 状態と矩形をリセット
-            self.rect_manager.clear() # 確定したら矩形をクリア
+            self.rect_manager.clear_rect() # 確定したら矩形をクリア
             self.invalidate_rect_cache()
             self.state_handler.update_state(ZoomState.NO_RECT, {"action": "決定"})
             self.cursor_manager.set_default_cursor() # 修正: set_default_cursor を使用
@@ -120,20 +118,15 @@ class ZoomSelector:
             self.logger.log(LogLevel.WARNING, "決定不可：ズーム領域なし")
 
     def cancel_zoom(self):
-        """ (内部用) キャンセル時に呼ばれる """
-        self.logger.log(LogLevel.CALL, "ズーム領域キャンセル：処理開始")
-        self.rect_manager.clear()
-        self.invalidate_rect_cache()
-        self.state_handler.update_state(ZoomState.NO_RECT, {"action": "キャンセル"})
-        self.event_handler.reset_internal_state()
-        self.cursor_manager.set_default_cursor() # 修正: set_default_cursor を使用
+        """ ズーム領域を削除してコールバックする """
+        self.rect_manager.clear_rect()
         self.logger.log(LogLevel.INFO, "ズーム領域キャンセル：コールバック呼出し")
         self.on_zoom_cancel()
 
     def reset(self):
         """ ZoomSelectorの状態をリセット """
         self.logger.log(LogLevel.CALL, "ZoomSelector リセット処理開始")
-        self.rect_manager.clear()
+        self.rect_manager.clear_rect()
         self.invalidate_rect_cache()
         self.state_handler.update_state(ZoomState.NO_RECT, {"action": "リセット"})
         self.event_handler.reset_internal_state()
@@ -141,10 +134,8 @@ class ZoomSelector:
         # reset 時のコールバック呼び出しは現状維持 (必要なら on_zoom_cancel を呼ぶ)
 
     def invalidate_rect_cache(self):
-        """ 矩形パッチ情報のキャッシュを無効化する """
-        # 修正: キャッシュ変数名を変更
+        """ ズーム領域のキャッシュを無効化する """
         if self._cached_rect_patch is not None:
-            self.logger.log(LogLevel.DEBUG, "キャッシュ無効化")
             self._cached_rect_patch = None
 
     def pointer_near_corner(self, event) -> Optional[int]:
