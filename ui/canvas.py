@@ -50,7 +50,7 @@ class FractalCanvas:
             self.zoom_cancel_callback()
 
     def update_canvas(self, fractal_image, params):
-        """ キャンバスを更新し、指定されたフラクタル画像を描画 """
+        """ キャンバスを更新 """
         self.ax.clear()  # キャンバスをクリア
         self.ax.axis('off')  # 座標軸は非表示
         self.fig.subplots_adjust(left=0, right=1, top=1, bottom=0)  # キャンバスのパディングを削除

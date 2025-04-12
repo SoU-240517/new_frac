@@ -5,7 +5,7 @@ from ui.zoom_function.debug_logger import DebugLogger
 from ui.zoom_function.enums import LogLevel # LogLevel をインポート
 
 def render_fractal(params, logger: DebugLogger):
-    """ 指定されたパラメータに基づいてフラクタルを描画 """
+    """ 指定されたパラメータでフラクタルを描画 """
     resolution = 500
     # ズーム情報があればそれを使用、なければ初期値
     center_x = params.get("center_x", 0.0)

@@ -36,7 +36,7 @@ class RectManager:
         self.ax.add_patch(self.rect)
         self.logger.log(LogLevel.DEBUG, "初期のズーム領域設置完了", {"x": x, "y": y})
 
-    def update_rect_size(self, start_x: float, start_y: float, current_x: float, current_y: float):
+    def setting_rect_size(self, start_x: float, start_y: float, current_x: float, current_y: float):
         """ 矩形のサイズと位置を更新 (作成中) """
         if not self.rect:
             self.logger.log(LogLevel.ERROR, "ズーム領域なし：サイズ更新不可")
@@ -56,10 +56,29 @@ class RectManager:
         self.rect.set_transform(self.ax.transData)
         self.logger.log(LogLevel.DEBUG, "ズーム領域のサイズ/位置更新完了", {"x": x, "y": y, "w": width, "h": height})
 
-    def update_rect_from_corners(self, fixed_x: float, fixed_y: float, current_x: float, current_y: float):
+    def edge_change_editing(self):
+        """ 矩形のエッジを変更 (色とスタイル) """
+        if not self.rect:
+            self.logger.log(LogLevel.ERROR, "ズーム領域なし：エッジ変更不可")
+            return
+
+        self.rect.set_edgecolor('gray') # 色を灰色に変更
+        self.rect.set_linestyle('--') # 破線に変更
+
+    def edge_change_finishing(self):
+        """ 矩形のエッジを変更 (色とスタイル) """
+        if not self.rect:
+            self.logger.log(LogLevel.ERROR, "ズーム領域なし：エッジ変更不可")
+            return
+
+        self.rect.set_edgecolor('white') # 色を白に変更
+        self.rect.set_linestyle('-') # 実線に変更
+
+
+    def resize_rect_from_corners(self, fixed_x: float, fixed_y: float, current_x: float, current_y: float):
         """ 固定された角と現在のマウス位置から矩形を更新 (リサイズ中) """
         if not self.rect:
-            self.logger.log(LogLevel.ERROR, "角の更新不可：ズーム領域なし")
+            self.logger.log(LogLevel.ERROR, "リサイズ不可：ズーム領域なし")
             return
 
         # リサイズ中は回転を考慮しないシンプルな更新（回転は別途適用）
@@ -71,11 +90,12 @@ class RectManager:
         # 矩形の基本プロパティを更新
         self.rect.set_width(width)
         self.rect.set_height(height)
+
         self.rect.set_xy((x, y))
 
         # 現在の回転角度を再適用
         self._apply_rotation()
-        # self.logger.log(LogLevel.CALL, "Rectangle updated from corners.", {"x": x, "y": y, "w": width, "h": height, "angle": self._angle}) # 頻繁すぎるログ
+        self.logger.log(LogLevel.CALL, "更新完了", {"x": x, "y": y, "w": width, "h": height, "angle": self._angle})
 
     def is_valid_size(self, width: float, height: float) -> bool:
         """ 指定された幅と高さが有効か (最小サイズ以上か) """
@@ -101,6 +121,7 @@ class RectManager:
         self.rect.set_xy((x, y))
         self._angle = 0.0 # 作成完了時は角度0
         self.rect.set_transform(self.ax.transData) # 回転なし
+        self.rect.set_edgecolor('white') # 色を白に変更
         self.rect.set_linestyle('-') # 実線に変更
         self.rect.set_visible(True)
         self.logger.log(LogLevel.INFO, "ズーム領域情報：作成完了時", {"x": x, "y": y, "w": width, "h": height})

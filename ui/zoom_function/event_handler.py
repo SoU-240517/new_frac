@@ -196,6 +196,9 @@ class EventHandler:
                     self.state_handler.update_state(ZoomState.RESIZING, {"action": "リサイズ開始", "角": corner_index})
                     self.resize_corner_index = corner_index
 
+                    self.rect_manager.edge_change_editing()
+                    self.canvas.draw_idle()
+
                     # 固定される対角の座標を計算して保持
                     rect_props = self.rect_manager.get_properties()
                     if rect_props:
@@ -224,6 +227,9 @@ class EventHandler:
                     # 矩形移動開始
                     self.logger.log(LogLevel.INFO, "状態変更：MOVE.")
                     self.state_handler.update_state(ZoomState.MOVE, {"action": "移動開始"})
+
+                    self.rect_manager.edge_change_editing()
+                    self.canvas.draw_idle()
 
                     self.move_start_x, self.move_start_y = event.xdata, event.ydata # 移動開始時のマウス座標
                     rect_props = self.rect_manager.get_properties()
@@ -254,7 +260,7 @@ class EventHandler:
                 # 矩形作成中のサイズ更新
                 if self.start_x is not None and self.start_y is not None:
                     self.logger.log(LogLevel.CALL, "新規作成中...")
-                    self.rect_manager.update_rect_size(self.start_x, self.start_y, event.xdata, event.ydata)
+                    self.rect_manager.setting_rect_size(self.start_x, self.start_y, event.xdata, event.ydata)
                     self.logger.log(LogLevel.CALL, "ズーム領域：キャッシュ無効化開始")
                     self.zoom_selector.invalidate_rect_cache() # キャッシュを無効化
 
@@ -296,7 +302,7 @@ class EventHandler:
                 # 矩形リサイズ中の処理
                 if not self._resize_logged:
                     self.logger.log(LogLevel.INFO, "ズーム領域リサイズ開始", {
-                        "button": event.button, "x": event.xdata, "y": event.ydata, "state": state, "corner": self.resize_corner_index})
+                        "ボタン": event.button, "x": event.xdata, "y": event.ydata, "状態": state, "角": self.resize_corner_index})
                     self._resize_logged = True
 
                 if self.fixed_corner_pos is not None:
@@ -304,7 +310,7 @@ class EventHandler:
                     current_x, current_y = event.xdata, event.ydata
 
                     # 固定点と現在のマウス位置から矩形を更新
-                    self.rect_manager.update_rect_from_corners(fixed_x, fixed_y, current_x, current_y)
+                    self.rect_manager.resize_rect_from_corners(fixed_x, fixed_y, current_x, current_y)
                     self.logger.log(LogLevel.CALL, f"固定角 ({fixed_x:.2f}, {fixed_y:.2f}) to mouse ({current_x:.2f}, {current_y:.2f})")
 
                     self.logger.log(LogLevel.CALL, "ズーム領域：キャッシュ無効化開始")
@@ -390,6 +396,7 @@ class EventHandler:
 
         elif state == ZoomState.MOVE:
             if event.button == MouseButton.LEFT:
+                self.rect_manager.edge_change_finishing()
                 self.logger.log(LogLevel.INFO, "ズーム領域移動終了", {
                     "ボタン": event.button, "x": event.xdata, "y": event.ydata, "状態": state})
                 self.logger.log(LogLevel.INFO, "状態変更 to EDIT.")
@@ -408,6 +415,8 @@ class EventHandler:
             if event.button == MouseButton.LEFT:
                 self.logger.log(LogLevel.INFO, "ズーム領域リサイズ終了", {
                     "ボタン": event.button, "x": event.xdata, "y": event.ydata, "状態": state})
+
+                self.rect_manager.edge_change_finishing()
 
                 # リサイズ完了後も矩形が有効かチェック（小さくなりすぎなど）
                 rect_props = self.rect_manager.get_properties()
@@ -436,10 +445,9 @@ class EventHandler:
                 # ... (ROTATING 完了処理) ...
                 self._reset_rotate_state() # 回転関連の状態をリセット
 
-        # --- 共通の後処理 ---
-        # motion イベントを切断 (MOVE, RESIZE, ROTATE, CREATE で接続されていた場合)
-        if state in [ZoomState.CREATE, ZoomState.MOVE, ZoomState.RESIZING, ZoomState.ROTATING]:
-             self._disconnect_motion()
+        # 矩形がある場合はマウス移動を切断しない（カーソル変更の都合で）
+#        if state in [ZoomState.CREATE, ZoomState.MOVE, ZoomState.RESIZING, ZoomState.ROTATING]:
+#             self._disconnect_motion()
 
         # 最終的な状態でカーソルを更新
         final_state = self.state_handler.get_state() # 状態変更後の最終状態を取得

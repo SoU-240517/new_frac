@@ -157,8 +157,8 @@ class ParameterPanel:
         else:
             self.formula_var.set("Z_n+1 = Z_n² + C\nZ_0 = 0, C = 座標")
 
-    def get_parameters(self):
-        """ パラメータを取得する関数 """
+    def get_parameters(self) -> dict:
+        """ 描画パラメータを取得する """
         try:
             panel_params = {
                 "fractal_type": self.fractal_type_var.get(),

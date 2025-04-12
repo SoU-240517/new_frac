@@ -13,9 +13,11 @@ class MainWindow:
         """ フラクタル描画アプリケーションのメインウィンドウ初期化（ズーム操作の状態管理も行う） """
         self.logger = logger
         self.logger.log(LogLevel.INIT, "MainWindow")
+
         self.root = root # Tkinter ルートウィンドウ
         self.root.title("フラクタル描画アプリケーション")
         self.root.geometry("1200x800")
+
         self.zoom_params = { # ズームパラメータに rotation を追加
             "center_x": 0.0,
             "center_y": 0.0,
@@ -24,17 +26,22 @@ class MainWindow:
             "rotation": 0.0 # 回転角度を追加
         }
         self.prev_zoom_params = None # ズームパラメータ：直前
-        self.main_frame = ttk.PanedWindow(root, orient=tk.HORIZONTAL) # パネルウィンドウを作成
-        self.main_frame.pack(fill=tk.BOTH, expand=True) # パネルウィンドウをメインフレームに追加
+
+        # メインフレームとして PanedWindow（可変分割ウィンドウ：横方向に並ぶ）を作成し、
+        # その中にキャンバスフレームとパラメータパネルフレームを配置
+        # キャンバスフレームは描画領域、パラメータパネルフレームは操作パネル
+        self.main_frame = ttk.PanedWindow(root, orient=tk.HORIZONTAL)
+        self.main_frame.pack(fill=tk.BOTH, expand=True) # メインフレームをルートウィンドウに追加
         self.canvas_frame = ttk.Frame(self.main_frame) # キャンバスフレームを作成
-        self.main_frame.add(self.canvas_frame, weight=3) # パネルウィンドウにキャンバスフレームを追加
-        self.control_frame = ttk.Frame(self.main_frame) # パラメータパネルフレームを作成
-        self.main_frame.add(self.control_frame, weight=1) # パネルウィンドウにパラメータパネルフレームを追加
-        self.fractal_canvas = FractalCanvas(self.canvas_frame, self.logger) # Logger を渡す
+        self.main_frame.add(self.canvas_frame, weight=3) # パネルウィンドウに配置
+        self.control_frame = ttk.Frame(self.main_frame) # コントロールフレームを作成
+        self.main_frame.add(self.control_frame, weight=1) # パネルウィンドウに配置
+
+        self.fractal_canvas = FractalCanvas(self.canvas_frame, self.logger)
+        self.parameter_panel = ParameterPanel(self.control_frame, self.update_fractal, reset_callback=self.reset_zoom, logger=self.logger)
+
         self.logger.log(LogLevel.DEBUG, "コールバック初期化開始：on_zoom_confirm、on_zoom_cancel")
-        # ZoomSelector の __init__ で on_zoom_confirm の型ヒントを修正済み
         self.fractal_canvas.set_zoom_callback(self.on_zoom_confirm, self.on_zoom_cancel)
-        self.parameter_panel = ParameterPanel(self.control_frame, self.update_fractal, reset_callback=self.reset_zoom, logger=self.logger) # Logger を渡す
 
         self.logger.log(LogLevel.DEBUG, "フラクタルキャンバスの初期化開始")
         self.update_fractal() # 初回描画
@@ -42,13 +49,12 @@ class MainWindow:
     def update_fractal(self, *args):
         """ 最新パラメータにズーム情報を上書きしてフラクタルを再描画 """
         self.logger.log(LogLevel.DEBUG, "描画パラメータ取得開始")
-        panel_params = self.parameter_panel.get_parameters() # パネルからパラメータを取得
+        panel_params = self.parameter_panel.get_parameters()
 
         # 描画パラメータに現在のズーム情報（回転含む）をマージ
         current_params = self.zoom_params.copy()
         current_params.update(panel_params) # パネル設定で上書き（max_iterなど）
 
-#        self.logger.log(LogLevel.DEBUG, "取得パラメータにてフラクタル描画開始", context=current_params)
         self.logger.log(LogLevel.DEBUG, "取得パラメータにてフラクタル描画開始")
         # render_fractal が rotation キーを解釈できる前提
         fractal_image = render_fractal(current_params, self.logger)
