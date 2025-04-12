@@ -1,11 +1,9 @@
 import numpy as np
 from ui.zoom_function.debug_logger import DebugLogger
-from ui.zoom_function.enums import LogLevel # LogLevel をインポート
+from ui.zoom_function.enums import LogLevel
 
 def compute_mandelbrot(Z, Z0, max_iter, logger: DebugLogger):
-    """ マンデルブロ集合を計算 """
-    logger.log(LogLevel.DEBUG, "Calculate the Mandelbrot set.")
-
+    """ マンデルブロ集合の計算 """
     shape = Z.shape
     iterations = np.zeros(shape, dtype=int)
     z = np.full(shape, Z0, dtype=complex)

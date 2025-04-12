@@ -10,13 +10,14 @@ class FractalCanvas:
         """ キャンバス初期化（MatplotlibのFigure を Tkinter ウィジェットに埋め込む）"""
         self.logger = logger
         self.logger.log(LogLevel.INIT, "FractalCanvas")
+
         self.parent = master
         self.fig = Figure(figsize=(6, 6), dpi=100)
         self.ax = self.fig.add_subplot(111)
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.parent)
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
-        self.zoom_confirm_callback = zoom_confirm_callback # MainWindow.on_zoom_confirm を保持
+        self.zoom_confirm_callback = zoom_confirm_callback
 
         # ZoomSelector をインスタンス化（コールバック MainWindow から設定）
         from ui.zoom_function.zoom_selector import ZoomSelector
@@ -25,7 +26,6 @@ class FractalCanvas:
             on_zoom_confirm=lambda x, y, w, h, angle: self.zoom_confirmed(x, y, w, h, angle), # Accept 5 args, pass 5
             on_zoom_cancel=self.zoom_cancelled,
             logger=self.logger
-#            canvas=self.canvas
         )
 
     def set_zoom_callback(self, zoom_confirm_callback, zoom_cancel_callback):
@@ -34,22 +34,21 @@ class FractalCanvas:
         self.zoom_cancel_callback = zoom_cancel_callback
 
     def zoom_confirmed(self, x, y, w, h, angle):
-        """ズームが確定されたときに呼び出される"""
-        self.logger.log(LogLevel.DEBUG, f"Canvas zoom_confirmed called with x={x}, y={y}, w={w}, h={h}, angle={angle}")
-        # MainWindow の on_zoom_confirm を5つの引数で呼び出す
+        """ ズーム確定 """
+        self.logger.log(LogLevel.DEBUG, "Canvas zoom_confirmed called", {"x": x, "y": y, "w": w, "h": h, "angle": angle})
         if self.zoom_confirm_callback:
             self.zoom_confirm_callback(x, y, w, h, angle)
 
     def zoom_cancelled(self):
-        """ ズームキャンセル時のコールバック """
+        """ ズームキャンセル """
         self.logger.log(LogLevel.DEBUG, "ズームキャンセル時のコールバック開始")
         if hasattr(self, 'zoom_cancel_callback') and self.zoom_cancel_callback:
             self.zoom_cancel_callback()
 
     def update_canvas(self, fractal_image, params):
-        """ キャンバスを更新 """
-        self.ax.clear()  # キャンバスをクリア
-        self.ax.axis('off')  # 座標軸は非表示
+        """ キャンバス更新 """
+        self.ax.clear()
+        self.ax.axis('off') # 座標軸は非表示
         self.fig.subplots_adjust(left=0, right=1, top=1, bottom=0)  # キャンバスのパディングを削除
         self.ax.set_position((0.0, 0.0, 1.0, 1.0))  # キャンバスの位置を調整
         aspect_ratio = fractal_image.shape[1] / fractal_image.shape[0]  # 画像のアスペクト比を取得

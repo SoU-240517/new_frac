@@ -25,7 +25,6 @@ class DebugLogger:
         """ ログを出力 (外部呼び出し用) """
         if not self.debug_enabled and not force and level == LogLevel.DEBUG:
             return
-
         # 呼び出し元を正しく特定するため stacklevel=2
         self._log_internal(level, message, context, force, stacklevel=2)
 
@@ -80,9 +79,7 @@ class DebugLogger:
             color = "white"
             level_name = "UNKNOWN_LEVEL"
 
-        # log_prefix に func_name を含めるように修正
         log_prefix = f"[{elapsed_time:.3f}s] {level_name}:"
-        # location からは func_name を削除 (元の状態に戻す)
         location = f"[{func_name}: {file_path}:{line_no}]"
         escaped_message = escape(message)
         escaped_location = escape(location)

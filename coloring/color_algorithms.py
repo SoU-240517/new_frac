@@ -1,13 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.colors import Normalize # Normalize を直接インポート
+from matplotlib.colors import Normalize
 from coloring import gradient
 from ui.zoom_function.debug_logger import DebugLogger
-from ui.zoom_function.enums import LogLevel # LogLevel をインポート
+from ui.zoom_function.enums import LogLevel
 
 def apply_coloring_algorithm(results, params, logger: DebugLogger):
     """ 着色アルゴリズムを適用して結果を返す """
-
 
     iterations = results['iterations']
     mask = results['mask']
@@ -21,7 +20,6 @@ def apply_coloring_algorithm(results, params, logger: DebugLogger):
         # 発散する場合の処理
         algo = params["diverge_algorithm"]
         if algo == "反復回数線形マッピング":
-            # 修正: plt.Normalize -> Normalize
             norm = Normalize(1, params["max_iterations"])
             colored[divergent] = plt.cm.get_cmap(params["diverge_colormap"])(norm(iterations[divergent]))
         elif algo == "スムージングカラーリング":
@@ -29,7 +27,6 @@ def apply_coloring_algorithm(results, params, logger: DebugLogger):
             nu = np.log(log_zn/np.log(2)) / np.log(2)
             smooth_iter = iterations - nu
             smooth_iter[mask] = 0
-            # 修正: plt.Normalize -> Normalize
             norm = Normalize(0, params["max_iterations"])
             colored[divergent] = plt.cm.get_cmap(params["diverge_colormap"])(norm(smooth_iter[divergent]))
         elif algo == "ヒストグラム平坦化法":
@@ -45,7 +42,6 @@ def apply_coloring_algorithm(results, params, logger: DebugLogger):
         elif algo == "距離カラーリング":
             dist = np.abs(z_vals)
             dist[mask] = 0
-            # 修正: plt.Normalize -> Normalize
             norm = Normalize(0, 10)
             colored[divergent] = plt.cm.get_cmap(params["diverge_colormap"])(norm(dist[divergent]))
         elif algo == "角度カラーリング":
@@ -58,10 +54,8 @@ def apply_coloring_algorithm(results, params, logger: DebugLogger):
         elif algo == "軌道トラップ法":
             trap_dist = np.abs(z_vals - 1.0)
             trap_dist[mask] = float('inf')
-            # 修正: plt.Normalize -> Normalize
             norm = Normalize(0, 2)
             colored[divergent] = plt.cm.get_cmap(params["diverge_colormap"])(norm(trap_dist[divergent]))
-
     non_divergent = ~divergent
     if np.any(non_divergent):
         # 発散しない場合の処理

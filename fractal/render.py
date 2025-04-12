@@ -2,7 +2,7 @@ import numpy as np
 from coloring import color_algorithms
 from fractal.fractal_types import julia, mandelbrot
 from ui.zoom_function.debug_logger import DebugLogger
-from ui.zoom_function.enums import LogLevel # LogLevel をインポート
+from ui.zoom_function.enums import LogLevel
 
 def render_fractal(params, logger: DebugLogger):
     """ 指定されたパラメータでフラクタルを描画 """
@@ -12,8 +12,7 @@ def render_fractal(params, logger: DebugLogger):
     center_y = params.get("center_y", 0.0)
     width = params.get("width", 4.0)
     # height は width と aspect_ratio から計算されるため、params から取得しない
-    # height = params.get("height", 4.0) # 不要
-    rotation_deg = params.get("rotation", 0.0) # 回転角度を度単位で取得
+    rotation_deg = params.get("rotation", 0.0)
 
     # キャンバスのアスペクト比を維持するために、高さを幅に合わせる
     # 注意: ここでの aspect_ratio は描画解像度に基づくもので、
@@ -33,21 +32,16 @@ def render_fractal(params, logger: DebugLogger):
     # 回転を適用
     if rotation_deg != 0:
         logger.log(LogLevel.DEBUG, f"回転適用: {rotation_deg} 度")
-        # 度からラジアンに変換
-        rotation_rad = np.radians(rotation_deg)
-        # 回転演算子 (複素数)
-        rotation_operator = np.exp(1j * rotation_rad)
-        # グリッドを回転
-        Z_rotated_centered_origin = Z_unrotated_centered_origin * rotation_operator
+        rotation_rad = np.radians(rotation_deg) # 度からラジアンに変換
+        rotation_operator = np.exp(1j * rotation_rad) # 回転演算子 (複素数)
+        Z_rotated_centered_origin = Z_unrotated_centered_origin * rotation_operator # グリッドを回転
     else:
-        # 回転がない場合はそのまま
-        Z_rotated_centered_origin = Z_unrotated_centered_origin
+        Z_rotated_centered_origin = Z_unrotated_centered_origin # 回転がない場合はそのまま
 
     # 回転後のグリッドを中心座標にシフト
     Z = Z_rotated_centered_origin + complex(center_x, center_y)
     logger.log(LogLevel.DEBUG, "グリッドの作成と変換完了",
                context={"中心_x": center_x, "中心_y": center_y, "w": width, "h": height, "角度": rotation_deg})
-
 
     # フラクタルの種類に応じた計算
     if params["fractal_type"] == "Julia":
@@ -55,16 +49,15 @@ def render_fractal(params, logger: DebugLogger):
 
         logger.log(LogLevel.DEBUG, "ジュリア集合の計算開始")
         # 回転・シフト後のグリッド Z を使用
-        results = julia.compute_julia(Z, C, params["max_iterations"], logger) # logger を渡す
+        results = julia.compute_julia(Z, C, params["max_iterations"], logger)
     else: # Mandelbrot
         Z0 = complex(params["z_real"], params["z_imag"])
         logger.log(LogLevel.DEBUG, "マンデルブロ集合の計算開始")
         # 回転・シフト後のグリッド Z を使用
-        # compute_mandelbrot に logger を渡す
         results = mandelbrot.compute_mandelbrot(Z, Z0, params["max_iterations"], logger)
 
     # 着色アルゴリズムの適用
     logger.log(LogLevel.DEBUG, "着色アルゴリズムの適用開始")
-    colored = color_algorithms.apply_coloring_algorithm(results, params, logger) # logger を渡す
+    colored = color_algorithms.apply_coloring_algorithm(results, params, logger)
 
     return colored
