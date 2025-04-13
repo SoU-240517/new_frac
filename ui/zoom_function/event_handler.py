@@ -180,13 +180,6 @@ class EventHandler:
                 elif not self._alt_pressed and corner_index is not None:
                     # --- リサイズ開始処理 ---
                     self.logger.log(LogLevel.INFO, f"リサイズ開始：角 {corner_index}.")
-                    # ★注意: 回転中のリサイズは未実装のため、必要ならここで回転をリセットする等の処理を追加
-                    # if self.rect_manager.get_rotation() != 0:
-                    #     self.logger.log(LogLevel.WARNING, "回転中のリサイズは未サポートです。")
-                    #     # return # または回転を0にするなど
-                    #     # self.rect_manager.set_rotation(0)
-                    #     # self.rect_initial_angle = 0 # 内部状態もリセット
-
                     self.logger.log(LogLevel.INFO, "状態変更：RESIZING.")
                     self.state_handler.update_state(ZoomState.RESIZING, {"action": "リサイズ開始", "角": corner_index})
                     self.resize_corner_index = corner_index
@@ -194,40 +187,24 @@ class EventHandler:
                     self.rect_manager.edge_change_editing()
                     self.canvas.draw_idle()
 
-                    # --- 固定角の計算 ---
-                    # ★注意: 現在の実装 [107-111] は回転前の矩形に基づいており、回転中は不正確
-                    # 完全な実装には、回転後のコーナー座標を取得して対角を計算する必要がある
-                    # 例: rotated_corners = self.zoom_selector.get_rotated_corners()
-                    #     if rotated_corners:
-                    #         fixed_corner_idx = 3 - corner_index
-                    #         self.fixed_corner_pos = rotated_corners[fixed_corner_idx]
-                    #         self.logger.log(LogLevel.CALL, f"固定する角 {fixed_corner_idx} at {self.fixed_corner_pos} (rotated)")
-                    #     else: # フォールバックまたはエラー
-                    #         self.logger.log(LogLevel.ERROR, "リサイズ不可：回転後の角を取得できず")
-                    #         self._reset_resize_state()
-                    #         self.state_handler.update_state(ZoomState.EDIT, {"action": "リサイズ開始失敗"})
-                    #         return
-                    # ★簡易的な対応として、現在の回転無視のコードを維持するが、問題が出る可能性がある
-                    rect_props = self.rect_manager.get_properties()
-                    if rect_props:
-                        # 注意: 回転を考慮しない場合、この座標は不正確になる可能性
-                        x, y, w, h = rect_props
-                        # 回転前のコーナー座標を取得するロジックが必要かもしれない
-                        # もしくは RectManager に回転後のコーナー座標を取得するメソッドを追加する
-                        # 現状は回転前の矩形に基づく単純な計算
-                        x0, y0 = min(x, x + w), min(y, y + h)
-                        x1, y1 = max(x, x + w), max(y, y + h)
-                        corners_unrotated = [(x0, y1), (x1, y1), (x0, y0), (x1, y0)] # 0:左上, 1:右上, 2:左下, 3:右下 (EventHandlerの期待に合わせる)
+                    # --- 固定角の計算 (回転後座標を使用) ---
+                    rotated_corners = self.rect_manager.get_rotated_corners() # 回転後の角座標を取得
+                    if rotated_corners:
                         fixed_corner_idx = 3 - corner_index # 対角のインデックス (0<->3, 1<->2)
-                        self.fixed_corner_pos = corners_unrotated[fixed_corner_idx]
-                        self.logger.log(LogLevel.CALL, f"固定する角 {fixed_corner_idx} at {self.fixed_corner_pos} (based on unrotated rect)")
+                        self.fixed_corner_pos = rotated_corners[fixed_corner_idx] # 回転後の対角座標を保存
+                        self.logger.log(LogLevel.CALL, f"固定する角 {fixed_corner_idx} at {self.fixed_corner_pos} (rotated)")
+                    else: # フォールバックまたはエラー
+                        self.logger.log(LogLevel.ERROR, "リサイズ不可：回転後の角を取得できず")
+                        self._reset_resize_state()
+                        self.state_handler.update_state(ZoomState.EDIT, {"action": "リサイズ開始失敗"})
+                        return # リサイズ処理を中断
                     # --- 固定角の計算ここまで ---
 
                     self._connect_motion()
                     self.logger.log(LogLevel.INFO, "カーソル更新（リサイズモード）")
-                    # is_rotating=False を渡す
                     self.cursor_manager.cursor_update(event, state=self.state_handler.get_state(), near_corner_index=self.resize_corner_index, is_rotating=False)
                     self._resize_logged = False
+                    # --- リサイズ開始処理ここまで ---
 
                 elif not self._alt_pressed and self.zoom_selector.cursor_inside_rect(event):
                     # ズーム領域移動開始
@@ -308,19 +285,18 @@ class EventHandler:
 
         elif state == ZoomState.RESIZING:
             if event.button == MouseButton.LEFT:
-                # ズーム領域リサイズ中の処理
                 if not self._resize_logged:
-                    self.logger.log(LogLevel.INFO, "ズーム領域リサイズ開始", {
+                    self.logger.log(LogLevel.INFO, "ズーム領域リサイズ中...", {
                         "ボタン": event.button, "x": event.xdata, "y": event.ydata, "状態": state, "角": self.resize_corner_index})
                     self._resize_logged = True
 
                 if self.fixed_corner_pos is not None:
-                    fixed_x, fixed_y = self.fixed_corner_pos
+                    fixed_x_rotated, fixed_y_rotated = self.fixed_corner_pos # 回転後の固定角座標
                     current_x, current_y = event.xdata, event.ydata
 
-                    # 固定点と現在のマウス位置から矩形を更新
-                    self.rect_manager.resize_rect_from_corners(fixed_x, fixed_y, current_x, current_y)
-                    self.logger.log(LogLevel.CALL, f"固定角 ({fixed_x:.2f}, {fixed_y:.2f}) to mouse ({current_x:.2f}, {current_y:.2f})")
+                    # 回転を考慮したリサイズメソッドを呼び出す
+                    self.rect_manager.resize_rect_from_corners(fixed_x_rotated, fixed_y_rotated, current_x, current_y)
+                    self.logger.log(LogLevel.CALL, f"リサイズ中: 固定角(回転後)={fixed_x_rotated:.2f},{fixed_y_rotated:.2f} マウス={current_x:.2f},{current_y:.2f}")
 
                     self.logger.log(LogLevel.CALL, "ズーム領域：キャッシュ無効化開始")
                     self.zoom_selector.invalidate_rect_cache()
