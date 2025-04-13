@@ -3,6 +3,7 @@ from matplotlib.backend_bases import MouseEvent, Event
 from typing import Optional, TYPE_CHECKING
 from .debug_logger import DebugLogger
 from .enums import ZoomState, LogLevel
+from .event_validator import EventValidator, ValidationResult
 
 if TYPE_CHECKING:
     from .zoom_state_handler import ZoomStateHandler
@@ -31,16 +32,9 @@ class CursorManager:
         # logger が None でないことを確認してからログを記録
         self.logger.log(LogLevel.INIT, "CursorManager")
         self._current_cursor = CURSOR_DEFAULT
-        self.zoom_selector: Optional['ZoomSelector'] = None # zoom_selector の初期化と型ヒント
-
-#    def _log(self, level: LogLevel, message: str):
-#        """ logger が存在する場合にログを記録する """
-#        if self.logger:
-#            try:
-#                self.logger.log(level, message)
-#            except Exception as e:
-#                # logger.log でエラーが発生した場合に備える (例: logger が期待通りでない場合)
-#                print(f"[CursorManager Log Error] Failed to log message: {message}. Error: {e}")
+        self.zoom_selector: Optional['ZoomSelector'] = None
+        # Validatorインスタンスが必要な場合 (通常は EventHandler が持っているものを共有)
+        # self.validator = EventValidator() # 必要に応じてインスタンス化
 
     def cursor_update(self,
                       event: Optional[MouseEvent],
@@ -58,7 +52,22 @@ class CursorManager:
         """
         new_cursor = CURSOR_DEFAULT # デフォルトは標準カーソル
 
-        if event and event.inaxes: # Axes 内の場合のみカーソルを変更
+        # --- イベント検証 ---
+        validation_result = None
+        if event and self.zoom_selector: # イベントと zoom_selector が存在する場合のみ検証
+             # EventHandlerが持っているvalidatorインスタンスを使うのが通常
+             # ここでは EventValidator.validate_event を直接呼び出す例
+            validation_result = EventValidator.validate_event(
+                event, self.zoom_selector.ax, self.logger
+            )
+            # カーソル更新に必要なのは Axes 内であることと座標があること
+            should_update_cursor = validation_result.is_in_axes and validation_result.has_coords
+        else:
+            should_update_cursor = False # イベントがない、または検証できない場合は更新しない
+        # --- 検証ここまで ---
+
+        if should_update_cursor:
+            # --- 検証成功後のカーソル形状決定ロジック ---
             if is_rotating and near_corner_index is not None: # 回転モードで、かつ角に近い場合
                 new_cursor = CURSOR_ROTATE
             elif not is_rotating and near_corner_index is not None: # 回転モードでない場合、かつ角に近い場合
@@ -71,32 +80,33 @@ class CursorManager:
             elif state == ZoomState.ON_MOVE:
                 new_cursor = CURSOR_MOVE
             elif state == ZoomState.EDIT:
-                # zoom_selector が設定されているか、かつ None でないか確認
-                if self.zoom_selector and hasattr(self.zoom_selector, 'cursor_inside_rect') and self.zoom_selector.cursor_inside_rect(event):
+                # zoom_selector が設定されているか、かつ None でないか確認 (should_update_cursorで確認済み)
+                if self.zoom_selector.cursor_inside_rect(event): # cursor_inside_rect は event を引数に取る
                     new_cursor = CURSOR_MOVE
                 else:
-                    new_cursor = CURSOR_DEFAULT
-            elif state == ZoomState.RESIZING:
-                 pass # near_corner_index is not None の分岐で処理
-            elif state == ZoomState.ROTATING:
-                 pass # is_rotating and near_corner_index is not None の分岐で処理
-        else: # Axes 外またはイベントがない場合
+                    # 角に近くない、かつ矩形の内側でもない場合
+                    new_cursor = CURSOR_DEFAULT # または適切なカーソル
+            # elif state == ZoomState.RESIZING: ... (near_corner_index is not None で処理)
+            # elif state == ZoomState.ROTATING: ... (is_rotating and near_corner_index is not None で処理)
+            else:
+                 # 上記以外の場合 (例: EDIT状態で矩形外かつ角にも近くない)
+                 new_cursor = CURSOR_DEFAULT # デフォルトに戻す
+            # --- カーソル形状決定ロジックここまで ---
+        else:
+            # 検証失敗またはイベントがない場合はデフォルトカーソル
             new_cursor = CURSOR_DEFAULT
-        if new_cursor != self._current_cursor: # カーソルが変更されている場合のみ更新
-            try: # カーソルの設定に失敗した場合の例外処理
+
+        # --- カーソル設定 ---
+        if new_cursor != self._current_cursor:
+            try:
                 self.widget.config(cursor=new_cursor)
                 self._current_cursor = new_cursor
-                self.logger.log(LogLevel.SUCCESS, f"カーソル変更 to '{new_cursor}'")
+                # ログレベルを DEBUG に変更 (頻繁に呼ばれるため)
+                self.logger.log(LogLevel.DEBUG, f"カーソル変更 to '{new_cursor}'", {"state": state.name})
             except tk.TclError as e:
                 self.logger.log(LogLevel.ERROR, f"カーソルの設定に失敗 '{new_cursor}': {e}")
-                try: # 不明なカーソル名の場合、デフォルトに戻す
-                    if self._current_cursor != CURSOR_DEFAULT:
-                        self.widget.config(cursor=CURSOR_DEFAULT)
-                        self._current_cursor = CURSOR_DEFAULT
-                        self._log(LogLevel.WARNING, f"カーソル変更失敗 '{new_cursor}' デフォルトに戻す")
-                except tk.TclError as e_reset:
-                     self.logger.log(LogLevel.ERROR, f"エラー後、カーソルをデフォルトにリセットできない: {e_reset}")
-                     pass # これも失敗したら諦める
+                # ... (エラー時のフォールバック処理) ...
+        # --- カーソル設定ここまで ---
 
     def set_default_cursor(self):
         """ カーソルをデフォルトに戻す """

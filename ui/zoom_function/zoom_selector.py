@@ -1,22 +1,23 @@
 from matplotlib.axes import Axes
-from typing import Callable, Optional, Tuple # Optional, Tuple をインポート
+from typing import Callable, Optional, Tuple
 import numpy as np
 import matplotlib.transforms as transforms # 回転計算用に transforms をインポート
 from .enums import ZoomState, LogLevel
-from .event_validator import EventValidator
+from .event_validator import EventValidator, ValidationResult
 from .zoom_state_handler import ZoomStateHandler
 from .rect_manager import RectManager
 from .cursor_manager import CursorManager
 from .debug_logger import DebugLogger
 from .event_handler import EventHandler
+import matplotlib.patches as patches # patches のインポートを追加 (キャッシュの型ヒント用)
 
 class ZoomSelector:
     """ マウスドラッグで矩形を描画し、回転やリサイズを行う機能を持つクラス"""
     def __init__(self,
-                ax: Axes,
-                on_zoom_confirm: Callable[[float, float, float, float, float], None],
-                on_zoom_cancel: Callable[[], None],
-                logger: DebugLogger):
+                 ax: Axes,
+                 on_zoom_confirm: Callable[[float, float, float, float, float], None],
+                 on_zoom_cancel: Callable[[], None],
+                 logger: DebugLogger):
 
         self.logger = logger
         self.logger.log(LogLevel.INIT, "ZoomSelector")
@@ -25,13 +26,13 @@ class ZoomSelector:
         self.canvas = ax.figure.canvas
         self.on_zoom_confirm = on_zoom_confirm
         self.on_zoom_cancel = on_zoom_cancel
-        self._cached_rect_patch: Optional[patches.Rectangle] = None # type: ignore # patches未インポート警告抑制
+        self._cached_rect_patch: Optional[patches.Rectangle] = None # 型ヒントを修正
 
         # --- 各コンポーネントの初期化 ---
         self.state_handler = ZoomStateHandler(
                                 initial_state=ZoomState.NO_RECT,
                                 logger=self.logger,
-                                canvas=self.canvas)
+                                canvas=self.canvas) # canvas を渡す
 
         self.rect_manager = RectManager(ax, self.logger)
 
@@ -41,17 +42,19 @@ class ZoomSelector:
         # CursorManager の初期化を修正: canvas ウィジェットと logger のみを渡す
         self.cursor_manager = CursorManager(tk_widget, self.logger)
 
+        # Validator インスタンスを生成して EventHandler に渡す
         self.validator = EventValidator()
         self.event_handler = EventHandler(self,
-                                        self.state_handler,
-                                        self.rect_manager,
-                                        self.cursor_manager,
-                                        self.validator,
-                                        self.logger,
-                                        self.canvas)
+                                          self.state_handler,
+                                          self.rect_manager,
+                                          self.cursor_manager,
+                                          self.validator, # 生成したインスタンスを渡す
+                                          self.logger,
+                                          self.canvas)
 
-        # StateHandler に EventHandler の参照を設定 (循環参照に注意が必要な場合あり)
-        # 必要であれば弱参照 (weakref) の使用を検討
+        # CursorManager に ZoomSelector の参照を設定
+        self.cursor_manager.set_zoom_selector(self)
+        # StateHandler に EventHandler の参照を設定
         self.state_handler.event_handler = self.event_handler
         # --- 初期化ここまで ---
 
@@ -137,16 +140,20 @@ class ZoomSelector:
         - 許容範囲 tol は矩形の短辺の10% (最小0.02)。
         - 角のインデックス: 0:左上, 1:右上, 2:左下, 3:右下 (回転前の定義に基づく)
         """
+        # --- イベント検証 ---
+        # ZoomSelector が持つ validator インスタンスを使用
+        validation_result = self.validator.validate_event(event, self.ax, self.logger)
+        # 角の判定には Axes 内で座標があることが必要 (is_fully_valid でチェック)
+        if not validation_result.is_fully_valid:
+            return None
+        # --- 検証ここまで ---
+
         rect_props = self.rect_manager.get_properties()
         center = self.rect_manager.get_center()
         angle_deg = self.rect_manager.get_rotation()
 
         if rect_props is None or center is None:
-            self.logger.log(LogLevel.ERROR, "ズーム領域なし")
-            return None
-
-        if event.xdata is None or event.ydata is None:
-            self.logger.log(LogLevel.ERROR, "ポインターのイベント座標なし")
+            self.logger.log(LogLevel.DEBUG, "角判定不可: ズーム領域または中心なし")
             return None
 
         x, y, width, height = rect_props
@@ -183,14 +190,20 @@ class ZoomSelector:
         # 許容範囲の計算
         abs_width = abs(width)
         abs_height = abs(height)
-        min_dim = min(abs_width, abs_height)
+        # width または height が 0 の場合に備える
+        if abs_width < 1e-9 or abs_height < 1e-9:
+             min_dim = 0.0
+        else:
+            min_dim = min(abs_width, abs_height)
         tol = max(0.1 * min_dim, 0.02) # 短辺の10% or 最小許容範囲
 
         # 各回転後コーナーとの距離を計算
         for i, (corner_x, corner_y) in enumerate(rotated_corners):
+            # event.xdata/ydata は検証済みなので None でないはず
             distance = np.hypot(event.xdata - corner_x, event.ydata - corner_y)
             if distance < tol:
-                self.logger.log(LogLevel.SUCCESS, f"カーソルに近い角 {i}.")
+                # ログレベルを DEBUG に変更 (頻繁に呼ばれるため)
+                self.logger.log(LogLevel.DEBUG, f"カーソルに近い角 {i} (距離: {distance:.3f} < 許容範囲: {tol:.3f})")
                 return i # 近い角のインデックスを返す
 
-        return None
+        return None # どの角にも近くない

@@ -35,7 +35,7 @@ class FractalCanvas:
 
     def zoom_confirmed(self, x, y, w, h, angle):
         """ ズーム確定 """
-        self.logger.log(LogLevel.DEBUG, "Canvas zoom_confirmed called", {"x": x, "y": y, "w": w, "h": h, "angle": angle})
+        self.logger.log(LogLevel.DEBUG, "ズーム確定時のコールバック開始", {"x": x, "y": y, "w": w, "h": h, "angle": angle})
         if self.zoom_confirm_callback:
             self.zoom_confirm_callback(x, y, w, h, angle)
 

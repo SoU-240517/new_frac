@@ -112,15 +112,13 @@ class EventHandler:
 
     def on_press(self, event: MouseEvent):
         """ マウスボタンが押された時の処理 """
-        if not self.validator.validate_basic(event, self.zoom_selector.ax, self.logger):
-            self.logger.log(LogLevel.ERROR, "検証失敗: validate_basic")
-            return
-        self.logger.log(LogLevel.DEBUG, "検証成功：validate_basic")
+        validation_result = self.validator.validate_event(event, self.zoom_selector.ax, self.logger)
 
-        if event.xdata is None or event.ydata is None:
-            self.logger.log(LogLevel.ERROR, "座標データなし：マウスプレスイベントを却下")
-            return
-        self.logger.log(LogLevel.CALL, "座標データ利用可能：処理続行")
+        # マウスプレスに必要な全ての条件を満たしているかチェック
+        if not validation_result.is_press_valid:
+             self.logger.log(LogLevel.DEBUG, "基本検証失敗：処理中断")
+             return
+        self.logger.log(LogLevel.CALL, "検証成功：処理続行")
 
         state = self.state_handler.get_state()
         self.logger.log(LogLevel.CALL, "状態取得", {"結果": state.name})
@@ -233,12 +231,14 @@ class EventHandler:
 
     def on_motion(self, event: MouseEvent) -> None:
         """ マウスが動いた時の処理 """
-        if event.inaxes != self.zoom_selector.ax:
-            self.logger.log(LogLevel.CALL, "マウスが軸外に移動：モーションイベントを無視")
-            return
-        if event.xdata is None or event.ydata is None:
-            self.logger.log(LogLevel.CALL, "座標データなし：モーションイベントは無視")
-            return
+        validation_result = self.validator.validate_event(event, self.zoom_selector.ax, self.logger)
+
+        # モーションイベントでは、Axes内で座標があることが重要 (ボタン情報は通常不要)
+        if not (validation_result.is_in_axes and validation_result.has_coords):
+             # is_fully_valid を使っても良い
+             # if not validation_result.is_fully_valid:
+             self.logger.log(LogLevel.DEBUG, "on_motion: Axes外または座標無効のため処理中断")
+             return
 
         state = self.state_handler.get_state()
         self.logger.log(LogLevel.CALL, "状態取得", {"状態": state.name})
@@ -311,10 +311,20 @@ class EventHandler:
 
     def on_release(self, event: MouseEvent) -> None:
         """ マウスボタンが離された時の処理 """
+        validation_result = self.validator.validate_event(event, self.zoom_selector.ax, self.logger)
+
+        # リリース時は、座標があるかどうかだけを気にする場合など、要件に応じてチェック
+        # 例えば、軸外でのリリースも許容するなら is_in_axes はチェックしないなど。
+        # ここでは例として座標があるかだけチェック
+        if not validation_result.has_coords:
+             self.logger.log(LogLevel.INFO, "on_release: 座標無効でマウスリリース（処理中断または継続）")
+             # return するか、以降のロジックで is_outside として扱う
+             # is_outside = not validation_result.has_coords # 例
+
         state = self.state_handler.get_state() # 処理前の状態を保持
         self.logger.log(LogLevel.CALL, "ボタンリリース処理前に状態取得完了", {"状態": state})
 
-        is_outside = event.xdata is None or event.ydata is None
+        is_outside = not validation_result.has_coords # 検証結果を利用
 
         if state == ZoomState.CREATE:
             self.logger.log(LogLevel.INFO, "ズーム領域作成完了処理開始：作成関連の内部状態をリセット")
