@@ -2,7 +2,7 @@ import tkinter as tk
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from .zoom_function.debug_logger import DebugLogger
-from .zoom_function.enums import LogLevel # LogLevel をインポート
+from .zoom_function.enums import LogLevel
 
 class FractalCanvas:
     """ フラクタル描画キャンバスクラス """
@@ -45,7 +45,7 @@ class FractalCanvas:
         if hasattr(self, 'zoom_cancel_callback') and self.zoom_cancel_callback:
             self.zoom_cancel_callback()
 
-    def update_canvas(self, fractal_image, params):
+    def update_canvas(self, fractal_image, params) -> None:
         """ キャンバス更新 """
         self.ax.clear()
         self.ax.axis('off') # 座標軸は非表示
