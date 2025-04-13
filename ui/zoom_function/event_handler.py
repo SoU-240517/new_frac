@@ -1,7 +1,6 @@
-import math # 角度計算のために追加
-from matplotlib.backend_bases import MouseEvent, MouseButton, KeyEvent # KeyEvent を追加
+import math # 角度計算
+from matplotlib.backend_bases import MouseEvent, MouseButton, KeyEvent
 from typing import Optional, TYPE_CHECKING, Tuple
-# ZoomState をインポート
 from .enums import LogLevel, ZoomState
 
 # 他のクラスの型ヒントのためにインポート (循環参照回避)
@@ -66,7 +65,7 @@ class EventHandler:
         # 矩形回転用
         self._alt_pressed: bool = False # Altキーが押されているか
         self.rotate_start_mouse_pos: Optional[Tuple[float, float]] = None # 回転開始時のマウス座標
-        self.rotate_start_angle_vector: Optional[float] = None # 回転開始時の中心からマウスへのベクトル角度
+        self.rotate_start_vector_angle: Optional[float] = None # 回転開始時の中心からマウスへのベクトル角度 ★修正: 変数名変更★
         self.rect_initial_angle: Optional[float] = None # 回転開始時の矩形の角度
         self.rotate_center: Optional[Tuple[float, float]] = None # 回転中心座標
 
@@ -152,29 +151,42 @@ class EventHandler:
                 # マウスカーソルがズーム領域の角の近くか判定
                 corner_index = self.zoom_selector.pointer_near_corner(event)
                 if self._alt_pressed and corner_index is not None:
-                    # 回転開始
+                    # --- 回転開始処理 ---
                     self.logger.log(LogLevel.INFO, f"回転開始：角 {corner_index}.")
                     center = self.rect_manager.get_center()
                     if center:
                         self.rotate_center = center
                         self.rotate_start_mouse_pos = (event.xdata, event.ydata)
-                        self.rotate_start_angle_vector = self._calculate_angle(center[0], center[1], event.xdata, event.ydata)
-                        self.rect_initial_angle = self.rect_manager.get_rotation()
-                        self.logger.log(LogLevel.CALL, f"回転開始：中心 = {center}, mouse_angle={self.rotate_start_angle_vector:.2f}, rect_angle={self.rect_initial_angle:.2f}")
+                        # 回転開始時の、中心からマウスカーソルへの角度を計算
+                        self.rotate_start_vector_angle = self._calculate_angle(
+                            center[0], center[1], event.xdata, event.ydata
+                        )
+                        # 回転開始時の矩形の角度を取得
+                        self.rect_initial_angle = self.rect_manager.get_rotation() # [103] 正しい
+                        self.logger.log(LogLevel.CALL, f"回転開始：中心 = {center}, mouse_angle={self.rotate_start_vector_angle:.2f}, rect_angle={self.rect_initial_angle:.2f}")
 
                         self.logger.log(LogLevel.INFO, "状態変更：ROTATING")
                         self.state_handler.update_state(ZoomState.ROTATING, {"action": "回転開始", "角": corner_index})
 
                         self._connect_motion()
-                        self.logger.log(LogLevel.INFO, "カーソル更新")
+                        self.logger.log(LogLevel.INFO, "カーソル更新（回転モード）")
+                        # is_rotating=True を渡す
                         self.cursor_manager.cursor_update(event, state=self.state_handler.get_state(), near_corner_index=corner_index, is_rotating=True)
-                        self._rotate_logged = False
+                        self._rotate_logged = False # 回転ログフラグリセット
                     else:
                         self.logger.log(LogLevel.ERROR, "回転不可：ズーム領域の中心を取得できず")
+                    # --- 回転開始処理ここまで ---
 
                 elif not self._alt_pressed and corner_index is not None:
-                    # リサイズ開始
+                    # --- リサイズ開始処理 ---
                     self.logger.log(LogLevel.INFO, f"リサイズ開始：角 {corner_index}.")
+                    # ★注意: 回転中のリサイズは未実装のため、必要ならここで回転をリセットする等の処理を追加
+                    # if self.rect_manager.get_rotation() != 0:
+                    #     self.logger.log(LogLevel.WARNING, "回転中のリサイズは未サポートです。")
+                    #     # return # または回転を0にするなど
+                    #     # self.rect_manager.set_rotation(0)
+                    #     # self.rect_initial_angle = 0 # 内部状態もリセット
+
                     self.logger.log(LogLevel.INFO, "状態変更：RESIZING.")
                     self.state_handler.update_state(ZoomState.RESIZING, {"action": "リサイズ開始", "角": corner_index})
                     self.resize_corner_index = corner_index
@@ -182,7 +194,20 @@ class EventHandler:
                     self.rect_manager.edge_change_editing()
                     self.canvas.draw_idle()
 
-                    # 固定される対角の座標を計算して保持
+                    # --- 固定角の計算 ---
+                    # ★注意: 現在の実装 [107-111] は回転前の矩形に基づいており、回転中は不正確
+                    # 完全な実装には、回転後のコーナー座標を取得して対角を計算する必要がある
+                    # 例: rotated_corners = self.zoom_selector.get_rotated_corners()
+                    #     if rotated_corners:
+                    #         fixed_corner_idx = 3 - corner_index
+                    #         self.fixed_corner_pos = rotated_corners[fixed_corner_idx]
+                    #         self.logger.log(LogLevel.CALL, f"固定する角 {fixed_corner_idx} at {self.fixed_corner_pos} (rotated)")
+                    #     else: # フォールバックまたはエラー
+                    #         self.logger.log(LogLevel.ERROR, "リサイズ不可：回転後の角を取得できず")
+                    #         self._reset_resize_state()
+                    #         self.state_handler.update_state(ZoomState.EDIT, {"action": "リサイズ開始失敗"})
+                    #         return
+                    # ★簡易的な対応として、現在の回転無視のコードを維持するが、問題が出る可能性がある
                     rect_props = self.rect_manager.get_properties()
                     if rect_props:
                         # 注意: 回転を考慮しない場合、この座標は不正確になる可能性
@@ -192,16 +217,15 @@ class EventHandler:
                         # 現状は回転前の矩形に基づく単純な計算
                         x0, y0 = min(x, x + w), min(y, y + h)
                         x1, y1 = max(x, x + w), max(y, y + h)
-                        # EventHandler の corner_index (0:左上, 1:右上, 2:左下, 3:右下) に合わせる
-                        corners_unrotated = [(x0, y1), (x1, y1), (x0, y0), (x1, y0)]
-                        # 対角のインデックス（0<->3, 1<->2）
-                        fixed_corner_idx = 3 - corner_index
+                        corners_unrotated = [(x0, y1), (x1, y1), (x0, y0), (x1, y0)] # 0:左上, 1:右上, 2:左下, 3:右下 (EventHandlerの期待に合わせる)
+                        fixed_corner_idx = 3 - corner_index # 対角のインデックス (0<->3, 1<->2)
                         self.fixed_corner_pos = corners_unrotated[fixed_corner_idx]
                         self.logger.log(LogLevel.CALL, f"固定する角 {fixed_corner_idx} at {self.fixed_corner_pos} (based on unrotated rect)")
+                    # --- 固定角の計算ここまで ---
 
                     self._connect_motion()
-
-                    self.logger.log(LogLevel.INFO, "カーソル更新")
+                    self.logger.log(LogLevel.INFO, "カーソル更新（リサイズモード）")
+                    # is_rotating=False を渡す
                     self.cursor_manager.cursor_update(event, state=self.state_handler.get_state(), near_corner_index=self.resize_corner_index, is_rotating=False)
                     self._resize_logged = False
 
@@ -304,9 +328,28 @@ class EventHandler:
                     self.canvas.draw_idle()
 
         elif state == ZoomState.ROTATING:
-            if event.button == MouseButton.LEFT:
-                # ズーム領域回転中の処理
-                # ... (矩形回転中の処理) ...
+            if event.button == MouseButton.LEFT and self.rotate_center and self.rotate_start_vector_angle is not None and self.rect_initial_angle is not None:
+                # --- 回転中の処理 ---
+                if not self._rotate_logged:
+                    self.logger.log(LogLevel.INFO, "ズーム領域回転中...", {
+                        "ボタン": event.button, "x": event.xdata, "y": event.ydata, "状態": state})
+                    self._rotate_logged = True
+
+                # 現在のマウス位置から中心への角度を計算
+                current_vector_angle = self._calculate_angle(
+                    self.rotate_center[0], self.rotate_center[1], event.xdata, event.ydata
+                )
+                # 回転開始時の角度からの差分を計算
+                angle_diff = current_vector_angle - self.rotate_start_vector_angle
+                # 新しい矩形の角度 = 開始時の角度 + 差分
+                new_angle = self.rect_initial_angle + angle_diff
+
+                self.rect_manager.set_rotation(new_angle)
+                self.logger.log(LogLevel.CALL, f"回転中... 新角度: {new_angle:.2f}")
+
+                self.logger.log(LogLevel.CALL, "ズーム領域：キャッシュ無効化開始")
+                self.zoom_selector.invalidate_rect_cache()
+
                 self.canvas.draw_idle()
 
     def on_release(self, event: MouseEvent) -> None:
@@ -432,15 +475,27 @@ class EventHandler:
 
         elif state == ZoomState.ROTATING:
             if event.button == MouseButton.LEFT:
-                # ... (ROTATING 完了処理) ...
-                self._reset_rotate_state()
+                # --- 回転完了処理 ---
+                self.logger.log(LogLevel.INFO, "ズーム領域回転終了", {
+                    "ボタン": event.button, "x": event.xdata, "y": event.ydata, "状態": state})
+                self.logger.log(LogLevel.INFO, "状態変更 to EDIT.")
+                self.state_handler.update_state(ZoomState.EDIT, {"action": "回転終了"})
+                self.logger.log(LogLevel.CALL, "切断：motion_notify_event")
+                self._disconnect_motion()
+                self.logger.log(LogLevel.CALL, "リセット：回転関連の内部状態")
+                self._reset_rotate_state() # 回転状態をリセット
+                self.logger.log(LogLevel.INFO, "カーソル更新")
+                # Altキーの状態も渡す
+                self.cursor_manager.cursor_update(event, state=self.state_handler.get_state(), is_rotating=self._alt_pressed)
+                self.logger.log(LogLevel.CALL, "ズーム領域：キャッシュ無効化開始")
+                self.zoom_selector.invalidate_rect_cache()
+                self.canvas.draw_idle()
 
-        final_state = self.state_handler.get_state() # 状態変更後の最終状態を取得
         # 最終的な状態でカーソルを更新
+        final_state = self.state_handler.get_state() # 状態変更後の最終状態を取得
         self.logger.log(LogLevel.INFO, "カーソル更新開始：リリース時")
         self.cursor_manager.cursor_update(event, state=final_state, is_rotating=self._alt_pressed)
         self.canvas.draw_idle()
-
 
     def on_key_press(self, event: KeyEvent):
         """ キーボードが押された時の処理 """
@@ -461,11 +516,33 @@ class EventHandler:
                 self.cursor_manager.set_default_cursor()
                 self.canvas.draw_idle()
 
+        # Alt キー処理 (回転モードの開始)
+        elif event.key == 'alt':
+            if not self._alt_pressed: # まだ押されていなければ
+                self.logger.log(LogLevel.INFO, "Altキー押下検出：回転モード有効化")
+                self._alt_pressed = True
+                # EDIT状態の場合、カーソルを更新して回転の可能性を示す
+                state = self.state_handler.get_state()
+                if state == ZoomState.EDIT:
+                    # モーションイベントがないとマウス位置が分からないため、
+                    # connect_motion() または直近のイベント座標を使う必要があるが、
+                    # ここでは on_motion が呼ばれた際に更新されることに期待する
+                    self.logger.log(LogLevel.DEBUG, "EDIT状態でAlt押下。次のマウス移動でカーソル更新")
+                    # 強制的に更新したい場合は工夫が必要
+                    # self.cursor_manager.cursor_update(None, state=state, is_rotating=True) # イベントがない場合の例
+
     def on_key_release(self, event: KeyEvent):
         """ キーボードのキーが離された時の処理 """
-        # ... (キー処理) ...
-        # キーイベントではマウス位置が不定なため、カーソル更新は on_motion に任せる
-        pass
+        if event.key == 'alt':
+            if self._alt_pressed: # 押されていた場合のみ
+                self.logger.log(LogLevel.INFO, "Altキー解放検出：回転モード無効化")
+                self._alt_pressed = False
+                # EDIT状態の場合、カーソルを通常に戻す
+                state = self.state_handler.get_state()
+                if state == ZoomState.EDIT:
+                     self.logger.log(LogLevel.DEBUG, "EDIT状態でAlt解放。次のマウス移動でカーソル更新")
+                     # 強制的に更新したい場合は工夫が必要
+                     # self.cursor_manager.cursor_update(None, state=state, is_rotating=False)
 
     def _calculate_angle(self, cx: float, cy: float, px: float, py: float) -> float:
         """ 中心点(cx, cy)から点(px, py)へのベクトル角度を計算（度単位） """
