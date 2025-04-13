@@ -1,4 +1,5 @@
 import math # 角度計算
+import numpy as np # 角度の正規化で使用
 from matplotlib.backend_bases import MouseEvent, MouseButton, KeyEvent
 from typing import Optional, TYPE_CHECKING, Tuple
 from .enums import LogLevel, ZoomState
@@ -14,15 +15,26 @@ if TYPE_CHECKING:
 
 class EventHandler:
     """ matplotlib のイベントを処理し、各コンポーネントに指示を出すクラス """
+    # --- ★調整用パラメータを追加★ ---
+    # この値以下の角度変化（度単位）は無視して更新しない
+    ROTATION_THRESHOLD = 2.6  # 例: 0.1度。大きくすると鈍感になるが、カクつく可能性も。
+    # 角度変化の感度係数 (0.0 < 値 <= 1.0)。1.0で変更なし。小さくすると鈍くなる。
+    ROTATION_SENSITIVITY = 1.3 # 例: 0.8。値を小さくすると滑らかになるが、追従性が落ちる。
+    # --- パラメータここまで ---
+
+    # --- ★間引き用の設定を追加★ ---
+    ROTATION_THROTTLE_INTERVAL = 1 / 60  # 秒 (60fps相当に制限)
+    _last_rotation_update_time = 0 # 最後に回転処理を実行した時刻
+    # --- 設定ここまで ---
 
     def __init__(self,
-                zoom_selector: 'ZoomSelector',
-                state_handler: 'ZoomStateHandler',
-                rect_manager: 'RectManager',
-                cursor_manager: 'CursorManager',
-                validator: 'EventValidator',
-                logger: 'DebugLogger',
-                canvas):
+                 zoom_selector: 'ZoomSelector',
+                 state_handler: 'ZoomStateHandler',
+                 rect_manager: 'RectManager',
+                 cursor_manager: 'CursorManager',
+                 validator: 'EventValidator',
+                 logger: 'DebugLogger',
+                 canvas):
 
         self.logger = logger
         self.logger.log(LogLevel.INIT, "EventHandler")
@@ -65,9 +77,9 @@ class EventHandler:
         # 矩形回転用
         self._alt_pressed: bool = False # Altキーが押されているか
         self.rotate_start_mouse_pos: Optional[Tuple[float, float]] = None # 回転開始時のマウス座標
-        self.rotate_start_vector_angle: Optional[float] = None # 回転開始時の中心からマウスへのベクトル角度 ★修正: 変数名変更★
-        self.rect_initial_angle: Optional[float] = None # 回転開始時の矩形の角度
         self.rotate_center: Optional[Tuple[float, float]] = None # 回転中心座標
+        self.previous_vector_angle: Optional[float] = None # 前回のベクトル角度
+        self._rotate_logged = False
 
     def connect(self):
         """ イベントハンドラを接続 """
@@ -148,7 +160,6 @@ class EventHandler:
 
         elif state == ZoomState.EDIT:
             if event.button == MouseButton.LEFT:
-                # マウスカーソルがズーム領域の角の近くか判定
                 corner_index = self.zoom_selector.pointer_near_corner(event)
                 if self._alt_pressed and corner_index is not None:
                     # --- 回転開始処理 ---
@@ -156,26 +167,26 @@ class EventHandler:
                     center = self.rect_manager.get_center()
                     if center:
                         self.rotate_center = center
-                        self.rotate_start_mouse_pos = (event.xdata, event.ydata)
-                        # 回転開始時の、中心からマウスカーソルへの角度を計算
-                        self.rotate_start_vector_angle = self._calculate_angle(
+                        self.rotate_start_mouse_pos = (event.xdata, event.ydata) # 開始位置は記録しておく（将来使うかも）
+
+                        # ★修正: 回転開始時のベクトル角度を previous_vector_angle に保存
+                        start_vector_angle = self._calculate_angle(
                             center[0], center[1], event.xdata, event.ydata
                         )
-                        # 回転開始時の矩形の角度を取得
-                        self.rect_initial_angle = self.rect_manager.get_rotation() # [103] 正しい
-                        self.logger.log(LogLevel.CALL, f"回転開始：中心 = {center}, mouse_angle={self.rotate_start_vector_angle:.2f}, rect_angle={self.rect_initial_angle:.2f}")
+                        self.previous_vector_angle = start_vector_angle
+                        # self.rect_initial_angle = self.rect_manager.get_rotation() # 不要になる
+
+                        self.logger.log(LogLevel.CALL, f"回転開始：中心 = {center}, 開始ベクトル角度={start_vector_angle:.2f}")
 
                         self.logger.log(LogLevel.INFO, "状態変更：ROTATING")
                         self.state_handler.update_state(ZoomState.ROTATING, {"action": "回転開始", "角": corner_index})
 
                         self._connect_motion()
                         self.logger.log(LogLevel.INFO, "カーソル更新（回転モード）")
-                        # is_rotating=True を渡す
                         self.cursor_manager.cursor_update(event, state=self.state_handler.get_state(), near_corner_index=corner_index, is_rotating=True)
-                        self._rotate_logged = False # 回転ログフラグリセット
+                        self._rotate_logged = False
                     else:
                         self.logger.log(LogLevel.ERROR, "回転不可：ズーム領域の中心を取得できず")
-                    # --- 回転開始処理ここまで ---
 
                 elif not self._alt_pressed and corner_index is not None:
                     # --- リサイズ開始処理 ---
@@ -304,29 +315,42 @@ class EventHandler:
                     self.canvas.draw_idle()
 
         elif state == ZoomState.ROTATING:
-            if event.button == MouseButton.LEFT and self.rotate_center and self.rotate_start_vector_angle is not None and self.rect_initial_angle is not None:
+            if event.button == MouseButton.LEFT and self.rotate_center and self.previous_vector_angle is not None:
                 # --- 回転中の処理 ---
                 if not self._rotate_logged:
-                    self.logger.log(LogLevel.INFO, "ズーム領域回転中...", {
-                        "ボタン": event.button, "x": event.xdata, "y": event.ydata, "状態": state})
+                    # ... (ログ開始) ...
                     self._rotate_logged = True
 
-                # 現在のマウス位置から中心への角度を計算
                 current_vector_angle = self._calculate_angle(
                     self.rotate_center[0], self.rotate_center[1], event.xdata, event.ydata
                 )
-                # 回転開始時の角度からの差分を計算
-                angle_diff = current_vector_angle - self.rotate_start_vector_angle
-                # 新しい矩形の角度 = 開始時の角度 + 差分
-                new_angle = self.rect_initial_angle + angle_diff
+                delta_angle = self._normalize_angle_diff(current_vector_angle, self.previous_vector_angle)
 
-                self.rect_manager.set_rotation(new_angle)
-                self.logger.log(LogLevel.CALL, f"回転中... 新角度: {new_angle:.2f}")
+                # ★閾値チェック: 小さすぎる変化は無視する★
+                if abs(delta_angle) > self.ROTATION_THRESHOLD:
 
-                self.logger.log(LogLevel.CALL, "ズーム領域：キャッシュ無効化開始")
-                self.zoom_selector.invalidate_rect_cache()
+                    # ★感度調整: 計算された変化量を調整★
+                    adjusted_delta_angle = delta_angle * self.ROTATION_SENSITIVITY
 
-                self.canvas.draw_idle()
+                    current_rect_angle = self.rect_manager.get_rotation()
+                    new_angle = current_rect_angle + adjusted_delta_angle
+
+                    self.rect_manager.set_rotation(new_angle)
+
+                    # ★重要: 次回の計算のために保存するのは「調整前の」角度★
+                    # これにより、感度調整による遅延が累積しないようにする
+                    self.previous_vector_angle = current_vector_angle
+
+                    self.logger.log(LogLevel.DEBUG, f"回転 delta:{delta_angle:.2f} adj:{adjusted_delta_angle:.2f} new:{new_angle:.2f}")
+
+                    self.zoom_selector.invalidate_rect_cache()
+                    self.canvas.draw_idle()
+                else:
+                    # 閾値以下の変化なので何もしない
+                    # previous_vector_angle も更新しないことで、次の有意な変化を待つ
+                    self.logger.log(LogLevel.DEBUG, f"回転 delta:{delta_angle:.2f} <= 閾値、スキップ")
+                    pass
+                # --- 回転中の処理ここまで ---
 
     def on_release(self, event: MouseEvent) -> None:
         """ マウスボタンが離された時の処理 """
@@ -521,8 +545,29 @@ class EventHandler:
                      # self.cursor_manager.cursor_update(None, state=state, is_rotating=False)
 
     def _calculate_angle(self, cx: float, cy: float, px: float, py: float) -> float:
-        """ 中心点(cx, cy)から点(px, py)へのベクトル角度を計算（度単位） """
+        """ 中心点(cx, cy)から点(px, py)へのベクトル角度を計算（度単位, -180 から 180） """
         return math.degrees(math.atan2(py - cy, px - cx))
+
+    def _normalize_angle_diff(self, angle1: float, angle2: float) -> float:
+        """ 2つの角度の差を計算し、-180度から180度の範囲に正規化する """
+        # math.remainder を使うとシンプルに書ける (結果は [-180, 180])
+        # diff = math.remainder(angle1 - angle2, 360)
+        # または手動で正規化
+        diff = angle1 - angle2
+        while diff <= -180:
+            diff += 360
+        while diff > 180:
+            diff -= 360
+        return diff
+
+    def _reset_rotate_state(self):
+        """ 回転関連の内部状態をリセット """
+        self.rotate_start_mouse_pos = None
+        # self.rotate_start_vector_angle = None # 不要
+        # self.rect_initial_angle = None # 不要
+        self.rotate_center = None
+        self.previous_vector_angle = None # ★修正: リセット対象に追加
+        self._rotate_logged = False
 
     def reset_internal_state(self):
         """ 全ての内部状態をリセット """
