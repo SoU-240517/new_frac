@@ -31,10 +31,9 @@ class EventValidator:
     @staticmethod
     def validate_event(event: MouseEvent, ax: Axes, logger: DebugLogger) -> ValidationResult:
         """
-        基本的なイベント検証をまとめて行い、結果を ValidationResult で返す
-        失敗した項目についてはログを出力する
+        基本的なイベント検証をまとめて行い、結果を ValidationResult で返す（失敗項目はログを出力）
         """
-        result = ValidationResult()
+        result = ValidationResult() # 検証結果を格納するオブジェクトを初期化
         # 1. Axes内かチェック
         result.is_in_axes = (event.inaxes == ax)
         if not result.is_in_axes:

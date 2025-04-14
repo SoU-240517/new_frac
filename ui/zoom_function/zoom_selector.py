@@ -18,7 +18,6 @@ class ZoomSelector:
                  on_zoom_confirm: Callable[[float, float, float, float, float], None],
                  on_zoom_cancel: Callable[[], None],
                  logger: DebugLogger):
-
         self.logger = logger
         self.logger.log(LogLevel.INIT, "ZoomSelector")
         self.ax = ax
