@@ -1,6 +1,6 @@
 import numpy as np
 from ui.zoom_function.debug_logger import DebugLogger
-from ui.zoom_function.enums import LogLevel # LogLevel をインポート
+from ui.zoom_function.enums import LogLevel
 
 def compute_julia(Z, C, max_iter, logger: DebugLogger):
     """ ジュリア集合の計算 """
@@ -10,7 +10,6 @@ def compute_julia(Z, C, max_iter, logger: DebugLogger):
     # 初期マスク：絶対値2以下の点
     mask = np.abs(z) <= 2.0
     z_vals = np.zeros(shape, dtype=complex)
-
     for i in range(max_iter):
         mask = np.abs(z) <= 2.0
         if not np.any(mask):

@@ -39,13 +39,11 @@ class DebugLogger:
         caller_frame_record = None
         file_path = "unknown"
         line_no = 0
-        func_name = "unknown" # 関数名を初期化
-
+        func_name = "unknown"
         try:
             stack = inspect.stack()
             if len(stack) > stacklevel:
                  caller_frame_record = stack[stacklevel] # stacklevel番目のフレーム情報を取得
-
             if caller_frame_record:
                 abs_path = os.path.abspath(caller_frame_record.filename)
                 try:
@@ -55,12 +53,10 @@ class DebugLogger:
                     file_path = os.path.basename(abs_path)
                 line_no = caller_frame_record.lineno
                 func_name = caller_frame_record.function # 関数名を取得
-
         except Exception as e:
              print(f"[DebugLogger Error] Failed to get caller info: {e}")
         finally:
             pass
-
         elapsed_time = time.time() - self.start_time
         color_map = {
             LogLevel.INIT: "grey50",
@@ -78,16 +74,13 @@ class DebugLogger:
         except AttributeError as e:
             color = "white"
             level_name = "UNKNOWN_LEVEL"
-
         log_prefix = f"[{elapsed_time:.3f}s] {level_name}:"
         location = f"[{func_name}: {file_path}:{line_no}]"
         escaped_message = escape(message)
         escaped_location = escape(location)
-
         log_message = f"[grey50]{log_prefix}[/grey50][{color}] {escaped_message} [/{color}][grey50]{escaped_location}[/grey50]"
         if context:
             log_message = f"[grey50]{log_prefix}[/grey50][{color}] {escaped_message} | {self._format_context(context)} [/{color}][grey50]{escaped_location}[/grey50]"
-
         rprint(log_message)
 
     def _format_context(self, context: Dict[str, Any]) -> str:

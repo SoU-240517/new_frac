@@ -6,24 +6,22 @@ from .zoom_function.enums import LogLevel
 
 class FractalCanvas:
     """ フラクタル描画キャンバスクラス """
+
     def __init__(self, master, width, height, logger, zoom_confirm_callback, zoom_cancel_callback):
         """ キャンバス初期化（MatplotlibのFigure を Tkinter ウィジェットに埋め込む）"""
         self.logger = logger
         self.logger.log(LogLevel.INIT, "FractalCanvas")
-
         self.parent = master
         self.fig = Figure(figsize=(6, 6), dpi=100)
         self.ax = self.fig.add_subplot(111)
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.parent)
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
-
         self.zoom_confirm_callback = zoom_confirm_callback
-
         # ZoomSelector をインスタンス化（コールバック MainWindow から設定）
         from ui.zoom_function.zoom_selector import ZoomSelector
         self.zoom_selector = ZoomSelector(
             self.ax,
-            on_zoom_confirm=lambda x, y, w, h, angle: self.zoom_confirmed(x, y, w, h, angle), # Accept 5 args, pass 5
+            on_zoom_confirm=lambda x, y, w, h, angle: self.zoom_confirmed(x, y, w, h, angle),
             on_zoom_cancel=self.zoom_cancelled,
             logger=self.logger
         )

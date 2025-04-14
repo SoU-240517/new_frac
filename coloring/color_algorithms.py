@@ -7,15 +7,12 @@ from ui.zoom_function.enums import LogLevel
 
 def apply_coloring_algorithm(results, params, logger: DebugLogger):
     """ 着色アルゴリズムを適用して結果を返す """
-
     iterations = results['iterations']
     mask = results['mask']
     z_vals = results['z_vals']
-
     # RGBA画像用の配列
     colored = np.zeros((*iterations.shape, 4), dtype=np.float32)
     divergent = iterations > 0
-
     if np.any(divergent):
         # 発散する場合の処理
         algo = params["diverge_algorithm"]

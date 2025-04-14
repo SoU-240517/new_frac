@@ -10,7 +10,6 @@ def compute_mandelbrot(Z, Z0, max_iter, logger: DebugLogger):
     c = Z.copy()
     mask = np.abs(z) <= 2.0
     z_vals = np.zeros(shape, dtype=complex)
-
     for i in range(max_iter):
         mask = np.abs(z) <= 2.0
         if not np.any(mask):
