@@ -36,7 +36,7 @@ class DebugLogger:
             stacklevel: int = 1): # スタックレベルを指定可能にする
         """ ログ出力の内部実装 """
         # 呼び出し元の情報を取得
-        caller_frame_record = None
+        caller_frame_record = None # 呼び出し元のフレーム情報
         file_path = "unknown"
         line_no = 0
         func_name = "unknown"

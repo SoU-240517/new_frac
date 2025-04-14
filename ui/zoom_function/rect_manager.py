@@ -139,11 +139,14 @@ class RectManager:
     def delete_rect(self):
         """ ズーム領域を削除 """
         if self.rect:
-            if self.rect in self.ax.patches:
-                self.ax.patches.remove(self.rect)
-            self.rect.set_visible(False) # または単に非表示にする
+            # try:
+            #     self.rect.remove() # NotImplementedError が発生するためコメントアウト
+            # except ValueError:
+            #      # remove() は、Artist が Axes に属していない場合に ValueError を発生させることがあります
+            #      self.logger.log(LogLevel.DEBUG, "削除試行時にズーム領域がAxesに存在しませんでした。")
+            self.rect.set_visible(False) # 代わりに非表示にする
             self.rect = None
-            self.logger.log(LogLevel.DEBUG, "ズーム領域削除完了")
+            self.logger.log(LogLevel.DEBUG, "ズーム領域削除完了 (非表示化)")
         else:
             self.logger.log(LogLevel.DEBUG, "ズーム領域なし：削除スキップ")
 

@@ -4,6 +4,7 @@ from matplotlib.backend_bases import MouseEvent
 from typing import Optional
 from .debug_logger import DebugLogger
 from .enums import LogLevel
+from .rect_manager import RectManager
 
 @dataclass
 class ValidationResult:
@@ -11,6 +12,7 @@ class ValidationResult:
     is_in_axes: bool = False   # イベントが指定されたAxes内で発生したか
     has_button: bool = False  # マウスボタン情報があるか (MouseEventのみrelevant)
     has_coords: bool = False  # xdata, ydata 座標情報があるか
+    has_rect: bool = False  # ズーム領域があるか
 
     @property
     def is_fully_valid(self) -> bool:
@@ -50,5 +52,4 @@ class EventValidator:
         result.has_coords = (event.xdata is not None and event.ydata is not None)
         if not result.has_coords:
             logger.log(LogLevel.WARNING, "検証失敗: イベント座標データ(xdata/ydata)なし")
-        # すべてのチェックが終わったら結果オブジェクトを返す
-        return result
+        return result # すべてのチェックが終わったら結果オブジェクトを返す
