@@ -76,17 +76,12 @@ class MainWindow:
 
     def on_zoom_cancel(self):
         """ ズームキャンセル時のコールバック """
-        # キャンセル時は特に何もしない（ZoomSelector側で矩形はクリアされる）
-        # 必要であれば prev_zoom_params を使って前の描画状態に戻すことも可能。
-        # ズーム関連のキャンセルは、ズーム確定キャンセル、ズーム領域キャンセル、ズーム領域編集キャンセルの 3 種類がある。
-        # ここでは、ズーム領域編集のキャンセル時に呼ばれることを想定。
-        # if self.prev_zoom_params is not None:
-        #     self.zoom_params = self.prev_zoom_params.copy()
-        #     self.update_fractal()
-        #     self.prev_zoom_params = None
-        # else:
-        #     self.logger.log(LogLevel.DEBUG, "No previous zoom parameters to restore.")
-        pass
+        if self.prev_zoom_params is not None:
+            self.zoom_params = self.prev_zoom_params.copy()
+            self.update_fractal()
+            self.prev_zoom_params = None
+        else:
+            self.logger.log(LogLevel.DEBUG, "直前のズームパラメータなし")
 
     def reset_zoom(self):
         """ 操作パネルの「描画リセット」ボタン押下時の処理（ズームパラメータを初期状態に戻して再描画） """

@@ -306,7 +306,7 @@ class EventHandler:
                 self.logger.log(LogLevel.CALL, "切断：motion_notify_event")
                 self._disconnect_motion()
                 self.logger.log(LogLevel.INFO, "キャンセル：ズーム領域作成")
-                self.zoom_selector.cancel_zoom()
+                self.zoom_selector.cancel_rect()
                 return
             if event.button == MouseButton.LEFT:
                 if self.start_x is not None and self.start_y is not None: # 開始座標がある場合
@@ -418,23 +418,23 @@ class EventHandler:
 
     def on_key_press(self, event: KeyEvent):
         """ キーボードが押された時の処理 """
-        # キーイベントではマウス位置が不定なため、カーソル更新は on_motion に任せる
-        # ESC でキャンセルした場合、ZoomSelector.cancel_zoom 内で set_default_cursor が呼ばれる
         if event.key == 'escape':
             state = self.state_handler.get_state()
             self.logger.log(LogLevel.CALL, "キー押下時の状態取得完了", {"状態": state.name})
-            if state is ZoomState.EDIT:
-                self.logger.log(LogLevel.INFO, f"ESC キー押下検出：ズーム領域キャンセル処理開始")
-                self._disconnect_motion()
+            if state is ZoomState.NO_RECT:
+                self.logger.log(LogLevel.INFO, f"ESC キー押下検出：ズームキャンセル処理開始")
                 self.zoom_selector.cancel_zoom()
+            if state is ZoomState.EDIT:
+                self.logger.log(LogLevel.INFO, f"ESC キー押下検出：ズーム領域編集キャンセル処理開始")
+                self._disconnect_motion()
+                self.zoom_selector.cancel_rect()
                 self.zoom_selector.invalidate_rect_cache()
                 self.reset_internal_state()
                 self.logger.log(LogLevel.INFO, "状態変更 to NO_RECT.")
-                self.state_handler.update_state(ZoomState.NO_RECT, {"action": "ズーム領域キャンセル完了"})
+                self.state_handler.update_state(ZoomState.NO_RECT, {"action": "ズーム領域編集キャンセル完了"})
                 self.cursor_manager.set_default_cursor()
                 self.canvas.draw_idle()
-        # Alt キー処理 (回転モードの開始)
-        elif event.key == 'alt':
+        elif event.key == 'alt': # Alt キー処理 (回転モードの開始)
             if not self._alt_pressed: # まだ押されていなければ
                 self.logger.log(LogLevel.INFO, "Altキー押下検出：回転モード有効化")
                 self._alt_pressed = True

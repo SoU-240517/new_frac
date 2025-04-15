@@ -98,10 +98,14 @@ class ZoomSelector:
         else:
             self.logger.log(LogLevel.WARNING, "決定不可：ズーム領域なし")
 
+    def cancel_rect(self):
+        """ ズーム領域を削除 """
+        self.rect_manager.delete_rect()
+        self.logger.log(LogLevel.INFO, "ズーム領域削除完了")
+
     def cancel_zoom(self):
         """ ズーム領域を削除してコールバックする """
-        self.rect_manager.delete_rect()
-        self.logger.log(LogLevel.INFO, "ズーム領域キャンセル：コールバック呼出し")
+        self.logger.log(LogLevel.INFO, "ズームキャンセル：コールバック呼出し")
         self.on_zoom_cancel()
 
     def reset(self):
