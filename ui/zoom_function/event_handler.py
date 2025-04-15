@@ -78,14 +78,15 @@ class EventHandler:
     def connect(self):
         """ イベントハンドラを接続 """
         if self._cid_press is None: # すでに接続されている場合は何もしない
+            self.logger.log(LogLevel.CALL, "接続開始：全イベントハンドラ")
             self._cid_press = self.canvas.mpl_connect('button_press_event', self.on_press)
             self._cid_release = self.canvas.mpl_connect('button_release_event', self.on_release)
             self._cid_key_press = self.canvas.mpl_connect('key_press_event', self.on_key_press)
             self._cid_key_release = self.canvas.mpl_connect('key_release_event', self.on_key_release)
-            self.logger.log(LogLevel.CALL, "接続完了：全イベントハンドラ")
 
     def disconnect(self):
         """ イベントハンドラを切断 """
+        self.logger.log(LogLevel.CALL, "イベントハンドラ切断開始")
         if self._cid_press is not None: # マウスボタン押下イベントが接続されている場合は切断
             self.canvas.mpl_disconnect(self._cid_press)
             self._cid_press = None
@@ -100,20 +101,19 @@ class EventHandler:
             self.canvas.mpl_disconnect(self._cid_key_release)
             self._cid_key_release = None
         self._alt_pressed = False # 切断時にAltキー状態をリセット
-        self.logger.log(LogLevel.CALL, "イベントハンドラ切断完了")
 
     def _connect_motion(self):
         """ motion_notify_event を接続 """
         if self._cid_motion is None: # モーションが切断されている場合は接続
+            self.logger.log(LogLevel.CALL, "接続開始：motion_notify_event")
             self._cid_motion = self.canvas.mpl_connect('motion_notify_event', self.on_motion)
-            self.logger.log(LogLevel.CALL, "接続完了：motion_notify_event")
 
     def _disconnect_motion(self):
         """ motion_notify_event を切断 """
         if self._cid_motion is not None: # モーションが接続されている場合は切断
+            self.logger.log(LogLevel.CALL, "切断開始：motion_notify_event")
             self.canvas.mpl_disconnect(self._cid_motion)
             self._cid_motion = None
-            self.logger.log(LogLevel.CALL, "切断完了：motion_notify_event")
     # --- イベント接続/切断 ここまで ---
 
     # --- イベント処理メソッド (ディスパッチャ) ---
