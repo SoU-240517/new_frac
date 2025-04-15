@@ -7,4 +7,4 @@
 2025/04/15
 - add_func を master にマージした
 - kiroku.md を作成
-- 新しいブランチを作成する予定
+- 新しいブランチを作成：color-related-changes
