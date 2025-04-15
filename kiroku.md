@@ -8,3 +8,4 @@
 - add_func を master にマージした
 - kiroku.md を作成
 - 新しいブランチを作成：color-related-changes
+- あああ
