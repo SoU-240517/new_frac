@@ -26,27 +26,23 @@ class ZoomSelector:
         self.on_zoom_cancel = on_zoom_cancel
         self._cached_rect_patch: Optional[patches.Rectangle] = None
         self.state_handler = ZoomStateHandler(
-                                initial_state=ZoomState.NO_RECT,
-                                logger=self.logger,
-                                canvas=self.canvas)
+                               initial_state=ZoomState.NO_RECT,
+                               logger=self.logger,
+                               canvas=self.canvas) # canvas を渡す
         self.rect_manager = RectManager(ax, self.logger)
-        # canvas.get_tk_widget() で Tkinter ウィジェットを取得
-        # getattr を使用して Tk ウィジェットを安全に取得する
-        # 利用できない場合はデフォルトで None になる
         tk_widget = getattr(self.canvas, 'get_tk_widget', lambda: None)()
         self.cursor_manager = CursorManager(tk_widget, self.logger)
-        # Validator インスタンスを生成して EventHandler に渡す
         self.validator = EventValidator()
         self.event_handler = EventHandler(self,
                                           self.state_handler,
                                           self.rect_manager,
                                           self.cursor_manager,
-                                          self.validator, # 生成したインスタンスを渡す
+                                          self.validator,
                                           self.logger,
-                                          self.canvas)
+                                          self.canvas) # canvas を渡す
         # CursorManager に ZoomSelector の参照を設定
         self.cursor_manager.set_zoom_selector(self)
-        # StateHandler に EventHandler の参照を設定
+        # StateHandler に EventHandler の参照を設定 (循環参照に注意しつつ)
         self.state_handler.event_handler = self.event_handler
         self.logger.log(LogLevel.INIT, "イベント接続")
         self.connect_events()
@@ -70,13 +66,17 @@ class ZoomSelector:
             self.logger.log(LogLevel.CALL, "ズーム領域のキャッシュなし：キャッシュを作成")
             self._cached_rect_patch = self.rect_manager.get_patch()
         if self._cached_rect_patch is not None:
+            # 矩形が見えない場合は False を返すように修正
+            if not self._cached_rect_patch.get_visible():
+                 self.logger.log(LogLevel.DEBUG, "カーソル：ズーム領域 外 (非表示)")
+                 return False
             contains, _ = self._cached_rect_patch.contains(event)
             if contains:
-                 self.logger.log(LogLevel.DEBUG, "カーソル：ズーム領域 内")
-                 return True
+                self.logger.log(LogLevel.DEBUG, "カーソル：ズーム領域 内")
+                return True
             else:
-                 self.logger.log(LogLevel.DEBUG, "カーソル：ズーム領域 外")
-                 return False
+                self.logger.log(LogLevel.DEBUG, "カーソル：ズーム領域 外")
+                return False
         self.logger.log(LogLevel.DEBUG, "ズーム領域なし：カーソル判定不可")
         return False # キャッシュ更新後も None の場合
 
@@ -89,101 +89,98 @@ class ZoomSelector:
             x, y, w, h = rect_props_tuple
             self.logger.log(LogLevel.INFO, "ズーム確定：コールバック呼出し", {
                 "x": x, "y": y, "w": w, "h": h, "angle": rotation_angle})
-            self.on_zoom_confirm(x, y, w, h, rotation_angle)
-            self.rect_manager.delete_rect()
-            self.invalidate_rect_cache()
-            self.logger.log(LogLevel.INFO, "状態変更：NO_RECT")
-            self.state_handler.update_state(ZoomState.NO_RECT, {"action": "決定"})
-            self.cursor_manager.set_default_cursor()
+            # --- 履歴クリアを追加 ---
+            self.event_handler.clear_edit_history()
+            # --- ここまで追加 ---
+            self.on_zoom_confirm(x, y, w, h, rotation_angle) # コールバック呼び出し
+            self.rect_manager.delete_rect() # 矩形削除
+            self.invalidate_rect_cache() # キャッシュ無効化
+            self.state_handler.update_state(ZoomState.NO_RECT, {"action": "ズーム確定完了"})
+            self.cursor_manager.set_default_cursor() # カーソルをデフォルトに
+            self.event_handler.reset_internal_state() # EventHandlerの状態もリセット
         else:
             self.logger.log(LogLevel.WARNING, "決定不可：ズーム領域なし")
 
     def cancel_rect(self):
-        """ ズーム領域を削除 """
-        self.rect_manager.delete_rect()
-        self.logger.log(LogLevel.INFO, "ズーム領域削除完了")
+        """ ズーム領域編集をキャンセルし、矩形を削除する """
+        self.logger.log(LogLevel.INFO, "ズーム領域編集キャンセル開始")
+        # --- 履歴クリアを追加 ---
+        self.event_handler.clear_edit_history()
+        # --- ここまで追加 ---
+        self.rect_manager.delete_rect() # 矩形を削除
+        self.invalidate_rect_cache() # キャッシュを無効化
+        # 状態をNO_RECTに戻す必要があれば、EventHandler側で行うか、ここで明示的に行う
+        # self.state_handler.update_state(ZoomState.NO_RECT, {"action": "編集キャンセル"}) # EventHandler側で行う想定
+        # self.cursor_manager.set_default_cursor() # EventHandler側で行う想定
+        self.logger.log(LogLevel.INFO, "ズーム領域編集キャンセル完了 (矩形削除)")
 
     def cancel_zoom(self):
-        """ ズーム領域を削除してコールバックする """
-        self.logger.log(LogLevel.INFO, "ズームキャンセル：コールバック呼出し")
-        self.on_zoom_cancel()
+        """ ズーム確定操作自体をキャンセルする（MainWindow側の処理を呼び出す） """
+        self.logger.log(LogLevel.INFO, "ズーム確定キャンセル：コールバック呼出し")
+        # --- 履歴クリアを追加 ---
+        self.event_handler.clear_edit_history()
+        # --- ここまで追加 ---
+        self.rect_manager.delete_rect() # 存在する場合、矩形も削除
+        self.invalidate_rect_cache()
+        self.on_zoom_cancel() # MainWindow の on_zoom_cancel を呼び出す
+        # 状態リセットなどは MainWindow 側で行われる想定
 
     def reset(self):
-        """ ZoomSelectorの状態をリセット """
+        """ ZoomSelectorの状態をリセット（描画リセットボタンなどから呼ばれる） """
         self.logger.log(LogLevel.CALL, "ZoomSelector リセット処理開始")
+        # --- 履歴クリアを追加 ---
+        self.event_handler.clear_edit_history()
+        # --- ここまで追加 ---
         self.rect_manager.delete_rect()
         self.invalidate_rect_cache()
-        self.logger.log(LogLevel.INFO, "状態変更：NO_RECT")
         self.state_handler.update_state(ZoomState.NO_RECT, {"action": "リセット"})
-        self.event_handler.reset_internal_state()
+        self.event_handler.reset_internal_state() # EventHandlerの内部状態もリセット
         self.cursor_manager.set_default_cursor()
+        # reset時には通常、MainWindow側で再描画がトリガーされる
 
     def invalidate_rect_cache(self):
         """ ズーム領域のキャッシュを無効化する """
         if self._cached_rect_patch is not None:
-            self._cached_rect_patch = None
+             self.logger.log(LogLevel.DEBUG, "ズーム領域キャッシュ無効化")
+             self._cached_rect_patch = None
 
     def pointer_near_corner(self, event) -> Optional[int]:
         """
         マウスカーソルがズーム領域の角に近いかどうかを判定し、
         近い場合はその角のインデックス (0-3) を返す
-        - 許容範囲 tol は矩形の短辺の10% (最小0.02)
-        - 角のインデックス: 0:左上, 1:右上, 2:左下, 3:右下 (回転前の定義に基づく)
         """
-        # ZoomSelector が持つ validator インスタンスを使用
         validation_result = self.validator.validate_event(event, self.ax, self.logger)
-        # 角の判定には Axes 内で座標があることが必要 (is_fully_valid でチェック)
         if not validation_result.is_fully_valid:
             return None
-        rect_props = self.rect_manager.get_properties()
-        center = self.rect_manager.get_center()
-        angle_deg = self.rect_manager.get_rotation()
-        if rect_props is None or center is None:
-            self.logger.log(LogLevel.DEBUG, "角判定不可: ズーム領域または中心なし")
+
+        # 回転後の角座標を取得
+        rotated_corners = self.rect_manager.get_rotated_corners()
+        if rotated_corners is None:
+            self.logger.log(LogLevel.DEBUG, "角判定不可: 回転後の角座標なし")
             return None
-        x, y, width, height = rect_props
-        cx, cy = center
-        angle_rad = np.radians(angle_deg)
-        # 回転前の角の座標 (中心からの相対座標)
-        half_w, half_h = width / 2, height / 2
-        corners_relative = [
-            (-half_w, -half_h), # 左下 (描画上の左上に対応する場合あり) -> インデックス2相当？
-            ( half_w, -half_h), # 右下 -> インデックス3相当？
-            (-half_w,  half_h), # 左上 -> インデックス0相当？
-            ( half_w,  half_h)  # 右上 -> インデックス1相当？
-        ]
-        # Note: Rectangleの(x,y)は左下だが、
-        # リサイズハンドルは視覚的な左上から0,1,2,3としたい場合が多い
-        # EventHandler 側の corner_index の意味と合わせる必要がある
-        # ここでは EventHandler の期待 (0:左上, 1:右上, 2:左下, 3:右下) に合わせるため、
-        # 座標リストの順序を調整する
-        corners_unrotated_relative = [
-            (-half_w,  half_h), # 左上 (Index 0)
-            ( half_w,  half_h), # 右上 (Index 1)
-            (-half_w, -half_h), # 左下 (Index 2)
-            ( half_w, -half_h)  # 右下 (Index 3)
-        ]
-        # 回転後の絶対座標を計算
-        cos_a, sin_a = np.cos(angle_rad), np.sin(angle_rad)
-        rotated_corners = []
-        for rel_x, rel_y in corners_unrotated_relative:
-            rotated_x = rel_x * cos_a - rel_y * sin_a + cx
-            rotated_y = rel_x * sin_a + rel_y * cos_a + cy
-            rotated_corners.append((rotated_x, rotated_y))
+
         # 許容範囲の計算
-        abs_width = abs(width)
-        abs_height = abs(height)
-        # width または height が 0 の場合に備える
-        if abs_width < 1e-9 or abs_height < 1e-9:
-             min_dim = 0.0
-        else:
-            min_dim = min(abs_width, abs_height)
-        tol = max(0.1 * min_dim, 0.02) # 短辺の10% or 最小許容範囲
+        rect_props = self.rect_manager.get_properties()
+        if rect_props is None or rect_props[2] <= 0 or rect_props[3] <= 0:
+             self.logger.log(LogLevel.DEBUG, "角判定不可: 矩形プロパティ無効またはサイズゼロ")
+             return None
+        width, height = rect_props[2], rect_props[3]
+        min_dim = min(width, height)
+        # 画面上のピクセル単位での許容範囲を考慮した方が良い場合もある
+        # 例: tol_pixels = 5
+        # disp_coords = self.ax.transData.transform([(0,0), (min_dim, min_dim)])
+        # dist_pixels = np.sqrt(((disp_coords[1] - disp_coords[0])**2).sum())
+        # tol = tol_pixels * min_dim / dist_pixels if dist_pixels > 0 else 0.02
+        tol = max(0.1 * min_dim, 0.02) # 短辺の10% or 最小許容範囲 (データ座標系)
+        self.logger.log(LogLevel.DEBUG, f"角判定の許容範囲(tol): {tol:.4f}")
+
+
         # 各回転後コーナーとの距離を計算
         for i, (corner_x, corner_y) in enumerate(rotated_corners):
-            # event.xdata/ydata は検証済みなので None でないはず
+            if event.xdata is None or event.ydata is None: continue # 型ガード
             distance = np.hypot(event.xdata - corner_x, event.ydata - corner_y)
             if distance < tol:
                 self.logger.log(LogLevel.DEBUG, f"カーソルに近い角 {i} (距離: {distance:.3f} < 許容範囲: {tol:.3f})")
                 return i # 近い角のインデックスを返す
+
         return None # どの角にも近くない

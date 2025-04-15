@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.patches as patches
 import matplotlib.transforms as transforms
 from matplotlib.axes import Axes
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict, Any
 from .debug_logger import DebugLogger
 from .enums import LogLevel
 
@@ -26,10 +26,12 @@ class RectManager:
 
     def setup_rect(self, x: float, y: float):
         """ 新しいズーム領域の初期設定 (設置サイズ 0：回転なし) """
+        self.delete_rect() # 古い矩形を消す
         self.rect = patches.Rectangle(
             (x, y), 0, 0,
             linewidth=1, edgecolor='gray', facecolor='none', linestyle='--', visible=True)
         self.ax.add_patch(self.rect)
+        self._angle = 0.0 # 角度リセット
         self.logger.log(LogLevel.DEBUG, "初期のズーム領域設置完了", {"x": x, "y": y})
 
     def setting_rect_size(self, start_x: float, start_y: float, current_x: float, current_y: float):
@@ -44,6 +46,7 @@ class RectManager:
         self.rect.set_width(width)
         self.rect.set_height(height)
         self.rect.set_xy((x, y))
+        self._angle = 0.0 # 作成中は回転しないので角度は0、変換も単純な transData
         self.rect.set_transform(self.ax.transData)
 
     def edge_change_editing(self):
@@ -93,6 +96,12 @@ class RectManager:
         new_x = min(fixed_x_unrotated, current_x_unrotated)
         new_y = min(fixed_y_unrotated, current_y_unrotated)
         # --- 計算ここまで ---
+
+        # サイズチェックを追加
+        if not self.is_valid_size(new_width, new_height):
+             self.logger.log(LogLevel.DEBUG, f"リサイズ中止：無効なサイズ w={new_width:.4f}, h={new_height:.4f}")
+             return # サイズが無効なら更新しない
+
         # --- 矩形プロパティを設定 (まだ回転は適用しない) ---
         self.rect.set_width(new_width)
         self.rect.set_height(new_height)
@@ -108,6 +117,7 @@ class RectManager:
         if not is_valid:
             self.logger.log(LogLevel.DEBUG, f"無効なサイズチェック: w={width:.4f} (<{self.MIN_WIDTH}), h={height:.4f} (<{self.MIN_HEIGHT})")
         return is_valid
+
     def temporary_creation(self, start_x: float, start_y: float, end_x: float, end_y: float) -> bool:
         """ ズーム領域作成完了 """
         if not self.rect:
@@ -117,10 +127,18 @@ class RectManager:
         height = abs(end_y - start_y)
         x = min(start_x, end_x)
         y = min(start_y, end_y)
+
+        # 作成完了時にもサイズチェック
+        if not self.is_valid_size(width, height):
+            self.logger.log(LogLevel.WARNING, f"ズーム領域作成不可：最終サイズが無効 w={width:.4f}, h={height:.4f}")
+            # 失敗を示すために False を返す（EventHandler側で削除処理を期待）
+            return False
+
         self.rect.set_width(width)
         self.rect.set_height(height)
         self.rect.set_xy((x, y))
         self._angle = 0.0
+        # 作成完了時は回転がないので、単純な transData を設定
         self.rect.set_transform(self.ax.transData)
         self.rect.set_edgecolor('white')
         self.rect.set_linestyle('-')
@@ -139,14 +157,22 @@ class RectManager:
     def delete_rect(self):
         """ ズーム領域を削除 """
         if self.rect:
-            # try:
-            #     self.rect.remove() # NotImplementedError が発生するためコメントアウト
-            # except ValueError:
-            #      # remove() は、Artist が Axes に属していない場合に ValueError を発生させることがあります
-            #      self.logger.log(LogLevel.DEBUG, "削除試行時にズーム領域がAxesに存在しませんでした。")
-            self.rect.set_visible(False) # 代わりに非表示にする
-            self.rect = None
-            self.logger.log(LogLevel.DEBUG, "ズーム領域削除完了 (非表示化)")
+            try:
+                # パッチがまだAxesに追加されているか確認
+                if self.rect in self.ax.patches:
+                    self.rect.remove()
+                    self.logger.log(LogLevel.DEBUG, "ズーム領域削除完了 (remove)")
+                else:
+                     # すでに追加されていない（remove済みか、非表示のみ）場合は何もしない
+                     self.logger.log(LogLevel.DEBUG, "ズーム領域は既に削除済み、または非表示")
+                     self.rect.set_visible(False) # 念のため非表示に
+            except Exception as e:
+                 # remove中に予期せぬエラーが発生した場合
+                 self.logger.log(LogLevel.ERROR, f"ズーム領域削除中にエラー: {e}")
+                 self.rect.set_visible(False) # エラーでも非表示にする
+            finally:
+                self.rect = None # 参照をクリア
+                self._angle = 0.0 # 角度もリセット
         else:
             self.logger.log(LogLevel.DEBUG, "ズーム領域なし：削除スキップ")
 
@@ -157,6 +183,82 @@ class RectManager:
             return (self.rect.get_x(), self.rect.get_y(),
                     self.rect.get_width(), self.rect.get_height())
         return None
+
+    # --- Undo/Redo 用メソッド (ここから追加/修正) ---
+    def get_state(self) -> Optional[Dict[str, Any]]:
+        """ 現在の矩形の状態 (Undo用) を取得 """
+        props = self.get_properties()
+        if props and self.rect: # rect が存在することも確認
+            x, y, width, height = props
+            return {
+                "x": x,
+                "y": y,
+                "width": width,
+                "height": height,
+                "angle": self._angle,
+                "visible": self.rect.get_visible(), # 可視状態も保存
+                "edgecolor": self.rect.get_edgecolor(), # エッジの色も保存
+                "linestyle": self.rect.get_linestyle() # 線のスタイルも保存
+            }
+        return None
+
+    def set_state(self, state: Optional[Dict[str, Any]]):
+        """ 指定された状態に矩形を復元 (Undo用) """
+        if not state:
+            self.logger.log(LogLevel.WARNING, "Undo不可：状態データなし、または削除された状態")
+            # 状態がない場合、矩形を削除する
+            self.delete_rect()
+            return
+
+        x = state.get("x")
+        y = state.get("y")
+        width = state.get("width")
+        height = state.get("height")
+        angle = state.get("angle", 0.0)
+        visible = state.get("visible", True) # デフォルトは表示
+        edgecolor = state.get("edgecolor", "white") # デフォルトは白
+        linestyle = state.get("linestyle", "-") # デフォルトは実線
+
+        # 必須パラメータのチェック
+        if None in [x, y, width, height]:
+             self.logger.log(LogLevel.ERROR, f"Undo失敗：無効な状態データ {state}")
+             # 状態データが無効なら矩形を削除する（安全策）
+             self.delete_rect()
+             return
+
+        # --- 矩形の作成または更新 ---
+        # サイズが有効かチェック
+        if not self.is_valid_size(width, height):
+            self.logger.log(LogLevel.WARNING, f"Undo: 矩形復元スキップ（サイズ無効 w={width:.4f}, h={height:.4f}）")
+            # 無効なサイズが指定された場合も、現在の矩形を削除する
+            self.delete_rect()
+            return
+
+        # 矩形が存在しない場合は作成
+        if not self.rect:
+             self.rect = patches.Rectangle((x, y), width, height,
+                                         linewidth=1, edgecolor=edgecolor, facecolor='none',
+                                         linestyle=linestyle, visible=False) # 最初は非表示
+             self.ax.add_patch(self.rect)
+             self.logger.log(LogLevel.DEBUG, "Undo: 矩形が存在しなかったので新規作成")
+        # 矩形が存在する場合、プロパティを設定
+        else:
+            self.rect.set_x(x)
+            self.rect.set_y(y)
+            self.rect.set_width(width)
+            self.rect.set_height(height)
+            self.rect.set_edgecolor(edgecolor) # エッジの色を復元
+            self.rect.set_linestyle(linestyle) # 線のスタイルを復元
+
+        self._angle = angle # 角度を設定
+        self.rect.set_visible(visible) # 可視状態を復元
+
+        # 最後に回転を適用
+        self._apply_rotation()
+
+        self.logger.log(LogLevel.DEBUG, "Undo: 矩形状態を復元", state)
+
+    # --- ここまで Undo/Redo 用メソッド ---
 
     def get_center(self) -> Optional[Tuple[float, float]]:
         """ ズーム領域の中心座標を取得 (回転前の座標系) """
@@ -172,8 +274,11 @@ class RectManager:
         """ 回転後の四隅の絶対座標を取得する """
         props = self.get_properties()
         center = self.get_center()
-        if props is None or center is None:
+        # 矩形がない、またはサイズが0の場合もNoneを返すように修正
+        if not self.rect or props is None or center is None or props[2] <= 0 or props[3] <= 0:
+            self.logger.log(LogLevel.DEBUG, "回転後の角取得不可：矩形、プロパティ、中心のいずれか、またはサイズが0")
             return None
+
         x, y, width, height = props
         cx, cy = center
         angle_rad = np.radians(self._angle)
@@ -202,7 +307,7 @@ class RectManager:
         if not self.rect:
             self.logger.log(LogLevel.ERROR, "ズーム領域回転不可：ズーム領域なし")
             return
-        self._angle = angle % 360 # 0-360度の範囲に正規化
+        self._angle = angle % 360 # 0-360度の範囲に正規化（-180から180にする場合は調整）
         self._apply_rotation()
 
     def _apply_rotation(self):
