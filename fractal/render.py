@@ -6,7 +6,11 @@ from ui.zoom_function.enums import LogLevel
 
 def render_fractal(params, logger: DebugLogger) -> np.ndarray:
     """ 設定されたパラメータでフラクタルを描画 """
-    resolution = 500
+    resolution = 800
+
+    samples_per_pixel = 4  # 1ピクセルあたりのサンプル数
+    super_resolution = resolution * samples_per_pixel
+
     center_x = params.get("center_x", 0.0)
     center_y = params.get("center_y", 0.0)
     width = params.get("width", 4.0)
@@ -18,12 +22,13 @@ def render_fractal(params, logger: DebugLogger) -> np.ndarray:
     # ここでは正方形解像度を仮定。
     aspect_ratio = resolution / resolution
     height = width / aspect_ratio
-    # 回転前のグリッド座標を生成
-    x = np.linspace(-width/2, width/2, resolution)
-    y = np.linspace(-height/2, height/2, resolution)
+    # 回転前のグリッド座標、かつ高解像度でグリッドを生成
+    x = np.linspace(-width/2, width/2, super_resolution)
+    y = np.linspace(-height/2, height/2, super_resolution)
     X, Y = np.meshgrid(x, y)
     # 複素数グリッドを作成 (まだ中心シフト・回転は適用しない)
     Z_unrotated_centered_origin = X + 1j * Y
+
     # 回転を適用
     if rotation_deg != 0:
         logger.log(LogLevel.DEBUG, f"回転適用: {rotation_deg} 度")
@@ -36,7 +41,8 @@ def render_fractal(params, logger: DebugLogger) -> np.ndarray:
     Z = Z_rotated_centered_origin + complex(center_x, center_y)
     logger.log(LogLevel.DEBUG, "グリッドの作成と変換完了",
                context={"中心_x": center_x, "中心_y": center_y, "w": width, "h": height, "角度": rotation_deg})
-    # フラクタルの種類に応じた計算
+
+    # フラクタルの種類に応じた計算（高解像度版）
     if params["fractal_type"] == "Julia":
         C = complex(params["c_real"], params["c_imag"])
         logger.log(LogLevel.DEBUG, "ジュリア集合の計算開始")
@@ -49,6 +55,8 @@ def render_fractal(params, logger: DebugLogger) -> np.ndarray:
         results = mandelbrot.compute_mandelbrot(Z, Z0, params["max_iterations"], logger)
     # 着色アルゴリズムの適用
     logger.log(LogLevel.DEBUG, "着色アルゴリズムの適用開始")
-    colored = color_algorithms.apply_coloring_algorithm(results, params, logger)
+    # 解像度をダウンサンプリング（アンチエイリアシング効果）
+    colored_high_res = color_algorithms.apply_coloring_algorithm(results, params, logger)
+    colored = colored_high_res.reshape((resolution, samples_per_pixel, resolution, samples_per_pixel, -1)).mean(axis=(1, 3))
 
     return colored
