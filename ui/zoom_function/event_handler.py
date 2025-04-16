@@ -77,7 +77,6 @@ class EventHandler:
     def connect(self):
         """ イベントハンドラを接続 """
         if self._cid_press is None: # すでに接続されている場合は何もしない
-            self.logger.log(LogLevel.CALL, "接続開始：全イベントハンドラ")
             self._cid_press = self.canvas.mpl_connect('button_press_event', self.on_press)
             self._cid_motion = self.canvas.mpl_connect('motion_notify_event', self.on_motion)
             self._cid_release = self.canvas.mpl_connect('button_release_event', self.on_release)
@@ -89,10 +88,10 @@ class EventHandler:
         """ マウスボタン押下イベントのディスパッチャ """
         validation_result = self.validator.validate_event(event, self.zoom_selector.ax, self.logger)
         if not validation_result.is_press_valid:
-            self.logger.log(LogLevel.DEBUG, "on_press: 基本検証失敗のため処理中断")
+            self.logger.log(LogLevel.DEBUG, "基本検証失敗のため処理中断")
             return
         state = self.state_handler.get_state()
-        self.logger.log(LogLevel.CALL, f"on_press: 状態={state.name}, ボタン={event.button}")
+        self.logger.log(LogLevel.CALL, f"状態取得：{state.name}, ボタン={event.button}")
         # 状態とボタンに応じてハンドラを呼び出し
         if state == ZoomState.NO_RECT:
             if event.button == MouseButton.LEFT:
@@ -108,11 +107,11 @@ class EventHandler:
         """ マウス移動イベントのディスパッチャ """
         validation_result = self.validator.validate_event(event, self.zoom_selector.ax, self.logger)
         if not (validation_result.is_in_axes and validation_result.has_coords):
-            self.logger.log(LogLevel.DEBUG, "on_motion: Axes外または座標無効のため処理中断")
+            self.logger.log(LogLevel.DEBUG, "Axes外または座標無効のため処理中断")
             self.undo_or_cancel_edit()
             return
         state = self.state_handler.get_state()
-        self.logger.log(LogLevel.CALL, f"on_motion: 状態={state.name}")
+        self.logger.log(LogLevel.CALL, f"状態取得：{state.name}")
         # 状態に応じてハンドラを呼び出し
         if state == ZoomState.CREATE:
             if event.button == MouseButton.LEFT: # ドラッグ中か確認
@@ -134,7 +133,7 @@ class EventHandler:
         validation_result = self.validator.validate_event(event, self.zoom_selector.ax, self.logger)
         is_outside = not validation_result.has_coords # 軸外でのリリースか
         state = self.state_handler.get_state()
-        self.logger.log(LogLevel.CALL, f"on_release: 状態={state.name}, ボタン={event.button}, 軸外={is_outside}")
+        self.logger.log(LogLevel.CALL, f"状態取得：{state.name}, ボタン={event.button}, 軸外={is_outside}")
         operation_ended = False
         final_state_to_set = ZoomState.EDIT # デフォルトは操作完了後のEDIT状態
         # 状態に応じてハンドラを呼び出し

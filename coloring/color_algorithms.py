@@ -1,3 +1,4 @@
+import time
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import Normalize
@@ -23,19 +24,22 @@ def apply_coloring_algorithm(results, params, logger: DebugLogger):
             return np.nan_to_num(smooth, nan=iters)
     if np.any(divergent):
         algo = params["diverge_algorithm"]
+        logger.log(LogLevel.INFO, f"着色アルゴリズム選択: {algo}")
         if algo == "反復回数線形マッピング":
             norm = Normalize(1, params["max_iterations"])
             colored[divergent] = plt.cm.get_cmap(params["diverge_colormap"])(norm(iterations[divergent]))
         if algo == "スムージングカラーリング":
-            # 既存の高精度スムージング
             with np.errstate(invalid='ignore', divide='ignore'):
                 log_zn = np.log(np.abs(z_vals))
                 nu = np.log(log_zn / np.log(2)) / np.log(2)
                 smooth_iter = iterations - nu
             invalid_mask = ~np.isfinite(smooth_iter)
             smooth_iter[invalid_mask] = iterations[invalid_mask]
-        elif algo == "高速スムージング":  # 新しいアルゴリズム
+        elif algo == "高速スムージング":
+            start_time = time.perf_counter()
             smooth_iter = fast_smoothing(z_vals, iterations)
+            elapsed = time.perf_counter() - start_time
+            logger.log(LogLevel.PERF, f"高速スムージング処理時間: {elapsed:.5f}秒")
         # 共通の正規化処理
         if algo in ["スムージングカラーリング", "高速スムージング"]:
             valid_vals = smooth_iter[divergent & np.isfinite(smooth_iter)]
@@ -43,15 +47,13 @@ def apply_coloring_algorithm(results, params, logger: DebugLogger):
             vmax = np.max(valid_vals) if len(valid_vals) > 0 else params["max_iterations"]
             norm = Normalize(vmin=vmin, vmax=vmax)
             colored[divergent] = plt.cm.get_cmap(params["diverge_colormap"])(norm(smooth_iter[divergent]))
-        elif algo == "指数スムージング":  # 新しいアルゴリズムを追加
-            logger.log(LogLevel.DEBUG, "指数スムージング計算開始")
+        elif algo == "指数スムージング":
             with np.errstate(divide='ignore', invalid='ignore'):
                 smooth_iter = iterations + 1 - np.log(np.log(np.abs(z_vals))) / np.log(2)
             # 不正な値の処理
             smooth_iter[~np.isfinite(smooth_iter)] = iterations[~np.isfinite(smooth_iter)]
             norm = Normalize(vmin=0, vmax=params["max_iterations"])
             colored[divergent] = plt.cm.get_cmap(params["diverge_colormap"])(norm(smooth_iter[divergent]))
-            logger.log(LogLevel.DEBUG, "指数スムージング計算完了")
         elif algo == "ヒストグラム平坦化法":
             hist, bins = np.histogram(iterations[divergent], bins=params["max_iterations"], density=True)
             cdf = hist.cumsum()
@@ -101,7 +103,7 @@ def apply_coloring_algorithm(results, params, logger: DebugLogger):
             colored[divergent] = plt.cm.get_cmap(params["diverge_colormap"])(norm(trap_dist[divergent]))
     non_divergent = ~divergent
     if np.any(non_divergent):
-        # 発散しない場合の処理
+        # === 発散しない場合の処理 ===
         non_algo = params["non_diverge_algorithm"]
         if non_algo == "単色":
             colored[non_divergent] = [0, 0, 0, 1] # 黒で塗りつぶし

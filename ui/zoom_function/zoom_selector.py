@@ -49,7 +49,7 @@ class ZoomSelector:
 
     def connect_events(self):
         """ イベントハンドラの接続（マウスモーション以外の全て） """
-        self.logger.log(LogLevel.CALL, "接続開始：イベントハンドラ（マウス移動以外全て）")
+        self.logger.log(LogLevel.CALL, "接続開始：全イベントハンドラ")
         self.event_handler.connect()
         self.cursor_manager.set_default_cursor()
 

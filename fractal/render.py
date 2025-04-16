@@ -1,3 +1,4 @@
+import time
 import numpy as np
 from coloring import color_algorithms
 from fractal.fractal_types import julia, mandelbrot
@@ -8,9 +9,10 @@ def render_fractal(params, logger: DebugLogger) -> np.ndarray:
     """ 設定されたパラメータでフラクタルを描画（動的解像度版） """
     # 動的解像度計算
     resolution = calculate_dynamic_resolution(params.get("width", 4.0))
-    # アンチエイリアシング設定（ズームレベルに応じてサンプル数を調整）
-    zoom_level = 4.0 / params.get("width", 4.0)
-    samples_per_pixel = 2 if zoom_level < 1.0 else 4  # ズームアウト時はサンプル数減らす
+    logger.log(LogLevel.INFO, f"動的解像度計算完了: {resolution}x{resolution} (width={params.get('width', 4.0):.2f})")
+    zoom_level = 4.0 / params.get("width", 4.0) # アンチエイリアシング設定（ズームレベルに応じてサンプル数を調整）
+    samples_per_pixel = 2 if zoom_level < 1.0 else 4 # ズームアウト時はサンプル数減らす
+    logger.log(LogLevel.DEBUG, f"アンチエイリアシング設定: samples_per_pixel={samples_per_pixel}")
     super_resolution = resolution * samples_per_pixel
     center_x = params.get("center_x", 0.0)
     center_y = params.get("center_y", 0.0)
@@ -20,7 +22,6 @@ def render_fractal(params, logger: DebugLogger) -> np.ndarray:
     # キャンバスのアスペクト比を維持するために、高さを幅に合わせる
     # 注意: ここでの aspect_ratio は描画解像度に基づくもので、
     # MainWindow での補正とは異なる可能性がある。一貫性を保つことが重要。
-    # ここでは正方形解像度を仮定。
     aspect_ratio = 1.0  # 正方形を維持
     height = width / aspect_ratio
     # 回転前のグリッド座標、かつ高解像度でグリッドを生成
@@ -47,18 +48,24 @@ def render_fractal(params, logger: DebugLogger) -> np.ndarray:
         C = complex(params["c_real"], params["c_imag"])
         logger.log(LogLevel.DEBUG, "ジュリア集合の計算開始")
         # 回転・シフト後のグリッド Z を使用
+        logger.log(LogLevel.DEBUG, "フラクタル計算開始")
+        start_time = time.perf_counter()
         results = julia.compute_julia(Z, complex(params["c_real"], params["c_imag"]), params["max_iterations"], logger)
+        elapsed = time.perf_counter() - start_time
+        logger.log(LogLevel.INFO, f"フラクタル計算時間: {elapsed:.3f}秒")
     else: # Mandelbrot
         Z0 = complex(params["z_real"], params["z_imag"])
         logger.log(LogLevel.DEBUG, "マンデルブロ集合の計算開始")
         # 回転・シフト後のグリッド Z を使用
+        logger.log(LogLevel.DEBUG, "フラクタル計算開始")
+        start_time = time.perf_counter()
         results = mandelbrot.compute_mandelbrot(Z, complex(params["z_real"], params["z_imag"]), params["max_iterations"], logger)
-    # 着色アルゴリズムの適用
-    logger.log(LogLevel.DEBUG, "着色アルゴリズムの適用開始")
+        elapsed = time.perf_counter() - start_time
+        logger.log(LogLevel.INFO, f"フラクタル計算時間: {elapsed:.3f}秒")
     # 解像度をダウンサンプリング（アンチエイリアシング効果）
     colored_high_res = color_algorithms.apply_coloring_algorithm(results, params, logger)
-    # ダウンサンプリング（サンプル数が1の場合はスキップ）
-    if samples_per_pixel > 1:
+    if samples_per_pixel > 1: # ダウンサンプリング（サンプル数が1の場合はスキップ）
+        logger.log(LogLevel.DEBUG, "ダウンサンプリング実行")
         colored = colored_high_res.reshape((resolution, samples_per_pixel, resolution, samples_per_pixel, -1)).mean(axis=(1, 3))
     else:
         colored = colored_high_res
@@ -66,6 +73,6 @@ def render_fractal(params, logger: DebugLogger) -> np.ndarray:
 
 def calculate_dynamic_resolution(width, base_res=600, min_res=300, max_res=1200):
     """ズームレベルに応じて解像度を動的に計算"""
-    zoom_factor = np.log(5.0 / width + 1.0)  # より滑らかな解像度変化
+    zoom_factor = np.log(5.0 / width + 1.0)
     resolution = int(base_res * zoom_factor)
     return np.clip(resolution, min_res, max_res)

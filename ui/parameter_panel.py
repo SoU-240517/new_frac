@@ -76,7 +76,7 @@ class ParameterPanel:
             self.parent, textvariable=self.fractal_type_var,
             values=["Julia", "Mandelbrot"], state="readonly")
         fractal_type_combo.grid(row=row, column=1, sticky=tk.W+tk.E, padx=10, pady=(5,0))
-        # フラクタルタイプ変更時にも描画更新とカラーバー更新を行う
+        # フラクタルタイプ変更時に、描画更新をし、その後にカラーバー更新を行う
         fractal_type_combo.bind("<<ComboboxSelected>>", lambda e: [self.update_callback(), self._update_colorbars()])
 
         # --- 漸化式表示 ---

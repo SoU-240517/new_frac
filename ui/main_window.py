@@ -41,6 +41,7 @@ class MainWindow:
         panel_params = self.parameter_panel.get_parameters()
         current_params = self.zoom_params.copy()
         current_params.update(panel_params) # パラメータパネルの設定で上書き（max_iterなど）
+        self.logger.log(LogLevel.DEBUG, "フラクタルを描画開始")
         fractal_image = render_fractal(current_params, self.logger)
         self.logger.log(LogLevel.INFO, "キャンバス更新開始（待機中...）")
         self.fractal_canvas.update_canvas(fractal_image, current_params)
