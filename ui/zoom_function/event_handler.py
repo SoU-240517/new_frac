@@ -74,6 +74,16 @@ class EventHandler:
         self.edit_history: List[Optional[Dict[str, Any]]] = [] # 矩形の状態を保存するリスト
 		# --- 内部状態ここまで ---
 
+    def connect(self):
+        """ イベントハンドラを接続 """
+        if self._cid_press is None: # すでに接続されている場合は何もしない
+            self.logger.log(LogLevel.CALL, "接続開始：全イベントハンドラ")
+            self._cid_press = self.canvas.mpl_connect('button_press_event', self.on_press)
+            self._cid_motion = self.canvas.mpl_connect('motion_notify_event', self.on_motion)
+            self._cid_release = self.canvas.mpl_connect('button_release_event', self.on_release)
+            self._cid_key_press = self.canvas.mpl_connect('key_press_event', self.on_key_press)
+            self._cid_key_release = self.canvas.mpl_connect('key_release_event', self.on_key_release)
+
     # --- イベント処理メソッド (ディスパッチャ) ---
     def on_press(self, event: MouseEvent):
         """ マウスボタン押下イベントのディスパッチャ """
