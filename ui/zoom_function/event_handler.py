@@ -74,48 +74,6 @@ class EventHandler:
         self.edit_history: List[Optional[Dict[str, Any]]] = [] # 矩形の状態を保存するリスト
 		# --- 内部状態ここまで ---
 
-    # --- イベント接続/切断 ---
-    def connect(self):
-        """ イベントハンドラを接続 """
-        if self._cid_press is None: # すでに接続されている場合は何もしない
-            self.logger.log(LogLevel.CALL, "接続開始：全イベントハンドラ")
-            self._cid_press = self.canvas.mpl_connect('button_press_event', self.on_press)
-            self._cid_release = self.canvas.mpl_connect('button_release_event', self.on_release)
-            self._cid_key_press = self.canvas.mpl_connect('key_press_event', self.on_key_press)
-            self._cid_key_release = self.canvas.mpl_connect('key_release_event', self.on_key_release)
-
-    def disconnect(self):
-        """ イベントハンドラを切断 """
-        self.logger.log(LogLevel.CALL, "イベントハンドラ切断開始")
-        if self._cid_press is not None: # マウスボタン押下イベントが接続されている場合は切断
-            self.canvas.mpl_disconnect(self._cid_press)
-            self._cid_press = None
-        if self._cid_release is not None: # マウスボタンリリースイベントが接続されている場合は切断
-            self.canvas.mpl_disconnect(self._cid_release)
-            self._cid_release = None
-        self._disconnect_motion()
-        if self._cid_key_press is not None: # キーボード押下イベントが接続されている場合は切断
-            self.canvas.mpl_disconnect(self._cid_key_press)
-            self._cid_key_press = None
-        if self._cid_key_release is not None: # キーリリース切断を追加
-            self.canvas.mpl_disconnect(self._cid_key_release)
-            self._cid_key_release = None
-        self._alt_pressed = False # 切断時にAltキー状態をリセット
-
-    def _connect_motion(self):
-        """ motion_notify_event を接続 """
-        if self._cid_motion is None: # モーションが切断されている場合は接続
-            self.logger.log(LogLevel.CALL, "接続開始：motion_notify_event")
-            self._cid_motion = self.canvas.mpl_connect('motion_notify_event', self.on_motion)
-
-    def _disconnect_motion(self):
-        """ motion_notify_event を切断 """
-        if self._cid_motion is not None: # モーションが接続されている場合は切断
-            self.logger.log(LogLevel.CALL, "切断開始：motion_notify_event")
-            self.canvas.mpl_disconnect(self._cid_motion)
-            self._cid_motion = None
-    # --- イベント接続/切断 ここまで ---
-
     # --- イベント処理メソッド (ディスパッチャ) ---
     def on_press(self, event: MouseEvent):
         """ マウスボタン押下イベントのディスパッチャ """
@@ -141,6 +99,7 @@ class EventHandler:
         validation_result = self.validator.validate_event(event, self.zoom_selector.ax, self.logger)
         if not (validation_result.is_in_axes and validation_result.has_coords):
             self.logger.log(LogLevel.DEBUG, "on_motion: Axes外または座標無効のため処理中断")
+            self.undo_or_cancel_edit()
             return
         state = self.state_handler.get_state()
         self.logger.log(LogLevel.CALL, f"on_motion: 状態={state.name}")
@@ -225,7 +184,6 @@ class EventHandler:
         self.start_x, self.start_y = event.xdata, event.ydata
         self.rect_manager.setup_rect(self.start_x, self.start_y)
         self.zoom_selector.invalidate_rect_cache()
-        self._connect_motion()
         self.cursor_manager.cursor_update(event, state=self.state_handler.get_state())
         self._create_logged = False
         self.canvas.draw_idle()
@@ -256,7 +214,6 @@ class EventHandler:
             self.previous_vector_angle = start_vector_angle
             self.logger.log(LogLevel.CALL, f"回転開始パラメータ: 中心={center}, 開始角度={start_vector_angle:.2f}")
             self.state_handler.update_state(ZoomState.ROTATING, {"action": "回転開始", "角": corner_index})
-            self._connect_motion()
             self.cursor_manager.cursor_update(event, state=self.state_handler.get_state(), near_corner_index=corner_index, is_rotating=True)
             self._rotate_logged = False
             # 回転開始時はスタイル変更はしない
@@ -277,7 +234,6 @@ class EventHandler:
             fixed_corner_idx = 3 - corner_index
             self.fixed_corner_pos = rotated_corners[fixed_corner_idx]
             self.logger.log(LogLevel.CALL, f"リサイズ開始パラメータ: 固定角(回転後)={self.fixed_corner_pos}")
-            self._connect_motion()
             self.cursor_manager.cursor_update(event, state=self.state_handler.get_state(), near_corner_index=self.resize_corner_index, is_rotating=False)
             self._resize_logged = False
             self.canvas.draw_idle() # スタイル変更を反映
@@ -296,7 +252,6 @@ class EventHandler:
             self.move_start_x, self.move_start_y = event.xdata, event.ydata
             self.rect_start_pos = (rect_props[0], rect_props[1]) # 回転前の左下座標
             self.logger.log(LogLevel.CALL, f"移動開始パラメータ: マウス=({self.move_start_x:.2f}, {self.move_start_y:.2f}), 矩形左下={self.rect_start_pos}")
-            self._connect_motion()
             self.cursor_manager.cursor_update(event, state=self.state_handler.get_state(), is_rotating=False)
             self._move_logged = False
             self.canvas.draw_idle() # スタイル変更を反映
@@ -378,7 +333,6 @@ class EventHandler:
     def _handle_release_create(self, event: MouseEvent, is_outside: bool) -> ZoomState:
         """ CREATE 状態でのマウス解放: 作成完了またはキャンセル """
         self.logger.log(LogLevel.INFO, "ハンドラ: _handle_release_create")
-        self._disconnect_motion() # モーション切断
         final_state = ZoomState.NO_RECT # デフォルトはキャンセル
 
         if is_outside:
@@ -409,7 +363,6 @@ class EventHandler:
         """ ON_MOVE 状態でのマウス解放: 移動完了 """
         self.logger.log(LogLevel.INFO, "ハンドラ: _handle_release_move (移動完了)")
         self.rect_manager.edge_change_finishing() # スタイルを戻す
-        self._disconnect_motion()
         self._reset_move_state()
         return ZoomState.EDIT # 移動後はEDIT状態へ
 
@@ -417,7 +370,6 @@ class EventHandler:
         """ RESIZING 状態でのマウス解放: リサイズ完了またはキャンセル/Undo """
         self.logger.log(LogLevel.INFO, "ハンドラ: _handle_release_resizing (リサイズ完了)")
         self.rect_manager.edge_change_finishing() # スタイルを戻す
-        self._disconnect_motion()
         final_state = ZoomState.EDIT # デフォルトはEDIT状態
 
         # リサイズ完了後も矩形が有効かチェック
@@ -435,7 +387,6 @@ class EventHandler:
         """ ROTATING 状態でのマウス解放: 回転完了 """
         self.logger.log(LogLevel.INFO, "ハンドラ: _handle_release_rotating (回転完了)")
         # スタイル変更は回転中にはないので戻す必要なし
-        self._disconnect_motion()
         self._reset_rotate_state()
         return ZoomState.EDIT # 回転後はEDIT状態へ
     # --- Release イベントハンドラ ここまで ---
@@ -523,7 +474,6 @@ class EventHandler:
         elif len(self.edit_history) == 1: # 矩形作成直後などの場合
             self.logger.log(LogLevel.INFO, "ESC -> Undo履歴なし: ズーム領域編集キャンセル実行")
             self.clear_edit_history() # 履歴クリア
-            self._disconnect_motion()
             self.zoom_selector.cancel_rect() # 矩形削除 (ZoomSelector側)
             self.reset_internal_state() # 内部状態リセット (ここで再度履歴クリアされる)
             self.state_handler.update_state(ZoomState.NO_RECT, {"action": "ESCによる編集キャンセル"})
@@ -531,7 +481,6 @@ class EventHandler:
             self.canvas.draw_idle()
         else: # 履歴0の場合 (通常EDITではないはず)
             self.logger.log(LogLevel.WARNING, "ESC -> 履歴0だがキャンセル試行")
-            self._disconnect_motion()
             self.zoom_selector.cancel_rect()
             self.reset_internal_state()
             self.state_handler.update_state(ZoomState.NO_RECT, {"action": "ESCによる編集キャンセル(履歴0)"})
@@ -561,7 +510,6 @@ class EventHandler:
         self._reset_rotate_state()
         self._alt_pressed = False
         self.clear_edit_history() # 編集履歴もクリア
-        self._disconnect_motion() # マウスモーションも切断
         self.logger.log(LogLevel.INFO, "EventHandler の内部状態と編集履歴をリセット完了")
 
     def _reset_create_state(self):

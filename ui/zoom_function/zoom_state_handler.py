@@ -27,12 +27,3 @@ class ZoomStateHandler:
         if context:
             log_context.update(context) # コンテキストをログコンテキストに追加
         self.logger.log(LogLevel.SUCCESS, "成功", log_context)
-
-        # NO_RECT状態になったらモーションイベントを切断
-#        if new_state == ZoomState.NO_RECT:
-#            if self.event_handler and hasattr(self.event_handler, '_cid_motion') and self.event_handler._cid_motion is not None:
-#                self.canvas.mpl_disconnect(self.event_handler._cid_motion)
-#                self.event_handler._cid_motion = None
-        # CREATE状態になったらモーションイベントを再接続
-#        elif new_state == ZoomState.CREATE and self.event_handler and self.event_handler._cid_motion is None:
-#            self.event_handler._cid_motion = self.canvas.mpl_connect('motion_notify_event', self.event_handler.on_motion)

@@ -44,21 +44,6 @@ class ZoomSelector:
         self.cursor_manager.set_zoom_selector(self)
         # StateHandler に EventHandler の参照を設定 (循環参照に注意しつつ)
         self.state_handler.event_handler = self.event_handler
-        self.logger.log(LogLevel.INIT, "イベント接続")
-        self.connect_events()
-
-    def connect_events(self):
-        """ イベントハンドラの接続（マウスモーション以外の全て） """
-        self.logger.log(LogLevel.CALL, "接続開始：イベントハンドラ（マウス移動以外全て）")
-        self.event_handler.connect()
-        self.cursor_manager.set_default_cursor()
-
-    def disconnect_events(self):
-        """ 全イベントハンドラの切断 ★★★ 未使用 ★★★ """
-        self.logger.log(LogLevel.CALL, "切断開始：全イベントハンドラ")
-        self.event_handler.disconnect()
-        self.logger.log(LogLevel.CALL, "切断時にデフォルトのカーソルを設定")
-        self.cursor_manager.set_default_cursor()
 
     def cursor_inside_rect(self, event) -> bool:
         """ マウスカーソル位置がズーム領域内か判定する (キャッシュを使用) """
