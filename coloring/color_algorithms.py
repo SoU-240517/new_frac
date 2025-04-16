@@ -9,19 +9,25 @@ from ui.zoom_function.enums import LogLevel
 def apply_coloring_algorithm(results, params, logger: DebugLogger):
     """ 着色アルゴリズムを適用（高速スムージング追加） """
     iterations = results['iterations']
-    mask = results['mask'] # 発散しなかった or 最大反復回数に達した点
-    z_vals = results['z_vals']
-    colored = np.zeros((*iterations.shape, 4), dtype=np.float32)
-    divergent = iterations > 0
+    mask = results['mask'] # 発散しない点のマスク
+    z_vals = results['z_vals'] # zの値
+    colored = np.zeros((*iterations.shape, 4), dtype=np.float32) # RGBA形式の配列を初期化
+    divergent = iterations > 0 # 発散した点のマスク
     # 高速スムージング用の事前計算
+
     def fast_smoothing(z, iters):
+        """ 高速スムージングアルゴリズム """
         with np.errstate(divide='ignore', invalid='ignore'):
             abs_z = np.abs(z)
-            # 近似計算: abs_z > 1.5 の領域のみ精密計算
-            smooth = np.where(abs_z > 2,
-                            iters - np.log(np.log(abs_z)) / np.log(2),
-                            iters)
+            # 近似計算: abs_z > 2 の領域のみ精密計算
+            smooth = np.where(
+                abs_z > 2,
+                iters - np.log(np.log(abs_z)) / np.log(2),
+                iters
+            )
             return np.nan_to_num(smooth, nan=iters)
+
+    # === 発散する場合の処理 ===
     if np.any(divergent):
         algo = params["diverge_algorithm"]
         logger.log(LogLevel.INFO, f"着色アルゴリズム選択: {algo}")
