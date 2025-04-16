@@ -135,7 +135,7 @@ class ParameterPanel:
         ttk.Label(self.parent, text="着色アルゴリズム:").grid(row=row, column=0, sticky=tk.W, padx=10, pady=(5,0))
         self.diverge_algo_var = tk.StringVar(value="スムージングカラーリング") # デフォルト変更
         self.diverge_algorithms = [
-            "スムージングカラーリング", "指数スムージング", "反復回数線形マッピング", "ヒストグラム平坦化法",
+            "スムージングカラーリング", "高速スムージング", "指数スムージング", "反復回数線形マッピング", "ヒストグラム平坦化法",
             "反復回数対数マッピング", "距離カラーリング", "角度カラーリング",
             "ポテンシャル関数法", "軌道トラップ法"
         ]

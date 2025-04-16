@@ -6,36 +6,43 @@ from ui.zoom_function.debug_logger import DebugLogger
 from ui.zoom_function.enums import LogLevel
 
 def apply_coloring_algorithm(results, params, logger: DebugLogger):
-    """ 着色アルゴリズムを適用して結果を返す """
+    """ 着色アルゴリズムを適用（高速スムージング追加） """
     iterations = results['iterations']
     mask = results['mask'] # 発散しなかった or 最大反復回数に達した点
     z_vals = results['z_vals']
-    # RGBA画像用の配列
     colored = np.zeros((*iterations.shape, 4), dtype=np.float32)
-    divergent = iterations > 0 # 途中で発散した点 (iterationsに1以上の値が入る)
+    divergent = iterations > 0
+    # 高速スムージング用の事前計算
+    def fast_smoothing(z, iters):
+        with np.errstate(divide='ignore', invalid='ignore'):
+            abs_z = np.abs(z)
+            # 近似計算: abs_z > 1.5 の領域のみ精密計算
+            smooth = np.where(abs_z > 2,
+                            iters - np.log(np.log(abs_z)) / np.log(2),
+                            iters)
+            return np.nan_to_num(smooth, nan=iters)
     if np.any(divergent):
-        # 発散する場合の処理
         algo = params["diverge_algorithm"]
         if algo == "反復回数線形マッピング":
             norm = Normalize(1, params["max_iterations"])
             colored[divergent] = plt.cm.get_cmap(params["diverge_colormap"])(norm(iterations[divergent]))
-        elif algo == "スムージングカラーリング":
-            logger.log(LogLevel.DEBUG, "スムージングカラーリング計算開始")
+        if algo == "スムージングカラーリング":
+            # 既存の高精度スムージング
             with np.errstate(invalid='ignore', divide='ignore'):
                 log_zn = np.log(np.abs(z_vals))
                 nu = np.log(log_zn / np.log(2)) / np.log(2)
                 smooth_iter = iterations - nu
-            # 不正な値の処理
-            invalid_mask = ~np.isfinite(smooth_iter) & divergent
-            if np.any(invalid_mask):
-                smooth_iter[invalid_mask] = iterations[invalid_mask]
-            # 連続的な正規化（データに基づいて動的に範囲を設定）
-            valid_smooth_iter = smooth_iter[divergent & np.isfinite(smooth_iter)]
-            vmin = np.min(valid_smooth_iter) if len(valid_smooth_iter) > 0 else 0
-            vmax = np.max(valid_smooth_iter) if len(valid_smooth_iter) > 0 else params["max_iterations"]
+            invalid_mask = ~np.isfinite(smooth_iter)
+            smooth_iter[invalid_mask] = iterations[invalid_mask]
+        elif algo == "高速スムージング":  # 新しいアルゴリズム
+            smooth_iter = fast_smoothing(z_vals, iterations)
+        # 共通の正規化処理
+        if algo in ["スムージングカラーリング", "高速スムージング"]:
+            valid_vals = smooth_iter[divergent & np.isfinite(smooth_iter)]
+            vmin = np.min(valid_vals) if len(valid_vals) > 0 else 0
+            vmax = np.max(valid_vals) if len(valid_vals) > 0 else params["max_iterations"]
             norm = Normalize(vmin=vmin, vmax=vmax)
             colored[divergent] = plt.cm.get_cmap(params["diverge_colormap"])(norm(smooth_iter[divergent]))
-            logger.log(LogLevel.DEBUG, "スムージングカラーリング計算完了")
         elif algo == "指数スムージング":  # 新しいアルゴリズムを追加
             logger.log(LogLevel.DEBUG, "指数スムージング計算開始")
             with np.errstate(divide='ignore', invalid='ignore'):
