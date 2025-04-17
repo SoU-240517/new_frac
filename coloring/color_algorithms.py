@@ -6,6 +6,61 @@ from coloring import gradient
 from ui.zoom_function.debug_logger import DebugLogger
 from ui.zoom_function.enums import LogLevel
 
+class FractalCache:
+    def __init__(self, max_size=100):
+        self.cache = {}
+        self.max_size = max_size
+        self.logger = DebugLogger()
+        self.logger.log(LogLevel.INFO, "FractalCache initialized")
+
+    def _create_cache_key(self, params):
+        # キャッシュキーを生成
+        key_params = {
+            'zoom_level': params.get('zoom_level', 1),
+            'center': params.get('center', (0, 0)),
+            'size': params.get('size', (1, 1)),
+            'max_iterations': params.get('max_iterations', 100),
+            'diverge_algorithm': params.get('diverge_algorithm', 'default')
+        }
+        return hash(frozenset(key_params.items()))
+
+    def get(self, params):
+        key = self._create_cache_key(params)
+        self.logger.log(LogLevel.DEBUG, f"Cache get attempt for key: {key}")
+        if key in self.cache:
+            self.logger.log(LogLevel.SUCCESS, "Cache hit")
+            return self.cache[key]
+        self.logger.log(LogLevel.DEBUG, "Cache miss")
+        return None
+
+    def put(self, params, image):
+        key = self._create_cache_key(params)
+        self.logger.log(LogLevel.DEBUG, f"Cache put attempt for key: {key}")
+        
+        # キャッシュが満杯の場合、最古のエントリを削除
+        if len(self.cache) >= self.max_size:
+            oldest_key = next(iter(self.cache))
+            self.logger.log(LogLevel.INFO, f"Cache full, removing oldest entry: {oldest_key}")
+            del self.cache[oldest_key]
+        
+        self.cache[key] = {
+            'image': image,
+            'timestamp': time.time(),
+            'params': params
+        }
+        self.logger.log(LogLevel.SUCCESS, "Cache entry added")
+
+    def clear(self):
+        self.logger.log(LogLevel.INFO, "Clearing cache")
+        self.cache.clear()
+
+    def get_stats(self):
+        return {
+            'size': len(self.cache),
+            'max_size': self.max_size,
+            'memory_usage': sum(len(v['image']) for v in self.cache.values())
+        }
+
 class ColorCache:
     def __init__(self, max_size=100):
         self.cache = {}
@@ -26,9 +81,19 @@ class ColorCache:
 
 def apply_coloring_algorithm(results, params, logger: DebugLogger):
     """ 着色アルゴリズムを適用（高速スムージング追加）。float32 [0, 255] RGBA 配列を返す """
+
+    cache = FractalCache()
+    cached = cache.get(params)
+    
+    if cached:
+        logger.log(LogLevel.INFO, "Using cached image")
+        return cached['image']
+
+    # 着色処理
     iterations = results['iterations']
     mask = results['mask'] # 発散しない点のマスク
     z_vals = results['z_vals'] # zの値
+
     # float32 配列で初期化
     colored = np.zeros((*iterations.shape, 4), dtype=np.float32)
     divergent = iterations > 0 # 発散した点のマスク
@@ -169,4 +234,8 @@ def apply_coloring_algorithm(results, params, logger: DebugLogger):
 
     logger.log(LogLevel.DEBUG, f"最終的な colored 配列の dtype: {colored.dtype}, min: {np.min(colored)}, max: {np.max(colored)}") # 追加: 最終的な配列情報をログ出力
     # float32 [0, 255] 配列を返す
+
+    # キャッシュに保存
+    cache.put(params, colored)
+
     return colored
