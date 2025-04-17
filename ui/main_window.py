@@ -1,13 +1,12 @@
 import tkinter as tk
 import numpy as np
-import threading
-import time
 from tkinter import ttk
 from ui.canvas import FractalCanvas
 from ui.parameter_panel import ParameterPanel
 from fractal.render import render_fractal
 from .zoom_function.debug_logger import DebugLogger
 from .zoom_function.enums import LogLevel
+import threading  # 追加
 
 class MainWindow:
     def __init__(self, root, logger: DebugLogger):
@@ -16,22 +15,6 @@ class MainWindow:
         self.root = root
         self.root.title("フラクタル描画アプリケーション")
         self.root.geometry("1200x800")
-
-        # ステータスバー追加
-        self.status_frame = ttk.Frame(self.root)
-        self.status_frame.pack(fill=tk.X, side=tk.BOTTOM)
-        self.status_label = ttk.Label(self.status_frame, text="準備中...")
-        self.status_label.pack(side=tk.LEFT, padx=5, pady=2)
-        
-        # スレッド制御用のフラグ
-        self.is_drawing = False
-        self.draw_thread = None
-        self.animation_thread = None
-        self.animation_running = False
-
-        # アニメーション用の変数
-        self.animation_dots = 0
-        self.animation_max_dots = 5
 
         # 初期パラメータ設定
         self.zoom_params = {
@@ -71,84 +54,23 @@ class MainWindow:
         # 非同期でフラクタル描画を開始
         threading.Thread(target=self.update_fractal, daemon=True).start()
 
-    def start_status_animation(self):
-        """ステータスアニメーションを開始"""
-        if self.animation_thread and self.animation_thread.is_alive():
-            return
-            
-        self.animation_running = True
-        self.animation_dots = 0
-        self.animation_thread = threading.Thread(
-            target=self._status_animation_thread,
-            daemon=True
-        )
-        self.animation_thread.start()
-
-    def _status_animation_thread(self):
-        """ステータスアニメーションの実際の処理"""
-        while self.animation_running:
-            # ドットの数を増やして、最大に達したらリセット
-            self.animation_dots = (self.animation_dots + 1) % (self.animation_max_dots + 1)
-            
-            # テキストを更新
-            dots = "." * self.animation_dots
-            self.root.after(0, lambda: self.status_label.config(text=f"描画中{dots}"))
-            
-            # 一定時間待機
-            time.sleep(0.1)
-
-    def stop_status_animation(self):
-        """ステータスアニメーションを停止"""
-        self.animation_running = False
-        if self.animation_thread and self.animation_thread.is_alive():
-            self.animation_thread.join()
-            self.status_label.config(text="完了")
-
-    def _update_fractal_thread(self):
-        """フラクタル更新の実際の処理"""
-        try:
-            # パラメータ取得
-            self.logger.log(LogLevel.CALL, "描画パラメータ：取得開始")
-            panel_params = self.parameter_panel.get_parameters()
-            current_params = self.zoom_params.copy()
-            current_params.update(panel_params) # パラメータパネルの設定で上書き（max_iterなど）
-            
-            # フラクタル描画
-            self.logger.log(LogLevel.CALL, "フラクタル描画開始")
-            fractal_image = render_fractal(current_params, self.logger)
-            
-            # メインスレッドで描画更新
-            self.logger.log(LogLevel.CALL, "キャンバス更新開始（待機中...）")
-            self.fractal_canvas.update_canvas(fractal_image, current_params)
-            
-            # ステータス更新
-            self.root.after(0, lambda: self.stop_status_animation())
-            
-        except Exception as e:
-            self.logger.log(LogLevel.ERROR, f"フラクタル更新エラー: {str(e)}")
-            self.root.after(0, lambda: self.stop_status_animation())
-        finally:
-            self.is_drawing = False
-
     def set_black_background(self):
         """黒背景を設定するヘルパーメソッド"""
         self.fractal_canvas.ax.set_facecolor('black')
         self.fractal_canvas.fig.patch.set_facecolor('black')
         self.fractal_canvas.canvas.draw()
 
+    # ... (他のメソッドはそのまま保持) ...
     def update_fractal(self, *args) -> None:
         """ 最新パラメータにズーム情報を上書きしてフラクタルを再描画 """
-        if self.draw_thread and self.draw_thread.is_alive():
-            return
-            
-        self.is_drawing = True
-        self.start_status_animation()
-
-        self.draw_thread = threading.Thread(
-            target=self._update_fractal_thread,
-            daemon=True
-        )
-        self.draw_thread.start()
+        self.logger.log(LogLevel.CALL, "描画パラメータ：取得開始")
+        panel_params = self.parameter_panel.get_parameters()
+        current_params = self.zoom_params.copy()
+        current_params.update(panel_params) # パラメータパネルの設定で上書き（max_iterなど）
+        self.logger.log(LogLevel.CALL, "フラクタル描画開始")
+        fractal_image = render_fractal(current_params, self.logger)
+        self.logger.log(LogLevel.CALL, "キャンバス更新開始（待機中...）")
+        self.fractal_canvas.update_canvas(fractal_image, current_params)
 
     def on_zoom_confirm(self, x: float, y: float, w: float, h: float, angle: float):
         """ ズーム確定時のコールバック（縦横比を調整し、ズームレベルに応じて反復回数を自動調整） """
