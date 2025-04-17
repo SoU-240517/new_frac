@@ -5,24 +5,19 @@ from .zoom_function.debug_logger import DebugLogger
 from .zoom_function.enums import LogLevel
 
 class FractalCanvas:
+    """ フラクタル描画キャンバスクラス """
+
     def __init__(self, master, width, height, logger, zoom_confirm_callback, zoom_cancel_callback):
         """ キャンバス初期化（MatplotlibのFigure を Tkinter ウィジェットに埋め込む）"""
         self.logger = logger
         self.logger.log(LogLevel.INIT, "FractalCanvas")
         self.parent = master
-        self.fig = Figure(figsize=(6, 6), dpi=100, facecolor='black')  # 背景黒に設定
-        self.ax = self.fig.add_subplot(111, facecolor='black')  # 背景黒に設定
-        self.ax.axis('off')  # 座標軸非表示
-
-        # キャンバス設定
+        self.fig = Figure(figsize=(6, 6), dpi=100)
+        self.ax = self.fig.add_subplot(111)
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.parent)
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
-
-        # 初期設定
         self.zoom_confirm_callback = zoom_confirm_callback
-        self.zoom_cancel_callback = zoom_cancel_callback
-
-        # ZoomSelector 初期化
+        # ZoomSelector をインスタンス化（コールバック MainWindow から設定）
         from ui.zoom_function.zoom_selector import ZoomSelector
         self.zoom_selector = ZoomSelector(
             self.ax,
@@ -31,18 +26,6 @@ class FractalCanvas:
             logger=self.logger
         )
 
-        # 初期黒背景表示
-        self.set_black_background()
-
-    def set_black_background(self):
-        """黒背景を設定"""
-        self.ax.set_facecolor('black')
-        self.fig.patch.set_facecolor('black')
-        self.ax.axis('off')
-        self.fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
-        self.canvas.draw()
-
-    # ... (他のメソッドはそのまま保持) ...
     def set_zoom_callback(self, zoom_confirm_callback, zoom_cancel_callback):
         """ ズーム確定・キャンセル時のコールバックを設定 """
         self.zoom_confirm_callback = zoom_confirm_callback
