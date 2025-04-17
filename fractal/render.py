@@ -5,8 +5,30 @@ from fractal.fractal_types import julia, mandelbrot
 from ui.zoom_function.debug_logger import DebugLogger
 from ui.zoom_function.enums import LogLevel
 
-def render_fractal(params, logger: DebugLogger) -> np.ndarray:
+class FractalCache:
+    def __init__(self, max_size=100):
+        self.cache = {}
+        self.max_size = max_size
+        
+    def get(self, params):
+        key = hash(frozenset(params.items()))
+        return self.cache.get(key)
+        
+    def put(self, params, result):
+        key = hash(frozenset(params.items()))
+        if len(self.cache) >= self.max_size:
+            oldest_key = next(iter(self.cache))
+            del self.cache[oldest_key]
+        self.cache[key] = result
+
+def render_fractal(params, logger: DebugLogger, cache=None) -> np.ndarray:
     """ 設定されたパラメータでフラクタルを描画（動的解像度版） """
+    # キャッシュから取得
+    if cache:
+        cached_result = cache.get(params)
+        if cached_result is not None:
+            logger.log(LogLevel.SUCCESS, "キャッシュヒット")
+            return cached_result
     # 動的解像度計算
     resolution = calculate_dynamic_resolution(params.get("width", 4.0))
     logger.log(LogLevel.SUCCESS, f"動的解像度計算完了: {resolution}x{resolution} (width={params.get('width', 4.0):.2f})")
@@ -23,11 +45,14 @@ def render_fractal(params, logger: DebugLogger) -> np.ndarray:
     height = width / aspect_ratio
     # 回転前のグリッド座標、かつ高解像度でグリッドを生成
     super_resolution = resolution * samples_per_pixel
-    x = np.linspace(-width/2, width/2, super_resolution)
-    y = np.linspace(-height/2, height/2, super_resolution)
-    X, Y = np.meshgrid(x, y)
+    # データ型の最適化
+    dtype = np.float16 if params.get("width", 4.0) > 1.0 else np.float32
+    x = np.linspace(-width/2, width/2, super_resolution, dtype=dtype)
+    y = np.linspace(-height/2, height/2, super_resolution, dtype=dtype)
+    X, Y = np.meshgrid(x, y, sparse=True)  # sparse=Trueでメモリ使用量を削減
     # 複素数グリッドを作成 (まだ中心シフト・回転は適用しない)
     Z_unrotated_centered_origin = X + 1j * Y
+    Z_unrotated_centered_origin = Z_unrotated_centered_origin.astype(np.complex64)
     if rotation_deg != 0: # 回転を適用
         logger.log(LogLevel.DEBUG, f"回転適用: {rotation_deg} 度")
         rotation_rad = np.radians(rotation_deg) # ラジアンに変換
@@ -45,6 +70,7 @@ def render_fractal(params, logger: DebugLogger) -> np.ndarray:
         # 回転・シフト後のグリッド Z を使用
         start_time = time.perf_counter()
         results = julia.compute_julia(Z, complex(params["c_real"], params["c_imag"]), params["max_iterations"], logger)
+        results['iterations'] = results['iterations'].astype(np.uint16)  # イテレーション数は16bit整数で十分
         elapsed = time.perf_counter() - start_time
         logger.log(LogLevel.INFO, f"ジュリア集合計算時間：{elapsed:.3f}秒")
     else: # Mandelbrot
@@ -52,10 +78,12 @@ def render_fractal(params, logger: DebugLogger) -> np.ndarray:
         # 回転・シフト後のグリッド Z を使用
         start_time = time.perf_counter()
         results = mandelbrot.compute_mandelbrot(Z, complex(params["z_real"], params["z_imag"]), params["max_iterations"], logger)
+        results['iterations'] = results['iterations'].astype(np.uint16)  # イテレーション数は16bit整数で十分
         elapsed = time.perf_counter() - start_time
         logger.log(LogLevel.INFO, f"マンデルブロ集合計算時間：{elapsed:.3f}秒")
     # 解像度をダウンサンプリング（アンチエイリアシング効果）
     colored_high_res = color_algorithms.apply_coloring_algorithm(results, params, logger)
+    colored_high_res = colored_high_res.astype(np.uint8)  # RGBAを8bitに
     if samples_per_pixel > 1: # ダウンサンプリング（サンプル数が1の場合はスキップ）
         logger.log(LogLevel.DEBUG, "ダウンサンプリング実行")
         colored = colored_high_res.reshape((resolution, samples_per_pixel, resolution, samples_per_pixel, -1)).mean(axis=(1, 3))

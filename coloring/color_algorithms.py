@@ -6,26 +6,49 @@ from coloring import gradient
 from ui.zoom_function.debug_logger import DebugLogger
 from ui.zoom_function.enums import LogLevel
 
+class ColorCache:
+    def __init__(self, max_size=100):
+        self.cache = {}
+        self.max_size = max_size
+
+    def get(self, params, iterations):
+        key = hash(frozenset(params.items()))
+        if key in self.cache:
+            return self.cache[key]
+        return None
+
+    def put(self, params, iterations, colored):
+        key = hash(frozenset(params.items()))
+        if len(self.cache) >= self.max_size:
+            oldest_key = next(iter(self.cache))
+            del self.cache[oldest_key]
+        self.cache[key] = colored
+
 def apply_coloring_algorithm(results, params, logger: DebugLogger):
     """ 着色アルゴリズムを適用（高速スムージング追加） """
     iterations = results['iterations']
     mask = results['mask'] # 発散しない点のマスク
     z_vals = results['z_vals'] # zの値
-    colored = np.zeros((*iterations.shape, 4), dtype=np.float32) # RGBA形式の配列を初期化
+    colored = np.zeros((*iterations.shape, 4), dtype=np.uint8) # RGBA形式の配列を初期化
     divergent = iterations > 0 # 発散した点のマスク
-    # 高速スムージング用の事前計算
 
-    def fast_smoothing(z, iters):
+    # 中間データを必要最小限に
+    if params["diverge_algorithm"] == "高速スムージング":
+        smooth_iter = np.zeros_like(iterations, dtype=np.float32)
+        fast_smoothing(z_vals, iterations, smooth_iter)
+        del z_vals  # これ以降不要なので削除
+
+    # 高速スムージング用の事前計算
+    def fast_smoothing(z, iters, out):
         """ 高速スムージングアルゴリズム """
         with np.errstate(divide='ignore', invalid='ignore'):
             abs_z = np.abs(z)
-            # 近似計算: abs_z > 2 の領域のみ精密計算
             smooth = np.where(
                 abs_z > 2,
                 iters - np.log(np.log(abs_z)) / np.log(2),
                 iters
             )
-            return np.nan_to_num(smooth, nan=iters)
+            out[...] = smooth  # 既存の配列を更新
 
     # === 発散する場合の処理 ===
     if np.any(divergent):
