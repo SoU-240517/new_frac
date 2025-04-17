@@ -4,7 +4,6 @@ from ui.zoom_function.enums import LogLevel
 
 def compute_gradient(shape, logger: DebugLogger):
     """ グラデーションを計算 """
-    logger.log(LogLevel.DEBUG, "グラデーション計算開始")
     x, y = np.indices(shape) # 2D座標を生成
     logger.log(LogLevel.DEBUG, f"2D座標生成: {x.shape}, {y.shape}")
     normalized_distance = np.sqrt(

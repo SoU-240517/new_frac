@@ -9,19 +9,16 @@ def render_fractal(params, logger: DebugLogger) -> np.ndarray:
     """ 設定されたパラメータでフラクタルを描画（動的解像度版） """
     # 動的解像度計算
     resolution = calculate_dynamic_resolution(params.get("width", 4.0))
-    logger.log(LogLevel.INFO, f"動的解像度計算完了: {resolution}x{resolution} (width={params.get('width', 4.0):.2f})")
+    logger.log(LogLevel.SUCCESS, f"動的解像度計算完了: {resolution}x{resolution} (width={params.get('width', 4.0):.2f})")
     zoom_level = 4.0 / params.get("width", 4.0) # アンチエイリアシング設定（ズームレベルに応じてサンプル数を調整）
     samples_per_pixel = 2 if zoom_level < 1.0 else 4 # ズームアウト時はサンプル数減らす
-    logger.log(LogLevel.DEBUG, f"アンチエイリアシング設定: samples_per_pixel={samples_per_pixel}")
+    logger.log(LogLevel.DEBUG, f"アンチエイリアシング設定：samples_per_pixel={samples_per_pixel}")
     super_resolution = resolution * samples_per_pixel
     center_x = params.get("center_x", 0.0)
     center_y = params.get("center_y", 0.0)
     width = params.get("width", 4.0)
-    # height は width と aspect_ratio から計算されるため、params から取得しない
+    # height は params から取得しない（width と aspect_ratio から計算する）
     rotation_deg = params.get("rotation", 0.0)
-    # キャンバスのアスペクト比を維持するために、高さを幅に合わせる
-    # 注意: ここでの aspect_ratio は描画解像度に基づくもので、
-    # MainWindow での補正とは異なる可能性がある。一貫性を保つことが重要。
     aspect_ratio = 1.0  # 正方形を維持
     height = width / aspect_ratio
     # 回転前のグリッド座標、かつ高解像度でグリッドを生成
@@ -31,37 +28,32 @@ def render_fractal(params, logger: DebugLogger) -> np.ndarray:
     X, Y = np.meshgrid(x, y)
     # 複素数グリッドを作成 (まだ中心シフト・回転は適用しない)
     Z_unrotated_centered_origin = X + 1j * Y
-    # 回転を適用
-    if rotation_deg != 0:
+    if rotation_deg != 0: # 回転を適用
         logger.log(LogLevel.DEBUG, f"回転適用: {rotation_deg} 度")
-        rotation_rad = np.radians(rotation_deg) # 度からラジアンに変換
+        rotation_rad = np.radians(rotation_deg) # ラジアンに変換
         rotation_operator = np.exp(1j * rotation_rad) # 回転演算子 (複素数)
         Z_rotated_centered_origin = Z_unrotated_centered_origin * rotation_operator # グリッドを回転
     else:
         Z_rotated_centered_origin = Z_unrotated_centered_origin # 回転がない場合はそのまま
     # 回転後のグリッドを中心座標にシフト
     Z = Z_rotated_centered_origin + complex(center_x, center_y)
-    logger.log(LogLevel.DEBUG, "グリッドの作成と変換完了",
+    logger.log(LogLevel.SUCCESS, "グリッドの作成と変換完了",
                context={"中心_x": center_x, "中心_y": center_y, "w": width, "h": height, "角度": rotation_deg})
     # フラクタルの種類に応じた計算（高解像度版）
     if params["fractal_type"] == "Julia":
         C = complex(params["c_real"], params["c_imag"])
-        logger.log(LogLevel.DEBUG, "ジュリア集合の計算開始")
         # 回転・シフト後のグリッド Z を使用
-        logger.log(LogLevel.DEBUG, "フラクタル計算開始")
         start_time = time.perf_counter()
         results = julia.compute_julia(Z, complex(params["c_real"], params["c_imag"]), params["max_iterations"], logger)
         elapsed = time.perf_counter() - start_time
-        logger.log(LogLevel.INFO, f"フラクタル計算時間: {elapsed:.3f}秒")
+        logger.log(LogLevel.INFO, f"ジュリア集合計算時間：{elapsed:.3f}秒")
     else: # Mandelbrot
         Z0 = complex(params["z_real"], params["z_imag"])
-        logger.log(LogLevel.DEBUG, "マンデルブロ集合の計算開始")
         # 回転・シフト後のグリッド Z を使用
-        logger.log(LogLevel.DEBUG, "フラクタル計算開始")
         start_time = time.perf_counter()
         results = mandelbrot.compute_mandelbrot(Z, complex(params["z_real"], params["z_imag"]), params["max_iterations"], logger)
         elapsed = time.perf_counter() - start_time
-        logger.log(LogLevel.INFO, f"フラクタル計算時間: {elapsed:.3f}秒")
+        logger.log(LogLevel.INFO, f"マンデルブロ集合計算時間：{elapsed:.3f}秒")
     # 解像度をダウンサンプリング（アンチエイリアシング効果）
     colored_high_res = color_algorithms.apply_coloring_algorithm(results, params, logger)
     if samples_per_pixel > 1: # ダウンサンプリング（サンプル数が1の場合はスキップ）

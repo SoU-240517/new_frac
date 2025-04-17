@@ -21,8 +21,8 @@ class FractalCanvas:
         from ui.zoom_function.zoom_selector import ZoomSelector
         self.zoom_selector = ZoomSelector(
             self.ax,
-            on_zoom_confirm=lambda x, y, w, h, angle: self.zoom_confirmed(x, y, w, h, angle),
-            on_zoom_cancel=self.zoom_cancelled,
+            on_zoom_confirm=zoom_confirm_callback,
+            on_zoom_cancel=zoom_cancel_callback,
             logger=self.logger
         )
 
@@ -33,14 +33,14 @@ class FractalCanvas:
 
     def zoom_confirmed(self, x, y, w, h, angle):
         """ ズーム確定 """
-        self.logger.log(LogLevel.DEBUG, "ズーム確定時のコールバック開始", {"x": x, "y": y, "w": w, "h": h, "angle": angle})
         if self.zoom_confirm_callback:
+            self.logger.log(LogLevel.SUCCESS, "ズーム確定時のコールバック呼出し", {"x": x, "y": y, "w": w, "h": h, "angle": angle})
             self.zoom_confirm_callback(x, y, w, h, angle)
 
     def zoom_cancelled(self):
         """ ズームキャンセル """
-        self.logger.log(LogLevel.DEBUG, "ズームキャンセル時のコールバック開始")
         if hasattr(self, 'zoom_cancel_callback') and self.zoom_cancel_callback:
+            self.logger.log(LogLevel.SUCCESS, "ズームキャンセル時のコールバック呼出し")
             self.zoom_cancel_callback()
 
     def update_canvas(self, fractal_image, params) -> None:
@@ -61,3 +61,9 @@ class FractalCanvas:
         ), origin="lower")
         self.fig.patch.set_visible(False)
         self.canvas.draw()
+
+    def reset_zoom_selector(self):
+        """ ZoomSelector の状態をリセットする """
+        if self.zoom_selector:
+            self.logger.log(LogLevel.CALL, "ZoomSelector のリセットを呼出し")
+            self.zoom_selector.reset()

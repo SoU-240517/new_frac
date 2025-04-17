@@ -32,7 +32,7 @@ class RectManager:
             linewidth=1, edgecolor='gray', facecolor='none', linestyle='--', visible=True)
         self.ax.add_patch(self.rect)
         self._angle = 0.0 # 角度リセット
-        self.logger.log(LogLevel.DEBUG, "初期のズーム領域設置完了", {"x": x, "y": y})
+        self.logger.log(LogLevel.SUCCESS, "初期のズーム領域設置完了", {"x": x, "y": y})
 
     def setting_rect_size(self, start_x: float, start_y: float, current_x: float, current_y: float):
         """ ズーム領域のサイズと位置を更新 (作成中：回転なし) """
@@ -96,12 +96,10 @@ class RectManager:
         new_x = min(fixed_x_unrotated, current_x_unrotated)
         new_y = min(fixed_y_unrotated, current_y_unrotated)
         # --- 計算ここまで ---
-
         # サイズチェックを追加
         if not self.is_valid_size(new_width, new_height):
              self.logger.log(LogLevel.DEBUG, f"リサイズ中止：無効なサイズ w={new_width:.4f}, h={new_height:.4f}")
              return # サイズが無効なら更新しない
-
         # --- 矩形プロパティを設定 (まだ回転は適用しない) ---
         self.rect.set_width(new_width)
         self.rect.set_height(new_height)
@@ -115,25 +113,22 @@ class RectManager:
         """ 指定された幅と高さが有効か (最小サイズ以上か) """
         is_valid = width >= self.MIN_WIDTH and height >= self.MIN_HEIGHT
         if not is_valid:
-            self.logger.log(LogLevel.DEBUG, f"無効なサイズチェック: w={width:.4f} (<{self.MIN_WIDTH}), h={height:.4f} (<{self.MIN_HEIGHT})")
+            self.logger.log(LogLevel.DEBUG, f"無効なサイズ：w={width:.4f} (<{self.MIN_WIDTH}), h={height:.4f} (<{self.MIN_HEIGHT})")
         return is_valid
 
     def temporary_creation(self, start_x: float, start_y: float, end_x: float, end_y: float) -> bool:
         """ ズーム領域作成完了 """
         if not self.rect:
-            self.logger.log(LogLevel.ERROR, "長方形確定不可：ズーム領域なし")
+            self.logger.log(LogLevel.ERROR, "ズーム領域作成不可：ズーム領域なし")
             return False # Indicate failure
         width = abs(end_x - start_x)
         height = abs(end_y - start_y)
         x = min(start_x, end_x)
         y = min(start_y, end_y)
-
         # 作成完了時にもサイズチェック
         if not self.is_valid_size(width, height):
             self.logger.log(LogLevel.WARNING, f"ズーム領域作成不可：最終サイズが無効 w={width:.4f}, h={height:.4f}")
-            # 失敗を示すために False を返す（EventHandler側で削除処理を期待）
-            return False
-
+            return False # 失敗を示すために False を返す（EventHandler側で削除処理を期待）
         self.rect.set_width(width)
         self.rect.set_height(height)
         self.rect.set_xy((x, y))
@@ -161,7 +156,7 @@ class RectManager:
                 # パッチがまだAxesに追加されているか確認
                 if self.rect in self.ax.patches:
                     self.rect.remove()
-                    self.logger.log(LogLevel.DEBUG, "ズーム領域削除完了 (remove)")
+                    self.logger.log(LogLevel.SUCCESS, "ズーム領域削除完了 (remove)")
                 else:
                      # すでに追加されていない（remove済みか、非表示のみ）場合は何もしない
                      self.logger.log(LogLevel.DEBUG, "ズーム領域は既に削除済み、または非表示")
@@ -184,9 +179,9 @@ class RectManager:
                     self.rect.get_width(), self.rect.get_height())
         return None
 
-    # --- Undo/Redo 用メソッド (ここから追加/修正) ---
+    # --- Undo/Redo 用メソッド ---
     def get_state(self) -> Optional[Dict[str, Any]]:
-        """ 現在の矩形の状態 (Undo用) を取得 """
+        """ 現在の状態 (Undo用) を取得 """
         props = self.get_properties()
         if props and self.rect: # rect が存在することも確認
             x, y, width, height = props
@@ -206,10 +201,8 @@ class RectManager:
         """ 指定された状態に矩形を復元 (Undo用) """
         if not state:
             self.logger.log(LogLevel.WARNING, "Undo不可：状態データなし、または削除された状態")
-            # 状態がない場合、矩形を削除する
-            self.delete_rect()
+            self.delete_rect() # 状態がない場合、矩形を削除する
             return
-
         x = state.get("x")
         y = state.get("y")
         width = state.get("width")
@@ -218,14 +211,12 @@ class RectManager:
         visible = state.get("visible", True) # デフォルトは表示
         edgecolor = state.get("edgecolor", "white") # デフォルトは白
         linestyle = state.get("linestyle", "-") # デフォルトは実線
-
         # 必須パラメータのチェック
         if None in [x, y, width, height]:
              self.logger.log(LogLevel.ERROR, f"Undo失敗：無効な状態データ {state}")
              # 状態データが無効なら矩形を削除する（安全策）
              self.delete_rect()
              return
-
         # --- 矩形の作成または更新 ---
         # サイズが有効かチェック
         if not self.is_valid_size(width, height):
@@ -233,7 +224,6 @@ class RectManager:
             # 無効なサイズが指定された場合も、現在の矩形を削除する
             self.delete_rect()
             return
-
         # 矩形が存在しない場合は作成
         if not self.rect:
              self.rect = patches.Rectangle((x, y), width, height,
@@ -249,15 +239,11 @@ class RectManager:
             self.rect.set_height(height)
             self.rect.set_edgecolor(edgecolor) # エッジの色を復元
             self.rect.set_linestyle(linestyle) # 線のスタイルを復元
-
         self._angle = angle # 角度を設定
         self.rect.set_visible(visible) # 可視状態を復元
-
         # 最後に回転を適用
         self._apply_rotation()
-
         self.logger.log(LogLevel.DEBUG, "Undo: 矩形状態を復元", state)
-
     # --- ここまで Undo/Redo 用メソッド ---
 
     def get_center(self) -> Optional[Tuple[float, float]]:
@@ -278,7 +264,6 @@ class RectManager:
         if not self.rect or props is None or center is None or props[2] <= 0 or props[3] <= 0:
             self.logger.log(LogLevel.DEBUG, "回転後の角取得不可：矩形、プロパティ、中心のいずれか、またはサイズが0")
             return None
-
         x, y, width, height = props
         cx, cy = center
         angle_rad = np.radians(self._angle)

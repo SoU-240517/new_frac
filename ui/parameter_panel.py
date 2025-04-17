@@ -24,6 +24,7 @@ class ParameterPanel:
 
     def _create_colorbar_image(self, cmap_name: str) -> ImageTk.PhotoImage:
         """ 指定されたカラーマップ名からカラーバーのPhotoImageを生成 """
+        self.logger.log(LogLevel.DEBUG, "カラーバー生成開始")
         try:
             cmap = plt.get_cmap(cmap_name)
             # NumPyでグラデーションデータを作成 (幅 x 高さ x RGBA)
@@ -227,7 +228,7 @@ class ParameterPanel:
         except ValueError as e:
             self.logger.log(LogLevel.ERROR, f"パラメータ取得エラー: 無効な数値入力 - {e}")
             # エラーが発生した場合、空の辞書ではなく、デフォルト値やNoneを返すなど、
-            # 呼び出し元でのエラーハンドリングを考慮した設計が良いかもしれません。
+            # 呼出し元でのエラーハンドリングを考慮した設計が良いかもしれません。
             # ここでは簡単な例として、エラーがあった項目を特定するのは難しいので空を返します。
             panel_params = {} # または一部の有効なパラメータのみ返すなど
         return panel_params

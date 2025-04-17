@@ -93,7 +93,7 @@ class CursorManager:
             try:
                 self.widget.config(cursor=new_cursor)
                 self._current_cursor = new_cursor
-                self.logger.log(LogLevel.DEBUG, f"カーソル変更 to '{new_cursor}'", {"state": state.name})
+                self.logger.log(LogLevel.SUCCESS, f"カーソル変更 to '{new_cursor}'", {"state": state.name})
             except tk.TclError as e:
                 self.logger.log(LogLevel.ERROR, f"カーソルの設定に失敗 '{new_cursor}': {e}")
 
@@ -109,4 +109,4 @@ class CursorManager:
     def set_zoom_selector(self, zoom_selector: 'ZoomSelector'):
         """ ZoomSelector のインスタンスへの参照を設定 """
         self.zoom_selector = zoom_selector
-        self.logger.log(LogLevel.INFO, "CursorManager に設定された ZoomSelector インスタンスへの参照終了")
+        self.logger.log(LogLevel.INIT, "CursorManager に設定された ZoomSelector インスタンスへの参照終了")

@@ -45,7 +45,7 @@ def apply_coloring_algorithm(results, params, logger: DebugLogger):
             start_time = time.perf_counter()
             smooth_iter = fast_smoothing(z_vals, iterations)
             elapsed = time.perf_counter() - start_time
-            logger.log(LogLevel.PERF, f"高速スムージング処理時間: {elapsed:.5f}秒")
+            logger.log(LogLevel.INFO, f"高速スムージング処理時間: {elapsed:.5f}秒")
         # 共通の正規化処理
         if algo in ["スムージングカラーリング", "高速スムージング"]:
             valid_vals = smooth_iter[divergent & np.isfinite(smooth_iter)]

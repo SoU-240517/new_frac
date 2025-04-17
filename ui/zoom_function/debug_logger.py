@@ -14,7 +14,7 @@ class DebugLogger:
         self.start_time = time.time()
         logger_dir = os.path.dirname(__file__)
         self.project_root = os.path.abspath(os.path.join(logger_dir, '..', '..'))
-        # 自分自身の初期化ログを出力 (呼び出し元情報は __init__ 自身になる)
+        # 自分自身の初期化ログを出力 (呼出し元情報は __init__ 自身になる)
         self._log_internal(LogLevel.INIT, "DebugLogger", force=True, stacklevel=1)
 
     def log(
@@ -22,10 +22,10 @@ class DebugLogger:
             message: str,
             context: Optional[Dict[str, Any]] = None,
             force: bool = False):
-        """ ログを出力 (外部呼び出し用) """
+        """ ログを出力 (外部び出し用) """
         if not self.debug_enabled and not force and level == LogLevel.DEBUG:
             return
-        # 呼び出し元を正しく特定するため stacklevel=2
+        # 呼出し元を正しく特定するため stacklevel=2
         self._log_internal(level, message, context, force, stacklevel=2)
 
     def _log_internal(
@@ -35,8 +35,8 @@ class DebugLogger:
             force: bool = False,
             stacklevel: int = 1): # スタックレベルを指定可能にする
         """ ログ出力の内部実装 """
-        # 呼び出し元の情報を取得
-        caller_frame_record = None # 呼び出し元のフレーム情報
+        # 呼出し元の情報を取得
+        caller_frame_record = None # 呼出し元のフレーム情報
         file_path = "unknown"
         line_no = 0
         func_name = "unknown"
