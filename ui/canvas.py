@@ -15,15 +15,12 @@ class FractalCanvas:
         self.fig = Figure(figsize=(6, 6), dpi=100, facecolor='black')  # 背景黒に設定
         self.ax = self.fig.add_subplot(111, facecolor='black')  # 背景黒に設定
         self.ax.axis('off')  # 座標軸非表示
-
         # キャンバス設定
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.parent)
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
-
         # 初期設定
         self.zoom_confirm_callback = zoom_confirm_callback
         self.zoom_cancel_callback = zoom_cancel_callback
-
         # ZoomSelector 初期化
         from ui.zoom_function.zoom_selector import ZoomSelector
         self.zoom_selector = ZoomSelector(
@@ -32,7 +29,6 @@ class FractalCanvas:
             on_zoom_cancel=zoom_cancel_callback,
             logger=self.logger
         )
-
         # 初期黒背景表示
         self.set_black_background()
 
@@ -43,7 +39,6 @@ class FractalCanvas:
         self.ax.axis('off')
         self.fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
         self.canvas.draw()
-
 
     def set_zoom_callback(self, zoom_confirm_callback, zoom_cancel_callback):
         """ ズーム確定・キャンセル時のコールバックを設定 """

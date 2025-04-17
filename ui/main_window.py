@@ -22,36 +22,28 @@ class MainWindow:
             "center_x": 0.0, "center_y": 0.0, "width": 4.0, "height": 4.0, "rotation": 0.0
         }
         self.prev_zoom_params = None
-
         # UI初期化
         self.main_frame = ttk.PanedWindow(root, orient=tk.HORIZONTAL)
         self.main_frame.pack(fill=tk.BOTH, expand=True)
-
         self.canvas_frame = ttk.Frame(self.main_frame)
         self.main_frame.add(self.canvas_frame, weight=3)
-
         self.parameter_frame = ttk.Frame(self.main_frame)
         self.main_frame.add(self.parameter_frame, weight=1)
-
         # キャンバス初期化（即時表示）
         self.fractal_canvas = FractalCanvas(
             self.canvas_frame, width=800, height=600, logger=self.logger,
             zoom_confirm_callback=self.on_zoom_confirm,
             zoom_cancel_callback=self.on_zoom_cancel
         )
-
         # 初期黒背景設定
         self.fractal_canvas.set_black_background()
-
         # パラメータパネル初期化
         self.parameter_panel = ParameterPanel(
             self.parameter_frame, self.update_fractal,
             reset_callback=self.reset_zoom, logger=self.logger
         )
-
         # コールバック設定
         self.fractal_canvas.set_zoom_callback(self.on_zoom_confirm, self.on_zoom_cancel)
-
         # 非同期でフラクタル描画を開始
         threading.Thread(target=self.update_fractal, daemon=True).start()
 
@@ -61,7 +53,6 @@ class MainWindow:
         self.fractal_canvas.fig.patch.set_facecolor('black')
         self.fractal_canvas.canvas.draw()
 
-    # ... (他のメソッドはそのまま保持) ...
     def update_fractal(self, *args) -> None:
         """ 最新パラメータにズーム情報を上書きしてフラクタルを再描画 """
         self.logger.log(LogLevel.CALL, "描画パラメータ：取得開始")
