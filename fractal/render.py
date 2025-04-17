@@ -9,11 +9,11 @@ class FractalCache:
     def __init__(self, max_size=100):
         self.cache = {}
         self.max_size = max_size
-        
+
     def get(self, params):
         key = hash(frozenset(params.items()))
         return self.cache.get(key)
-        
+
     def put(self, params, result):
         key = hash(frozenset(params.items()))
         if len(self.cache) >= self.max_size:
@@ -81,14 +81,28 @@ def render_fractal(params, logger: DebugLogger, cache=None) -> np.ndarray:
         results['iterations'] = results['iterations'].astype(np.uint16)  # イテレーション数は16bit整数で十分
         elapsed = time.perf_counter() - start_time
         logger.log(LogLevel.INFO, f"マンデルブロ集合計算時間：{elapsed:.3f}秒")
-    # 解像度をダウンサンプリング（アンチエイリアシング効果）
+    # 着色処理 (float32 [0, 255] RGBA 配列が返される)
     colored_high_res = color_algorithms.apply_coloring_algorithm(results, params, logger)
-    colored_high_res = colored_high_res.astype(np.uint8)  # RGBAを8bitに
+
+    # ダウンサンプリング（アンチエイリアシング効果）
     if samples_per_pixel > 1: # ダウンサンプリング（サンプル数が1の場合はスキップ）
         logger.log(LogLevel.DEBUG, "ダウンサンプリング実行")
+        # .mean() は float を返す (入力も float なので型は維持される)
         colored = colored_high_res.reshape((resolution, samples_per_pixel, resolution, samples_per_pixel, -1)).mean(axis=(1, 3))
     else:
+        # ダウンサンプリングしない場合は、そのまま float 配列を使用
         colored = colored_high_res
+
+    # 最終的な結果を uint8 [0, 255] に変換
+    # np.clip で範囲外の値が発生しないように念のためクリップ
+    colored = np.clip(colored, 0, 255).astype(np.uint8)
+    logger.log(LogLevel.DEBUG, f"最終的な render_fractal 出力 dtype: {colored.dtype}, shape: {colored.shape}")
+
+    # キャッシュに保存 (uint8 の最終結果を保存)
+    if cache:
+        cache.put(params, colored)
+
+    # uint8 [0, 255] 配列を返す
     return colored
 
 def calculate_dynamic_resolution(width, base_res=600, min_res=300, max_res=1200):

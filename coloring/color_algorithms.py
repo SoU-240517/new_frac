@@ -25,11 +25,12 @@ class ColorCache:
         self.cache[key] = colored
 
 def apply_coloring_algorithm(results, params, logger: DebugLogger):
-    """ 着色アルゴリズムを適用（高速スムージング追加） """
+    """ 着色アルゴリズムを適用（高速スムージング追加）。float32 [0, 255] RGBA 配列を返す """
     iterations = results['iterations']
     mask = results['mask'] # 発散しない点のマスク
     z_vals = results['z_vals'] # zの値
-    colored = np.zeros((*iterations.shape, 4), dtype=np.uint8) # RGBA形式の配列を初期化
+    # float32 配列で初期化
+    colored = np.zeros((*iterations.shape, 4), dtype=np.float32)
     divergent = iterations > 0 # 発散した点のマスク
 
     # 中間データを必要最小限に
@@ -54,54 +55,60 @@ def apply_coloring_algorithm(results, params, logger: DebugLogger):
     if np.any(divergent):
         algo = params["diverge_algorithm"]
         logger.log(LogLevel.INFO, f"着色アルゴリズム選択: {algo}")
+        # Colormap適用結果は float [0, 1]。これを [0, 255] にスケールする
+        cmap_func = plt.cm.get_cmap(params["diverge_colormap"])
+
         if algo == "反復回数線形マッピング":
             norm = Normalize(1, params["max_iterations"])
-            colored[divergent] = plt.cm.get_cmap(params["diverge_colormap"])(norm(iterations[divergent]))
-        if algo == "スムージングカラーリング":
+            colored[divergent] = cmap_func(norm(iterations[divergent])) * 255.0
+        elif algo == "スムージングカラーリング":
             with np.errstate(invalid='ignore', divide='ignore'):
                 log_zn = np.log(np.abs(z_vals))
                 nu = np.log(log_zn / np.log(2)) / np.log(2)
                 smooth_iter = iterations - nu
             invalid_mask = ~np.isfinite(smooth_iter)
             smooth_iter[invalid_mask] = iterations[invalid_mask]
+            valid_vals = smooth_iter[divergent & np.isfinite(smooth_iter)]
+            vmin = np.min(valid_vals) if len(valid_vals) > 0 else 0
+            vmax = np.max(valid_vals) if len(valid_vals) > 0 else params["max_iterations"]
+            norm = Normalize(vmin=vmin, vmax=vmax)
+            colored[divergent] = cmap_func(norm(smooth_iter[divergent])) * 255.0
         elif algo == "高速スムージング":
             start_time = time.perf_counter()
             smooth_iter = fast_smoothing(z_vals, iterations)
             elapsed = time.perf_counter() - start_time
             logger.log(LogLevel.INFO, f"高速スムージング処理時間: {elapsed:.5f}秒")
-        # 共通の正規化処理
-        if algo in ["スムージングカラーリング", "高速スムージング"]:
             valid_vals = smooth_iter[divergent & np.isfinite(smooth_iter)]
             vmin = np.min(valid_vals) if len(valid_vals) > 0 else 0
             vmax = np.max(valid_vals) if len(valid_vals) > 0 else params["max_iterations"]
             norm = Normalize(vmin=vmin, vmax=vmax)
-            colored[divergent] = plt.cm.get_cmap(params["diverge_colormap"])(norm(smooth_iter[divergent]))
+            colored[divergent] = cmap_func(norm(smooth_iter[divergent])) * 255.0
         elif algo == "指数スムージング":
             with np.errstate(divide='ignore', invalid='ignore'):
                 smooth_iter = iterations + 1 - np.log(np.log(np.abs(z_vals))) / np.log(2)
             # 不正な値の処理
             smooth_iter[~np.isfinite(smooth_iter)] = iterations[~np.isfinite(smooth_iter)]
             norm = Normalize(vmin=0, vmax=params["max_iterations"])
-            colored[divergent] = plt.cm.get_cmap(params["diverge_colormap"])(norm(smooth_iter[divergent]))
+            colored[divergent] = cmap_func(norm(smooth_iter[divergent])) * 255.0
         elif algo == "ヒストグラム平坦化法":
             hist, bins = np.histogram(iterations[divergent], bins=params["max_iterations"], density=True)
             cdf = hist.cumsum()
             cdf = cdf / cdf[-1]
             remapped = np.interp(iterations[divergent], bins[:-1], cdf)
-            colored[divergent] = plt.cm.get_cmap(params["diverge_colormap"])(remapped)
+            colored[divergent] = cmap_func(remapped) * 255.0
         elif algo == "反復回数対数マッピング":
             iter_log = np.zeros_like(iterations, dtype=float)
             valid_iter = iterations[divergent] > 0 # log(0) を避ける
             iter_log[divergent][valid_iter] = np.log(iterations[divergent][valid_iter]) / np.log(params["max_iterations"])
-            colored[divergent] = plt.cm.get_cmap(params["diverge_colormap"])(iter_log[divergent])
+            colored[divergent] = cmap_func(iter_log[divergent]) * 255.0
         elif algo == "距離カラーリング":
             dist = np.abs(z_vals)
             dist[mask] = 0
             norm = Normalize(0, 10) # この上限値(10)は調整可能
-            colored[divergent] = plt.cm.get_cmap(params["diverge_colormap"])(norm(dist[divergent]))
+            colored[divergent] = cmap_func(norm(dist[divergent])) * 255.0
         elif algo == "角度カラーリング":
             angles = np.angle(z_vals) / (2 * np.pi) + 0.5
-            colored[divergent] = plt.cm.get_cmap(params["diverge_colormap"])(angles[divergent])
+            colored[divergent] = cmap_func(angles[divergent]) * 255.0
         elif algo == "ポテンシャル関数法":
             # log(|z|) が必要。|z|=0 や |z|=1 で問題発生の可能性
             with np.errstate(divide='ignore', invalid='ignore'):
@@ -115,7 +122,7 @@ def apply_coloring_algorithm(results, params, logger: DebugLogger):
                 # potential = 1.0 - np.log(log_abs_z) / np.log(2) # こちらもlog(log)で警告の可能性
             potential[mask] = 0 # 発散しなかった点は0
             norm = Normalize(vmin=0) # vmin=0, vmaxはデータに依存
-            colored[divergent] = plt.cm.get_cmap(params["diverge_colormap"])(norm(potential[divergent]))
+            colored[divergent] = cmap_func(norm(potential[divergent])) * 255.0
         elif algo == "軌道トラップ法":
             # トラップ形状 (点、線、円など) によって定義が変わる
             # 例: 点 (1, 0) への距離
@@ -129,30 +136,37 @@ def apply_coloring_algorithm(results, params, logger: DebugLogger):
             # 距離が小さいほど明るくなるように反転させる場合もある
             # norm_dist = 1.0 - (trap_dist - min_dist) / (max_dist - min_dist + 1e-9)
             norm = Normalize(vmin=min_dist, vmax=max_dist)
-            colored[divergent] = plt.cm.get_cmap(params["diverge_colormap"])(norm(trap_dist[divergent]))
+            colored[divergent] = cmap_func(norm(trap_dist[divergent])) * 255.0
+
     non_divergent = ~divergent
+    logger.log(LogLevel.DEBUG, f"発散する点の数: {np.sum(divergent)}, 発散しない点の数: {np.sum(non_divergent)}") # 追加: 点の数をログ出力
     if np.any(non_divergent):
         # === 発散しない場合の処理 ===
         non_algo = params["non_diverge_algorithm"]
         if non_algo == "単色":
-            colored[non_divergent] = [0, 0, 0, 1] # 黒で塗りつぶし
+            # デバッグ用の白 [255, 255, 255, 255] を float で設定
+            colored[non_divergent] = [0.0, 0.0, 0.0, 255.0]
         elif non_algo == "グラデーション":
             grad = gradient.compute_gradient(iterations.shape, logger)
-            colored[non_divergent] = plt.cm.get_cmap(params["non_diverge_colormap"])(grad[non_divergent])
+            # cmap は [0, 1] を返すので 255.0 を掛ける
+            colored[non_divergent] = plt.cm.get_cmap(params["non_diverge_colormap"])(grad[non_divergent]) * 255.0
         elif non_algo == "パラメータ(C)":
             if params["fractal_type"] == "Julia":
                 c_val = complex(params["c_real"], params["c_imag"])
                 angle = (np.angle(c_val) / (2 * np.pi)) + 0.5
                 # 非発散領域全体に同じ色を適用
-                color_val = plt.cm.get_cmap(params["non_diverge_colormap"])(angle)
+                color_val = plt.cm.get_cmap(params["non_diverge_colormap"])(angle) * 255.0 # RGBAを[0, 255]範囲に
                 colored[non_divergent] = color_val
             else: # Mandelbrotの場合、各点のC（座標値）を使う
                 c_real, c_imag = np.real(z_vals[non_divergent]), np.imag(z_vals[non_divergent])
                 angle = (np.arctan2(c_imag, c_real) / (2 * np.pi)) + 0.5
-                colored[non_divergent] = plt.cm.get_cmap(params["non_diverge_colormap"])(angle)
+                colored[non_divergent] = plt.cm.get_cmap(params["non_diverge_colormap"])(angle) * 255.0
         elif non_algo == "パラメータ(Z)":
             # 最終的なZ値を使う
             z_real, z_imag = np.real(z_vals[non_divergent]), np.imag(z_vals[non_divergent])
             angle = (np.arctan2(z_imag, z_real) / (2 * np.pi)) + 0.5
-            colored[non_divergent] = plt.cm.get_cmap(params["non_diverge_colormap"])(angle)
+            colored[non_divergent] = plt.cm.get_cmap(params["non_diverge_colormap"])(angle) * 255.0
+
+    logger.log(LogLevel.DEBUG, f"最終的な colored 配列の dtype: {colored.dtype}, min: {np.min(colored)}, max: {np.max(colored)}") # 追加: 最終的な配列情報をログ出力
+    # float32 [0, 255] 配列を返す
     return colored
