@@ -286,7 +286,13 @@ class EventHandler:
 
     def _handle_motion_edit(self, event: MouseEvent):
         """ EDIT 状態でのマウス移動 """
+#
+#
+#
 #            self.undo_or_cancel_edit()
+#
+#
+#
         corner_index = self.zoom_selector.pointer_near_corner(event)
         self.cursor_manager.cursor_update(event, state=ZoomState.EDIT, near_corner_index=corner_index, is_rotating=self._alt_pressed)
 

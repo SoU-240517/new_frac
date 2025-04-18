@@ -94,6 +94,7 @@ class ParameterPanel:
         max_iter_entry = ttk.Entry(self.parent, textvariable=self.max_iter_var)
         max_iter_entry.grid(row=row, column=1, sticky=tk.W+tk.E, padx=10, pady=2)
         max_iter_entry.bind("<Return>", lambda e: [self.update_callback(), self._update_colorbars()]) # エントリーの変更時にも描画更新とカラーバー更新を行う
+# サンプルとして残す
 #        max_iter_entry.bind("<FocusOut>", lambda e: [self.update_callback(), self._update_colorbars()])
 
         row += 1 # Z (実部)
@@ -102,7 +103,6 @@ class ParameterPanel:
         z_real_entry = ttk.Entry(self.parent, textvariable=self.z_real_var)
         z_real_entry.grid(row=row, column=1, sticky=tk.W+tk.E, padx=10, pady=2)
         z_real_entry.bind("<Return>", lambda e: [self.update_callback(), self._update_colorbars()])
-#        z_real_entry.bind("<FocusOut>", lambda e: [self.update_callback(), self._update_colorbars()])
 
         row += 1 # Z (虚部)
         ttk.Label(self.parent, text="Z (虚部):").grid(row=row, column=0, sticky=tk.W, padx=10, pady=2)
@@ -110,7 +110,6 @@ class ParameterPanel:
         z_imag_entry = ttk.Entry(self.parent, textvariable=self.z_imag_var)
         z_imag_entry.grid(row=row, column=1, sticky=tk.W+tk.E, padx=10, pady=2)
         z_imag_entry.bind("<Return>", lambda e: [self.update_callback(), self._update_colorbars()])
-#        z_imag_entry.bind("<FocusOut>", lambda e: [self.update_callback(), self._update_colorbars()])
 
         row += 1 # C (実部)
         ttk.Label(self.parent, text="C (実部):").grid(row=row, column=0, sticky=tk.W, padx=10, pady=2)
@@ -118,7 +117,6 @@ class ParameterPanel:
         c_real_entry = ttk.Entry(self.parent, textvariable=self.c_real_var)
         c_real_entry.grid(row=row, column=1, sticky=tk.W+tk.E, padx=10, pady=2)
         c_real_entry.bind("<Return>", lambda e: [self.update_callback(), self._update_colorbars()])
-#        c_real_entry.bind("<FocusOut>", lambda e: [self.update_callback(), self._update_colorbars()])
 
         row += 1 # C (虚部)
         ttk.Label(self.parent, text="C (虚部):").grid(row=row, column=0, sticky=tk.W, padx=10, pady=2)
@@ -126,7 +124,6 @@ class ParameterPanel:
         c_imag_entry = ttk.Entry(self.parent, textvariable=self.c_imag_var)
         c_imag_entry.grid(row=row, column=1, sticky=tk.W+tk.E, padx=10, pady=2)
         c_imag_entry.bind("<Return>", lambda e: [self.update_callback(), self._update_colorbars()])
-#        c_imag_entry.bind("<FocusOut>", lambda e: [self.update_callback(), self._update_colorbars()])
 
         # --- 発散部の着色設定 ---
         row += 1

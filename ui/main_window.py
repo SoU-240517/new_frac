@@ -120,10 +120,6 @@ class MainWindow:
         self.fractal_canvas.fig.patch.set_facecolor('black')
         self.fractal_canvas.canvas.draw()
 
-#    def update_fractal(self, *args) -> None:
-#        """ 最新パラメータにズーム情報を上書きしてフラクタルを再描画 """
-#        self.logger.log(LogLevel.CALL, "描画パラメータ：取得開始")
-
     def update_fractal(self, *args) -> None:
         """ 最新パラメータにズーム情報を上書きしてフラクタルを再描画 """
         if self.draw_thread and self.draw_thread.is_alive():
