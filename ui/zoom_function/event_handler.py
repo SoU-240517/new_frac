@@ -6,12 +6,12 @@ from .enums import LogLevel, ZoomState
 
 # 他のクラスの型ヒントのためにインポート (循環参照回避)
 if TYPE_CHECKING:
+    from .cursor_manager import CursorManager
+    from .debug_logger import DebugLogger
+    from .event_validator import EventValidator
+    from .rect_manager import RectManager
     from .zoom_selector import ZoomSelector
     from .zoom_state_handler import ZoomStateHandler
-    from .rect_manager import RectManager
-    from .cursor_manager import CursorManager
-    from .event_validator import EventValidator
-    from .debug_logger import DebugLogger
 
 class EventHandler:
     """ matplotlib のイベントを処理し、各コンポーネントに指示を出すクラス """

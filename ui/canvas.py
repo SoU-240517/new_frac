@@ -1,6 +1,6 @@
 import tkinter as tk
-from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
 from .zoom_function.debug_logger import DebugLogger
 from .zoom_function.enums import LogLevel
 

@@ -1,8 +1,8 @@
-import tkinter as tk
-from tkinter import ttk
 import matplotlib.pyplot as plt
 import numpy as np
+import tkinter as tk
 from PIL import Image, ImageTk
+from tkinter import ttk
 from .zoom_function.debug_logger import DebugLogger
 from .zoom_function.enums import LogLevel
 

@@ -8,7 +8,6 @@ from ui.parameter_panel import ParameterPanel
 from fractal.render import render_fractal # render_fractal が rotation パラメータを扱えると仮定
 from .zoom_function.debug_logger import DebugLogger
 from .zoom_function.enums import LogLevel
-import threading
 
 class MainWindow:
     """

@@ -1,5 +1,5 @@
-import time
 import numpy as np
+import time
 from coloring import color_algorithms
 from fractal.fractal_types import julia, mandelbrot
 from ui.zoom_function.debug_logger import DebugLogger

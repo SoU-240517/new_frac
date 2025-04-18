@@ -1,6 +1,6 @@
-import numpy as np
 import matplotlib.transforms as transforms # 回転計算用
 import matplotlib.patches as patches # キャッシュの型ヒント用
+import numpy as np
 from matplotlib.axes import Axes
 from typing import Callable, Optional, Tuple
 from .cursor_manager import CursorManager

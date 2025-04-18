@@ -1,6 +1,6 @@
-import numpy as np
 import matplotlib.patches as patches
 import matplotlib.transforms as transforms
+import numpy as np
 from matplotlib.axes import Axes
 from typing import Optional, Tuple, Dict, Any
 from .debug_logger import DebugLogger

@@ -1,6 +1,6 @@
-import time
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+import time
 from matplotlib.colors import Normalize
 from coloring import gradient
 from ui.zoom_function.debug_logger import DebugLogger

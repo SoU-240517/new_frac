@@ -1,11 +1,11 @@
-import time
 import inspect
 import os
+import time
 from typing import Optional, Dict, Any
-from .enums import LogLevel
 from rich import print as rprint
 from rich.markup import escape
 from enum import Enum
+from .enums import LogLevel
 
 class DebugLogger:
     """ デバッグログを出力するクラス """
