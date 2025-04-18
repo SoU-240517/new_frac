@@ -1,15 +1,15 @@
-from matplotlib.axes import Axes
-from typing import Callable, Optional, Tuple
 import numpy as np
 import matplotlib.transforms as transforms # 回転計算用
-from .enums import ZoomState, LogLevel
-from .event_validator import EventValidator, ValidationResult
-from .zoom_state_handler import ZoomStateHandler
-from .rect_manager import RectManager
+import matplotlib.patches as patches # キャッシュの型ヒント用
+from matplotlib.axes import Axes
+from typing import Callable, Optional, Tuple
 from .cursor_manager import CursorManager
 from .debug_logger import DebugLogger
+from .enums import ZoomState, LogLevel
 from .event_handler import EventHandler
-import matplotlib.patches as patches # キャッシュの型ヒント用
+from .event_validator import EventValidator, ValidationResult
+from .rect_manager import RectManager
+from .zoom_state_handler import ZoomStateHandler
 
 class ZoomSelector:
     """ マウスドラッグで矩形を描画し、回転やリサイズを行う機能を持つクラス"""
@@ -21,6 +21,7 @@ class ZoomSelector:
         self.logger = logger
         self.ax = ax
         self.canvas = ax.figure.canvas
+        # FractalCanvas からコールバックを受け取る
         self.on_zoom_confirm = on_zoom_confirm
         self.on_zoom_cancel = on_zoom_cancel
         self._cached_rect_patch: Optional[patches.Rectangle] = None
@@ -28,7 +29,7 @@ class ZoomSelector:
         self.state_handler = ZoomStateHandler(
                                initial_state=ZoomState.NO_RECT,
                                logger=self.logger,
-                               canvas=self.canvas) # canvas を渡す
+                               canvas=self.canvas)
         self.logger.log(LogLevel.INIT, "RectManager 初期化開始")
         self.rect_manager = RectManager(ax, self.logger)
         tk_widget = getattr(self.canvas, 'get_tk_widget', lambda: None)()
@@ -86,7 +87,7 @@ class ZoomSelector:
             self.event_handler.clear_edit_history() # 履歴クリアを追加
             self.logger.log(LogLevel.CALL, "ズーム確定：コールバック呼出し", {
                 "x": x, "y": y, "w": w, "h": h, "angle": rotation_angle})
-            self.on_zoom_confirm(x, y, w, h, rotation_angle) # コールバック呼出し
+            self.on_zoom_confirm(x, y, w, h, rotation_angle) # MainWindow on_zoom_confirm を呼出す
             self.rect_manager.delete_rect() # 矩形削除
             self.invalidate_rect_cache() # キャッシュ無効化
             self.cursor_manager.set_default_cursor() # カーソルをデフォルトに
@@ -107,7 +108,7 @@ class ZoomSelector:
         self.rect_manager.delete_rect() # 存在する場合、矩形も削除
         self.invalidate_rect_cache()
         self.logger.log(LogLevel.SUCCESS, "ズーム確定キャンセル：コールバック呼出し")
-        self.on_zoom_cancel() # MainWindow の on_zoom_cancel を呼び出す
+        self.on_zoom_cancel() # MainWindow の on_zoom_cancel を呼出す
 
     def reset(self):
         """ ZoomSelectorの状態をリセット（描画リセットボタンなどから呼ばれる） """

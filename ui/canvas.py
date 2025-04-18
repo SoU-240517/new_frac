@@ -17,15 +17,14 @@ class FractalCanvas:
         # キャンバス設定
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.parent)
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
-        # 初期設定
-        self.zoom_confirm_callback = zoom_confirm_callback
-        self.zoom_cancel_callback = zoom_cancel_callback
-        # ZoomSelector 初期化
+        # MainWindow からコールバックを受け取る
+        self.zoom_confirm_callback = zoom_confirm_callback # on_zoom_confirm
+        self.zoom_cancel_callback = zoom_cancel_callback # on_zoom_cancel
         from ui.zoom_function.zoom_selector import ZoomSelector
         self.logger.log(LogLevel.INIT, "ZoomSelector 初期化開始")
         self.zoom_selector = ZoomSelector(
             self.ax,
-            on_zoom_confirm=zoom_confirm_callback,
+            on_zoom_confirm=zoom_confirm_callback, # zoom_selector.py にコールバックを渡す
             on_zoom_cancel=zoom_cancel_callback,
             logger=self.logger
         )
