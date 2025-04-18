@@ -14,7 +14,6 @@ class ParameterPanel:
     def __init__(self, parent, update_callback, reset_callback, logger: DebugLogger):
         """ パラメータパネルの初期化 """
         self.logger = logger
-        self.logger.log(LogLevel.INIT, "ParameterPanel")
         self.parent = parent
         self.update_callback = update_callback # フラクタル更新用コールバック
         self.reset_callback = reset_callback
@@ -24,7 +23,7 @@ class ParameterPanel:
 
     def _create_colorbar_image(self, cmap_name: str) -> ImageTk.PhotoImage:
         """ 指定されたカラーマップ名からカラーバーのPhotoImageを生成 """
-        self.logger.log(LogLevel.DEBUG, "カラーバー生成開始")
+        self.logger.log(LogLevel.SUCCESS, "カラーバー生成開始")
         try:
             cmap = plt.get_cmap(cmap_name)
             # NumPyでグラデーションデータを作成 (幅 x 高さ x RGBA)
@@ -55,14 +54,15 @@ class ParameterPanel:
 
     def _update_colorbars(self, *args):
         """ 選択されているカラーマップに基づいてカラーバーの表示を更新 """
-        self.logger.log(LogLevel.DEBUG, "カラーバー更新処理開始")
         # 発散部
         diverge_cmap_name = self.diverge_colormap_var.get()
+        self.logger.log(LogLevel.CALL, "カラーバー更新：発散部")
         diverge_photo = self._create_colorbar_image(diverge_cmap_name)
         self.diverge_colorbar_label.config(image=diverge_photo)
         self.diverge_colorbar_label.image = diverge_photo # 参照を保持
         # 非発散部
         non_diverge_cmap_name = self.non_diverge_colormap_var.get()
+        self.logger.log(LogLevel.CALL, "カラーバー更新：非発散部")
         non_diverge_photo = self._create_colorbar_image(non_diverge_cmap_name)
         self.non_diverge_colorbar_label.config(image=non_diverge_photo)
         self.non_diverge_colorbar_label.image = non_diverge_photo # 参照を保持

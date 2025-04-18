@@ -5,8 +5,7 @@ from ui.zoom_function.enums import LogLevel
 
 """
 生成AI用のコメント：
-- ログ出力が多いが消さないこと（製作者が不慣れなのでコードの流れを追うために多く書いている）
-- 矩形（ズーム領域）がある場合は、マウス移動イベントを切断しない（マウスカーソルの変更が必要なので）
+- ログ出力が多いけど消さないこと（製作者が不慣れなのでコードの流れを追うために多く書いている）
 - 以下の明確化について、現在のコード中では不適切な部分もあるが、順次、以下の状態に修正する。
 - キャンセルの明確化：
     - ズーム確定キャンセル：
@@ -26,6 +25,8 @@ if __name__ == "__main__":
     logger = DebugLogger() # Logger インスタンスを作成
     logger.log(LogLevel.INFO, "App START")
     root = tk.Tk() # Tkinter ルートウィンドウを作成
-    app = MainWindow(root, logger) # MainWindow インスタンスを作成
-    root.mainloop() #  Tkinter ルートウィンドウでイベントループを開始
+    logger.log(LogLevel.DEBUG, "MainWindow 初期化開始")
+    app = MainWindow(root, logger)
+    logger.log(LogLevel.DEBUG, "イベントループ開始")
+    root.mainloop()
     logger.log(LogLevel.INFO, "App FIN")

@@ -31,7 +31,6 @@ class CursorManager:
         self.widget = canvas_widget
         self.logger = logger
         # logger が None でないことを確認してからログを記録
-        self.logger.log(LogLevel.INIT, "CursorManager")
         self._current_cursor = CURSOR_DEFAULT
         self.zoom_selector: Optional['ZoomSelector'] = None
         # Validatorインスタンスが必要な場合 (通常は EventHandler が持っているものを共有)

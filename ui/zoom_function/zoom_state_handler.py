@@ -6,7 +6,6 @@ class ZoomStateHandler:
     """ ZoomSelectorの状態を管理するクラス """
     def __init__(self, initial_state: ZoomState, logger: DebugLogger, event_handler=None, canvas=None):
         self.logger = logger
-        self.logger.log(LogLevel.INIT, "ZoomStateHandler")
         self._state: ZoomState = initial_state
         self.event_handler = event_handler
         self.canvas = canvas

@@ -15,7 +15,6 @@ class RectManager:
                  ax: Axes,
                  logger: DebugLogger):
         self.logger = logger
-        self.logger.log(LogLevel.INIT, "RectManager")
         self.ax = ax
         self.rect: Optional[patches.Rectangle] = None
         self._angle: float = 0.0

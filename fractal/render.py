@@ -83,7 +83,6 @@ def render_fractal(params, logger: DebugLogger, cache=None) -> np.ndarray:
         logger.log(LogLevel.INFO, f"マンデルブロ集合計算時間：{elapsed:.3f}秒")
     # 着色処理 (float32 [0, 255] RGBA 配列が返される)
     colored_high_res = color_algorithms.apply_coloring_algorithm(results, params, logger)
-
     # ダウンサンプリング（アンチエイリアシング効果）
     if samples_per_pixel > 1: # ダウンサンプリング（サンプル数が1の場合はスキップ）
         logger.log(LogLevel.DEBUG, "ダウンサンプリング実行")
@@ -92,16 +91,13 @@ def render_fractal(params, logger: DebugLogger, cache=None) -> np.ndarray:
     else:
         # ダウンサンプリングしない場合は、そのまま float 配列を使用
         colored = colored_high_res
-
     # 最終的な結果を uint8 [0, 255] に変換
     # np.clip で範囲外の値が発生しないように念のためクリップ
     colored = np.clip(colored, 0, 255).astype(np.uint8)
     logger.log(LogLevel.DEBUG, f"最終的な render_fractal 出力 dtype: {colored.dtype}, shape: {colored.shape}")
-
     # キャッシュに保存 (uint8 の最終結果を保存)
     if cache:
         cache.put(params, colored)
-
     # uint8 [0, 255] 配列を返す
     return colored
 

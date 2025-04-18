@@ -15,7 +15,6 @@ class MainWindow:
     def __init__(self, root, logger: DebugLogger):
         """ フラクタル描画アプリケーションのメインウィンドウ初期化（ズーム操作の状態管理も行う） """
         self.logger = logger
-        self.logger.log(LogLevel.INIT, "MainWindow")
         self.root = root # Tkinter ルートウィンドウ
         self.root.title("フラクタル描画アプリケーション")
         self.root.geometry("1200x800")
@@ -44,7 +43,7 @@ class MainWindow:
         self.main_frame.add(self.canvas_frame, weight=3)
         self.parameter_frame = ttk.Frame(self.main_frame)
         self.main_frame.add(self.parameter_frame, weight=1)
-        # キャンバス初期化（即時表示）
+        self.logger.log(LogLevel.INIT, "FractalCanvas 初期化開始")
         self.fractal_canvas = FractalCanvas(
             self.canvas_frame, width=800, height=600, logger=self.logger,
             zoom_confirm_callback=self.on_zoom_confirm,
@@ -53,13 +52,14 @@ class MainWindow:
         # 初期黒背景設定
         self.fractal_canvas.set_black_background()
         # パラメータパネル初期化
+        self.logger.log(LogLevel.INIT, "ParameterPanel 初期化")
         self.parameter_panel = ParameterPanel(
             self.parameter_frame, self.update_fractal,
             reset_callback=self.reset_zoom, logger=self.logger
         )
-        # コールバック設定
+        self.logger.log(LogLevel.INIT, "コールバック設定")
         self.fractal_canvas.set_zoom_callback(self.on_zoom_confirm, self.on_zoom_cancel)
-        # 非同期でフラクタル描画を開始
+        self.logger.log(LogLevel.INFO, "非同期でフラクタル描画を開始")
         threading.Thread(target=self.update_fractal, daemon=True).start()
 
     def start_status_animation(self):
@@ -120,18 +120,16 @@ class MainWindow:
         self.fractal_canvas.fig.patch.set_facecolor('black')
         self.fractal_canvas.canvas.draw()
 
-    def update_fractal(self, *args) -> None:
-        """ 最新パラメータにズーム情報を上書きしてフラクタルを再描画 """
-        self.logger.log(LogLevel.CALL, "描画パラメータ：取得開始")
+#    def update_fractal(self, *args) -> None:
+#        """ 最新パラメータにズーム情報を上書きしてフラクタルを再描画 """
+#        self.logger.log(LogLevel.CALL, "描画パラメータ：取得開始")
 
     def update_fractal(self, *args) -> None:
         """ 最新パラメータにズーム情報を上書きしてフラクタルを再描画 """
         if self.draw_thread and self.draw_thread.is_alive():
             return
-
         self.is_drawing = True
         self.start_status_animation()
-
         self.draw_thread = threading.Thread(
             target=self._update_fractal_thread,
             daemon=True

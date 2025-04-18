@@ -7,14 +7,16 @@ from ui.zoom_function.debug_logger import DebugLogger
 from ui.zoom_function.enums import LogLevel
 
 class FractalCache:
-    def __init__(self, max_size=100):
+    """ フラクタル画像のキャッシュクラス """
+    def __init__(self, max_size=100, logger=None):
         self.cache = {}
         self.max_size = max_size
-        self.logger = DebugLogger()
-        self.logger.log(LogLevel.INFO, "FractalCache initialized")
+        self.logger = logger or DebugLogger()  # logger が渡されない場合は新規作成
+        self.logger.log(LogLevel.INIT, "DebugLogger 初期化完了（になっちゃう）")
 
     def _create_cache_key(self, params):
-        # キャッシュキーを生成
+        """ キャッシュキーを生成するためのヘルパーメソッド """
+        # キャッシュキーは、パラメータの組み合わせから生成される
         key_params = {
             'zoom_level': params.get('zoom_level', 1),
             'center': params.get('center', (0, 0)),
@@ -24,86 +26,65 @@ class FractalCache:
         }
         return hash(frozenset(key_params.items()))
 
-    def get(self, params):
+    def get_cache(self, params):
+        """ キャッシュから画像を取得 """
         key = self._create_cache_key(params)
-        self.logger.log(LogLevel.DEBUG, f"Cache get attempt for key: {key}")
+        self.logger.log(LogLevel.DEBUG, f"キャッシュキー取得試行: {key}")
         if key in self.cache:
-            self.logger.log(LogLevel.SUCCESS, "Cache hit")
+            self.logger.log(LogLevel.SUCCESS, "キャッシュヒット")
             return self.cache[key]
-        self.logger.log(LogLevel.DEBUG, "Cache miss")
+        self.logger.log(LogLevel.INFO, "キャッシュミス")
         return None
 
-    def put(self, params, image):
+    def put_cache(self, params, image):
+        """ キャッシュに画像を追加 """
         key = self._create_cache_key(params)
-        self.logger.log(LogLevel.DEBUG, f"Cache put attempt for key: {key}")
-        
+        self.logger.log(LogLevel.DEBUG, f"キャッシュキー書込み試行: {key}")
         # キャッシュが満杯の場合、最古のエントリを削除
         if len(self.cache) >= self.max_size:
             oldest_key = next(iter(self.cache))
-            self.logger.log(LogLevel.INFO, f"Cache full, removing oldest entry: {oldest_key}")
+            self.logger.log(LogLevel.INFO, f"キャッシュフル（最古エントリ削除）：{oldest_key}")
             del self.cache[oldest_key]
-        
         self.cache[key] = {
             'image': image,
             'timestamp': time.time(),
             'params': params
         }
-        self.logger.log(LogLevel.SUCCESS, "Cache entry added")
+        self.logger.log(LogLevel.SUCCESS, "キャッシュエントリ追加")
 
-    def clear(self):
-        self.logger.log(LogLevel.INFO, "Clearing cache")
+    def clear_cache(self):
+        """ キャッシュをクリア """
+        self.logger.log(LogLevel.INFO, "キャッシュクリア")
         self.cache.clear()
 
-    def get_stats(self):
+    def get_cache_stats(self):
+        """ キャッシュの統計情報を取得 """
         return {
             'size': len(self.cache),
             'max_size': self.max_size,
             'memory_usage': sum(len(v['image']) for v in self.cache.values())
         }
 
-class ColorCache:
-    def __init__(self, max_size=100):
-        self.cache = {}
-        self.max_size = max_size
-
-    def get(self, params, iterations):
-        key = hash(frozenset(params.items()))
-        if key in self.cache:
-            return self.cache[key]
-        return None
-
-    def put(self, params, iterations, colored):
-        key = hash(frozenset(params.items()))
-        if len(self.cache) >= self.max_size:
-            oldest_key = next(iter(self.cache))
-            del self.cache[oldest_key]
-        self.cache[key] = colored
-
 def apply_coloring_algorithm(results, params, logger: DebugLogger):
     """ 着色アルゴリズムを適用（高速スムージング追加）。float32 [0, 255] RGBA 配列を返す """
-
+    logger.log(LogLevel.INIT, "FractalCache 初期化開始")
     cache = FractalCache()
-    cached = cache.get(params)
-    
+    cached = cache.get_cache(params)
     if cached:
-        logger.log(LogLevel.INFO, "Using cached image")
+        logger.log(LogLevel.INFO, "キャッシュイメージ使用")
         return cached['image']
-
     # 着色処理
     iterations = results['iterations']
     mask = results['mask'] # 発散しない点のマスク
     z_vals = results['z_vals'] # zの値
-
     # float32 配列で初期化
     colored = np.zeros((*iterations.shape, 4), dtype=np.float32)
     divergent = iterations > 0 # 発散した点のマスク
-
     # 中間データを必要最小限に
     if params["diverge_algorithm"] == "高速スムージング":
         smooth_iter = np.zeros_like(iterations, dtype=np.float32)
         fast_smoothing(z_vals, iterations, smooth_iter)
         del z_vals  # これ以降不要なので削除
-
     # 高速スムージング用の事前計算
     def fast_smoothing(z, iters, out):
         """ 高速スムージングアルゴリズム """
@@ -115,14 +96,12 @@ def apply_coloring_algorithm(results, params, logger: DebugLogger):
                 iters
             )
             out[...] = smooth  # 既存の配列を更新
-
     # === 発散する場合の処理 ===
     if np.any(divergent):
         algo = params["diverge_algorithm"]
         logger.log(LogLevel.INFO, f"着色アルゴリズム選択: {algo}")
         # Colormap適用結果は float [0, 1]。これを [0, 255] にスケールする
         cmap_func = plt.cm.get_cmap(params["diverge_colormap"])
-
         if algo == "反復回数線形マッピング":
             norm = Normalize(1, params["max_iterations"])
             colored[divergent] = cmap_func(norm(iterations[divergent])) * 255.0
@@ -202,14 +181,12 @@ def apply_coloring_algorithm(results, params, logger: DebugLogger):
             # norm_dist = 1.0 - (trap_dist - min_dist) / (max_dist - min_dist + 1e-9)
             norm = Normalize(vmin=min_dist, vmax=max_dist)
             colored[divergent] = cmap_func(norm(trap_dist[divergent])) * 255.0
-
     non_divergent = ~divergent
-    logger.log(LogLevel.DEBUG, f"発散する点の数: {np.sum(divergent)}, 発散しない点の数: {np.sum(non_divergent)}") # 追加: 点の数をログ出力
+    logger.log(LogLevel.DEBUG, f"発散する点の数: {np.sum(divergent)}, 発散しない点の数: {np.sum(non_divergent)}")
     if np.any(non_divergent):
         # === 発散しない場合の処理 ===
         non_algo = params["non_diverge_algorithm"]
         if non_algo == "単色":
-            # デバッグ用の白 [255, 255, 255, 255] を float で設定
             colored[non_divergent] = [0.0, 0.0, 0.0, 255.0]
         elif non_algo == "グラデーション":
             grad = gradient.compute_gradient(iterations.shape, logger)
@@ -231,11 +208,8 @@ def apply_coloring_algorithm(results, params, logger: DebugLogger):
             z_real, z_imag = np.real(z_vals[non_divergent]), np.imag(z_vals[non_divergent])
             angle = (np.arctan2(z_imag, z_real) / (2 * np.pi)) + 0.5
             colored[non_divergent] = plt.cm.get_cmap(params["non_diverge_colormap"])(angle) * 255.0
-
-    logger.log(LogLevel.DEBUG, f"最終的な colored 配列の dtype: {colored.dtype}, min: {np.min(colored)}, max: {np.max(colored)}") # 追加: 最終的な配列情報をログ出力
+    logger.log(LogLevel.DEBUG, f"最終的な colored 配列の dtype: {colored.dtype}, min: {np.min(colored)}, max: {np.max(colored)}")
     # float32 [0, 255] 配列を返す
-
     # キャッシュに保存
-    cache.put(params, colored)
-
+    cache.put_cache(params, colored)
     return colored

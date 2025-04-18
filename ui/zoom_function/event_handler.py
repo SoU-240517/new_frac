@@ -35,7 +35,6 @@ class EventHandler:
                  logger: 'DebugLogger',
                  canvas):
         self.logger = logger
-        self.logger.log(LogLevel.INIT, "EventHandler")
         # --- 依存コンポーネント ---
         self.zoom_selector = zoom_selector
         self.state_handler = state_handler
@@ -108,7 +107,6 @@ class EventHandler:
         validation_result = self.validator.validate_event(event, self.zoom_selector.ax, self.logger)
         if not (validation_result.is_in_axes and validation_result.has_coords):
             self.logger.log(LogLevel.DEBUG, "Axes外または座標無効のため処理中断")
-            self.undo_or_cancel_edit()
             return
         state = self.state_handler.get_state()
         self.logger.log(LogLevel.DEBUG, f"状態取得完了：{state.name}")
@@ -288,6 +286,7 @@ class EventHandler:
 
     def _handle_motion_edit(self, event: MouseEvent):
         """ EDIT 状態でのマウス移動 """
+#            self.undo_or_cancel_edit()
         corner_index = self.zoom_selector.pointer_near_corner(event)
         self.cursor_manager.cursor_update(event, state=ZoomState.EDIT, near_corner_index=corner_index, is_rotating=self._alt_pressed)
 

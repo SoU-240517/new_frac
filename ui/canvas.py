@@ -10,7 +10,6 @@ class FractalCanvas:
     def __init__(self, master, width, height, logger, zoom_confirm_callback, zoom_cancel_callback):
         """ キャンバス初期化（MatplotlibのFigure を Tkinter ウィジェットに埋め込む）"""
         self.logger = logger
-        self.logger.log(LogLevel.INIT, "FractalCanvas")
         self.parent = master
         self.fig = Figure(figsize=(6, 6), dpi=100, facecolor='black')  # 背景黒に設定
         self.ax = self.fig.add_subplot(111, facecolor='black')  # 背景黒に設定
@@ -23,13 +22,14 @@ class FractalCanvas:
         self.zoom_cancel_callback = zoom_cancel_callback
         # ZoomSelector 初期化
         from ui.zoom_function.zoom_selector import ZoomSelector
+        self.logger.log(LogLevel.INIT, "ZoomSelector 初期化開始")
         self.zoom_selector = ZoomSelector(
             self.ax,
             on_zoom_confirm=zoom_confirm_callback,
             on_zoom_cancel=zoom_cancel_callback,
             logger=self.logger
         )
-        # 初期黒背景表示
+        self.logger.log(LogLevel.INIT, "キャンバス背景色設定開始")
         self.set_black_background()
 
     def set_black_background(self):
