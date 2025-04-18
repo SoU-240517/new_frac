@@ -184,12 +184,12 @@ class ParameterPanel:
 
         # --- ボタン ---
         row += 1
-        render_button = ttk.Button(self.parent, text="描画", command=lambda: [self.update_callback(), self._update_colorbars()]) # ボタン押下時も更新
+        render_button = ttk.Button(self.parent, text="描画", command=lambda: [self.update_callback(), self._update_colorbars()])
         render_button.grid(row=row, column=0, columnspan=2, sticky=tk.W+tk.E, padx=10, pady=10)
 
         row += 1
         if self.reset_callback is not None:
-            reset_button = ttk.Button(self.parent, text="描画リセット", command=lambda: [self.reset_callback(), self._update_colorbars()]) # リセット時も更新
+            reset_button = ttk.Button(self.parent, text="描画リセット", command=lambda: [self.reset_callback(), self._update_colorbars()])
             reset_button.grid(row=row, column=0, columnspan=2, sticky=tk.W+tk.E, padx=10, pady=10)
 
         # パネル全体の列幅を設定（必要に応じて）
