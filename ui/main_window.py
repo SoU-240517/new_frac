@@ -93,6 +93,7 @@ class MainWindow:
         最新パラメータにズーム情報を上書きしてフラクタルを再描画
         """
         if self.draw_thread and self.draw_thread.is_alive(): return
+
         self.is_drawing = True
         self.start_status_animation()
         self.draw_thread = threading.Thread(
@@ -114,10 +115,10 @@ class MainWindow:
             self.logger.log(LogLevel.CALL, "メインスレッドでキャンバス更新開始（待機中...）")
             self.fractal_canvas.update_canvas(fractal_image, current_params)
             self.root.after(0, lambda: self.stop_status_animation()) # ステータス更新
-        except Exception as e:
+        except Exception as e: # 例外処理
             self.logger.log(LogLevel.ERROR, f"フラクタル更新エラー: {str(e)}")
             self.root.after(0, lambda: self.stop_status_animation())
-        finally:
+        finally: # 描画スレッドの終了処理
             self.is_drawing = False
 
     def on_zoom_confirm(self, x: float, y: float, w: float, h: float, angle: float):
@@ -126,15 +127,19 @@ class MainWindow:
         """
         center_x = x + w / 2
         center_y = y + h / 2
+
         self.logger.log(LogLevel.SUCCESS, "ズーム確定", {"rect_x": x, "rect_y": y, "rect_w": w, "rect_h": h,
             "center_x": center_x, "center_y": center_y, "angle": angle})
         self.prev_zoom_params = self.zoom_params.copy() # ズーム確定前の状態を保存（ズーム確定キャンセル用）
+
         # 縦横比補正 (幅を基準に高さを調整)
         aspect_ratio = self.fractal_canvas.fig.get_size_inches()[0] / self.fractal_canvas.fig.get_size_inches()[1]
         new_width = w # 選択された矩形の幅をそのまま使用
         new_height = new_width / aspect_ratio # 縦横比を維持するように高さを計算
+
         zoom_factor = self.zoom_params["width"] / new_width if new_width > 0 else 1 # 幅の変化率でズームファクターを計算
         current_max_iter = int(self.parameter_panel.max_iter_var.get()) # 現在の最大反復回数を取得
+
         # ズームインした場合のみ反復回数を増やす（上限あり）
         if zoom_factor > 1:
             new_max_iterations = min(1000, max(current_max_iter, int(current_max_iter + 50 * np.log2(zoom_factor))))
@@ -142,14 +147,18 @@ class MainWindow:
             "zoom_factor": zoom_factor, "aspect_ratio": aspect_ratio,
             "new_width": new_width, "new_height": new_height,
             "current_max_iter": current_max_iter, "new_max_iterations": new_max_iterations})
+
         # 新しいズームパラメータを設定
         self.zoom_params = {
             "center_x": center_x, "center_y": center_y, "width": new_width, "height": new_height, "rotation": angle}
         self.parameter_panel.max_iter_var.set(str(new_max_iterations))  # 反復回数をパラメータパネルに反映
+
         self.update_fractal()
 
     def on_zoom_cancel(self):
-        """ ズームキャンセル時のコールバック """
+        """
+        ズームキャンセル時のコールバック
+        """
         if self.prev_zoom_params is not None:
             self.logger.log(LogLevel.SUCCESS, "ズームキャンセル")
             self.zoom_params = self.prev_zoom_params.copy()
@@ -159,7 +168,9 @@ class MainWindow:
             self.logger.log(LogLevel.INFO, "直前のズームパラメータなし")
 
     def reset_zoom(self):
-        """ 操作パネルの「描画リセット」ボタン押下時の処理（ズームパラメータを初期状態に戻して再描画） """
+        """
+        操作パネルの「描画リセット」ボタン押下時の処理（ズームパラメータを初期状態に戻して再描画）
+        """
         self.logger.log(LogLevel.DEBUG, "描画リセットボタンのメソッド開始")
         self.zoom_params = {
             "center_x": 0.0, "center_y": 0.0, "width": 4.0, "height": 4.0, "rotation": 0.0}
@@ -170,13 +181,17 @@ class MainWindow:
         self.update_fractal()
 
     def set_black_background(self):
-        """黒背景を設定するヘルパーメソッド"""
+        """
+        黒背景を設定するヘルパーメソッド
+        """
         self.fractal_canvas.ax.set_facecolor('black')
         self.fractal_canvas.fig.patch.set_facecolor('black')
         self.fractal_canvas.canvas.draw()
 
     def start_status_animation(self):
-        """ステータスアニメーションを開始"""
+        """
+        ステータスアニメーションを開始
+        """
         if self.animation_thread and self.animation_thread.is_alive():
             return
         self.animation_running = True
@@ -188,7 +203,9 @@ class MainWindow:
         self.animation_thread.start()
 
     def _status_animation_thread(self):
-        """ステータスアニメーションの実際の処理"""
+        """
+        ステータスアニメーションの実際の処理
+        """
         while self.animation_running:
             # ドットの数を増やして、最大に達したらリセット
             self.animation_dots = (self.animation_dots + 1) % (self.animation_max_dots + 1)
@@ -199,7 +216,9 @@ class MainWindow:
             time.sleep(0.1)
 
     def stop_status_animation(self):
-        """ステータスアニメーションを停止"""
+        """
+        ステータスアニメーションを停止
+        """
         self.animation_running = False
         if self.animation_thread and self.animation_thread.is_alive():
             self.animation_thread.join()
