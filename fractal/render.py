@@ -10,7 +10,16 @@ from ui.zoom_function.enums import LogLevel
     - 設定されたパラメータでフラクタルを描画
 """
 def render_fractal(params, logger: DebugLogger, cache=None) -> np.ndarray:
-    """ 設定されたパラメータでフラクタルを描画（動的解像度版） """
+    """設定されたパラメータでフラクタルを描画（動的解像度版）
+
+    Args:
+        params (dict): パラメータ辞書
+        logger (DebugLogger): ログ出力クラス
+        cache (FractalCache): キャッシュクラス
+
+    Returns:
+        np.ndarray: フラクタル画像
+    """
     # キャッシュから取得
     if cache:
         cached_result = cache.get(params)
@@ -90,7 +99,17 @@ def render_fractal(params, logger: DebugLogger, cache=None) -> np.ndarray:
     return colored
 
 def calculate_dynamic_resolution(width, base_res=600, min_res=300, max_res=1200):
-    """ズームレベルに応じて解像度を動的に計算"""
+    """ズームレベルに応じて解像度を動的に計算
+
+    Args:
+        width (float): ウィンドウの幅
+        base_res (int, optional): 基本解像度. Defaults to 600.
+        min_res (int, optional): 最小解像度. Defaults to 300.
+        max_res (int, optional): 最大解像度. Defaults to 1200.
+
+    Returns:
+        int: 解像度
+    """
     zoom_factor = np.log(5.0 / width + 1.0)
     resolution = int(base_res * zoom_factor)
     return np.clip(resolution, min_res, max_res)
@@ -101,14 +120,32 @@ class FractalCache:
         - ColorCache は別に存在する（color_algorithms.py）
     """
     def __init__(self, max_size=100):
+        """フラクタルキャッシュクラスのコンストラクタ
+        Args:
+            max_size (int, optional): キャッシュの最大サイズ. Defaults to 100.
+        """
         self.cache = {}
         self.max_size = max_size
 
     def get(self, params):
+        """キャッシュから計算結果を取得
+
+        Args:
+            params (dict): 計算パラメータ
+
+        Returns:
+            np.ndarray: 計算結果
+        """
         key = hash(frozenset(params.items()))
         return self.cache.get(key)
 
     def put(self, params, result):
+        """キャッシュに計算結果を追加
+
+        Args:
+            params (dict): 計算パラメータ
+            result (np.ndarray): 計算結果
+        """
         key = hash(frozenset(params.items()))
         if len(self.cache) >= self.max_size:
             oldest_key = next(iter(self.cache))

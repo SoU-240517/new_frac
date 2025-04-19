@@ -25,8 +25,8 @@ class CursorManager:
         - イベントと状態に基づいて矩形を更新する
     """
     def __init__(self, canvas_widget, logger: Optional[DebugLogger]):
-        """
-        CursorManager クラスのコンストラクタ
+        """CursorManager クラスのコンストラクタ（親: ZoomSelector)）
+
         Args:
             canvas_widget: Tkinter Canvas ウィジェット (FigureCanvasTkAgg.get_tk_widget())
             logger: DebugLogger インスタンス、または None
@@ -44,8 +44,8 @@ class CursorManager:
                       state: ZoomState, # 現在の状態を引数で受け取る
                       near_corner_index: Optional[int] = None,
                       is_rotating: bool = False):
-        """
-        イベントと状態に基づいてカーソル形状を更新する
+        """イベントと状態に基づいてカーソル形状を更新する
+
         Args:
             event: MouseEvent オブジェクト (Noneの場合、デフォルトカーソルに戻す)
             state: 現在の ZoomState
@@ -100,7 +100,7 @@ class CursorManager:
                 self.logger.log(LogLevel.ERROR, f"カーソルの設定に失敗 '{new_cursor}': {e}")
 
     def set_default_cursor(self):
-        """ カーソルをデフォルトに戻す """
+        """カーソルをデフォルトに戻す"""
         if self._current_cursor != CURSOR_DEFAULT:
             try:
                 self.widget.config(cursor=CURSOR_DEFAULT)
@@ -109,6 +109,11 @@ class CursorManager:
                 self.logger.log(LogLevel.ERROR, f"カーソルをデフォルトにできない: {e}")
 
     def set_zoom_selector(self, zoom_selector: 'ZoomSelector'):
-        """ ZoomSelector のインスタンスへの参照を設定 """
+        """ZoomSelector のインスタンスへの参照を設定
+
+        Args:
+            zoom_selector: ZoomSelector インスタンス
+        """
+        self.logger.log(LogLevel.INIT, "CursorManager に ZoomSelector インスタンスへの参照を設定")
         self.zoom_selector = zoom_selector
         self.logger.log(LogLevel.INIT, "CursorManager に設定された ZoomSelector インスタンスへの参照終了")

@@ -37,7 +37,19 @@ class EventHandler:
                  validator: 'EventValidator',
                  logger: 'DebugLogger',
                  canvas):
+        """イベントハンドラのコンストラクタ（親: ZoomSelector）
+
+        Args:
+            zoom_selector: ZoomSelector インスタンス
+            state_handler: ZoomStateHandler インスタンス
+            rect_manager: RectManager インスタンス
+            cursor_manager: CursorManager インスタンス
+            validator: EventValidator インスタンス
+            logger: DebugLogger インスタンス
+            canvas: FigureCanvasTkAgg インスタンス
+        """
         self.logger = logger
+
         # --- 依存コンポーネント ---
         self.zoom_selector = zoom_selector
         self.state_handler = state_handler
@@ -45,39 +57,46 @@ class EventHandler:
         self.cursor_manager = cursor_manager
         self.validator = validator
         self.canvas = canvas
-		# --- 内部状態 ---
+
+        # --- 内部状態 ---
         # ログ出力フラグ
         self._create_logged = False
         self._move_logged = False
         self._resize_logged = False
         self._rotate_logged = False
+
         # イベント接続ID
         self._cid_press: Optional[int] = None
         self._cid_release: Optional[int] = None
         self._cid_motion: Optional[int] = None
         self._cid_key_press: Optional[int] = None
         self._cid_key_release: Optional[int] = None
+
         # ドラッグ開始位置 (矩形作成用)
         self.start_x: Optional[float] = None
         self.start_y: Optional[float] = None
+
         # 矩形移動用
         self.move_start_x: Optional[float] = None # 移動開始時のマウスX座標
         self.move_start_y: Optional[float] = None # 移動開始時のマウスY座標
         self.rect_start_pos: Optional[Tuple[float, float]] = None # 移動開始時の矩形左下座標（x, y）
+
         # 矩形リサイズ用
         self.resize_corner_index: Optional[int] = None # リサイズ中の角のインデックス（0-3）
         self.fixed_corner_pos: Optional[Tuple[float, float]] = None # リサイズ中の固定された対角の座標
+
         # 矩形回転用
         self._alt_pressed: bool = False # Altキーが押されているか
         self.rotate_start_mouse_pos: Optional[Tuple[float, float]] = None # 回転開始時のマウス座標
         self.rotate_center: Optional[Tuple[float, float]] = None # 回転中心座標
         self.previous_vector_angle: Optional[float] = None # 前回のベクトル角度
+
         # --- Undo 用の編集履歴 ---
         self.edit_history: List[Optional[Dict[str, Any]]] = [] # 矩形の状態を保存するリスト
 		# --- 内部状態ここまで ---
 
     def connect(self):
-        """ イベントハンドラを接続 """
+        """全イベントハンドラを接続"""
         if self._cid_press is None: # すでに接続されている場合は何もしない
             self._cid_press = self.canvas.mpl_connect('button_press_event', self.on_press)
             self._cid_motion = self.canvas.mpl_connect('motion_notify_event', self.on_motion)
@@ -87,13 +106,19 @@ class EventHandler:
 
     # --- イベント処理メソッド (ディスパッチャ) ---
     def on_press(self, event: MouseEvent):
-        """ マウスボタン押下イベントのディスパッチャ """
+        """マウスボタン押下イベントのディスパッチャ
+
+        Args:
+            event: MouseEvent オブジェクト
+        """
         validation_result = self.validator.validate_event(event, self.zoom_selector.ax, self.logger)
         if not validation_result.is_press_valid:
             self.logger.log(LogLevel.ERROR, "基本検証失敗のため処理中断")
             return
+
         state = self.state_handler.get_state()
         self.logger.log(LogLevel.DEBUG, f"状態取得完了：{state.name}, ボタン={event.button}")
+
         # 状態とボタンに応じてハンドラを呼出し
         if state == ZoomState.NO_RECT:
             if event.button == MouseButton.LEFT:
@@ -106,13 +131,19 @@ class EventHandler:
         # 他の状態 (CREATE中など) でのPressは基本的に無視 or 特定の処理
 
     def on_motion(self, event: MouseEvent):
-        """ マウス移動イベントのディスパッチャ """
+        """マウス移動イベントのディスパッチャ
+
+        Args:
+            event: MouseEvent オブジェクト
+        """
         validation_result = self.validator.validate_event(event, self.zoom_selector.ax, self.logger)
         if not (validation_result.is_in_axes and validation_result.has_coords):
             self.logger.log(LogLevel.DEBUG, "Axes外または座標無効のため処理中断")
             return
+
         state = self.state_handler.get_state()
         self.logger.log(LogLevel.DEBUG, f"状態取得完了：{state.name}")
+
         # 状態に応じてハンドラを呼出し
         if state == ZoomState.CREATE:
             if event.button == MouseButton.LEFT: # ドラッグ中か確認
@@ -130,13 +161,20 @@ class EventHandler:
                 self._handle_motion_rotating(event)
 
     def on_release(self, event: MouseEvent):
-        """ マウスボタン解放イベントのディスパッチャ """
+        """マウスボタン解放イベントのディスパッチャ
+
+        Args:
+            event: MouseEvent オブジェクト
+        """
         validation_result = self.validator.validate_event(event, self.zoom_selector.ax, self.logger)
         is_outside = not validation_result.has_coords # 軸外でのリリースか
+
         state = self.state_handler.get_state()
         self.logger.log(LogLevel.CALL, f"状態取得：{state.name}, ボタン={event.button}, 軸外={is_outside}")
+
         operation_ended = False
         final_state_to_set = ZoomState.EDIT # デフォルトは操作完了後のEDIT状態
+
         # 状態に応じてハンドラを呼出し
         if state == ZoomState.CREATE:
             if event.button == MouseButton.LEFT:
@@ -154,17 +192,23 @@ class EventHandler:
             if event.button == MouseButton.LEFT:
                 final_state_to_set = self._handle_release_rotating(event)
                 operation_ended = True
+
         # 操作が終了した場合の共通後処理
         if operation_ended:
             self.logger.log(LogLevel.INFO, f"操作終了: 新しい状態へ遷移 -> {final_state_to_set.name}")
             self.state_handler.update_state(final_state_to_set, {"action": f"{state.name} 終了"})
             self.zoom_selector.invalidate_rect_cache()
+
             # Altキーの状態も考慮してカーソルを更新
             self.cursor_manager.cursor_update(event, state=final_state_to_set, is_rotating=self._alt_pressed)
             self.canvas.draw_idle()
 
     def on_key_press(self, event: KeyEvent):
-        """ キーボード押下イベントのディスパッチャ """
+        """キーボード押下イベントのディスパッチャ
+
+        Args:
+            event: KeyEvent オブジェクト
+        """
         self.logger.log(LogLevel.CALL, f"on_key_press: キー={event.key}")
         if event.key == 'escape':
             self._handle_key_escape(event)
@@ -175,7 +219,11 @@ class EventHandler:
         # self.cursor_manager.cursor_update(None, state=state, is_rotating=True)
 
     def on_key_release(self, event: KeyEvent):
-        """ キーボード解放イベントのディスパッチャ """
+        """キーボード解放イベントのディスパッチャ
+
+        Args:
+            event: KeyEvent オブジェクト
+        """
         self.logger.log(LogLevel.CALL, f"on_key_release: キー={event.key}")
         if event.key == 'alt':
             self._handle_key_alt_release(event)
@@ -187,7 +235,11 @@ class EventHandler:
     # --- プライベートハンドラメソッド ---
     # --- Press イベントハンドラ ---
     def _handle_press_no_rect_left(self, event: MouseEvent):
-        """ NO_RECT 状態で左クリック: 矩形作成開始 """
+        """NO_RECT 状態で左クリック: 矩形作成開始
+
+        Args:
+            event: MouseEvent オブジェクト
+        """
         self.logger.log(LogLevel.INFO, "ハンドラ：矩形作成開始：状態更新 ⇒ CREATE")
         self.state_handler.update_state(ZoomState.CREATE, {"action": "作成開始"})
         if event.xdata is None or event.ydata is None: return # 型ガード
@@ -200,7 +252,11 @@ class EventHandler:
         self.add_history(None) # 矩形がない状態を履歴に追加
 
     def _dispatch_press_edit_left(self, event: MouseEvent):
-        """ EDIT 状態で左クリック: 回転/リサイズ/移動の開始 """
+        """EDIT 状態で左クリック: 回転/リサイズ/移動の開始
+
+        Args:
+            event: MouseEvent オブジェクト
+        """
         corner_index = self.zoom_selector.pointer_near_corner(event)
         is_inside = self.zoom_selector.cursor_inside_rect(event)
         if self._alt_pressed and corner_index is not None:
@@ -212,7 +268,12 @@ class EventHandler:
         # else: 角でも内側でもない場合は何もしない
 
     def _handle_press_edit_start_rotating(self, event: MouseEvent, corner_index: int):
-        """ EDIT 状態 + Alt + 角で左クリック: 回転開始 """
+        """EDIT 状態 + Alt + 角で左クリック: 回転開始
+
+        Args:
+            event: MouseEvent オブジェクト
+            corner_index: 回転開始する角
+        """
         self.logger.log(LogLevel.INFO, f"ハンドラ：回転開始（角={corner_index}）")
         current_state_for_history = self.rect_manager.get_state() # 履歴追加のため先に取得
         center = self.rect_manager.get_center()
@@ -233,7 +294,12 @@ class EventHandler:
             self.logger.log(LogLevel.ERROR, "回転不可：中心座標またはイベント座標なし")
 
     def _handle_press_edit_start_resizing(self, event: MouseEvent, corner_index: int):
-        """ EDIT 状態 + 角で左クリック：リサイズ開始 """
+        """EDIT 状態 + 角で左クリック：リサイズ開始
+
+        Args:
+            event: MouseEvent オブジェクト
+            corner_index: リサイズ開始する角
+        """
         self.logger.log(LogLevel.INFO, f"ハンドラ：リサイズ開始（角={corner_index}）")
         current_state_for_history = self.rect_manager.get_state() # 履歴追加のため先に取得
         rotated_corners = self.rect_manager.get_rotated_corners()
@@ -253,7 +319,11 @@ class EventHandler:
             self.logger.log(LogLevel.ERROR, "リサイズ不可：回転後の角座標を取得できず")
 
     def _handle_press_edit_start_moving(self, event: MouseEvent):
-        """ EDIT 状態 + 内部で左クリック: 移動開始 """
+        """EDIT 状態 + 内部で左クリック: 移動開始
+
+        Args:
+            event: MouseEvent オブジェクト
+        """
         self.logger.log(LogLevel.INFO, "ハンドラ：移動開始")
         current_state_for_history = self.rect_manager.get_state() # 履歴追加のため先に取得
         rect_props = self.rect_manager.get_properties()
@@ -272,7 +342,11 @@ class EventHandler:
             self.logger.log(LogLevel.ERROR, "移動不可：矩形プロパティまたはイベント座標なし")
 
     def _handle_press_edit_right_confirm(self, event: MouseEvent):
-        """ EDIT 状態で右クリック: ズーム確定 """
+        """EDIT 状態で右クリック: ズーム確定
+
+        Args:
+            event: MouseEvent オブジェクト
+        """
         self.logger.log(LogLevel.INFO, "ハンドラ：ズーム確定")
         self.zoom_selector.confirm_zoom() # ZoomSelectorに処理を委譲
         self.logger.log(LogLevel.INFO, "状態更新：NO_RECT")
@@ -281,14 +355,22 @@ class EventHandler:
 
     # --- Motion イベントハンドラ ---
     def _handle_motion_create(self, event: MouseEvent):
-        """ CREATE 状態でのマウス移動: 矩形サイズ更新 """
+        """CREATE 状態でのマウス移動: 矩形サイズ更新
+
+        Args:
+            event: MouseEvent オブジェクト
+        """
         if self.start_x is not None and self.start_y is not None and event.xdata is not None and event.ydata is not None:
             self.logger.log(LogLevel.DEBUG, "ハンドラ：作成中・・・")
             self.rect_manager.setting_rect_size(self.start_x, self.start_y, event.xdata, event.ydata)
             self.canvas.draw_idle()
 
     def _handle_motion_edit(self, event: MouseEvent):
-        """ EDIT 状態でのマウス移動 """
+        """EDIT 状態でのマウス移動
+
+        Args:
+            event: MouseEvent オブジェクト
+        """
 #
 #
 #
@@ -300,10 +382,15 @@ class EventHandler:
         self.cursor_manager.cursor_update(event, state=ZoomState.EDIT, near_corner_index=corner_index, is_rotating=self._alt_pressed)
 
     def _handle_motion_move(self, event: MouseEvent):
-        """ ON_MOVE 状態でのマウス移動: 矩形移動 """
+        """ON_MOVE 状態でのマウス移動: 矩形移動
+
+        Args:
+            event: MouseEvent オブジェクト
+        """
         if not self._move_logged:
             self.logger.log(LogLevel.DEBUG, "ハンドラ：移動中・・・")
             self._move_logged = True
+
         if self.move_start_x is not None and self.move_start_y is not None and \
            self.rect_start_pos is not None and event.xdata is not None and event.ydata is not None:
             dx = event.xdata - self.move_start_x
@@ -315,7 +402,11 @@ class EventHandler:
             self.canvas.draw_idle()
 
     def _handle_motion_resizing(self, event: MouseEvent):
-        """ RESIZING 状態でのマウス移動: リサイズ """
+        """RESIZING 状態でのマウス移動: リサイズ
+
+        Args:
+            event: MouseEvent オブジェクト
+        """
         if not self._resize_logged:
             self.logger.log(LogLevel.DEBUG, f"ハンドラ：リサイズ中・・・：角={self.resize_corner_index})")
             self._resize_logged = True
@@ -327,7 +418,11 @@ class EventHandler:
             self.canvas.draw_idle()
 
     def _handle_motion_rotating(self, event: MouseEvent):
-        """ ROTATING 状態でのマウス移動: 矩形回転 """
+        """ROTATING 状態でのマウス移動: 矩形回転
+
+        Args:
+            event: MouseEvent オブジェクト
+        """
         if not self._rotate_logged:
             self.logger.log(LogLevel.DEBUG, "ハンドラ：回転中・・・")
             self._rotate_logged = True
@@ -349,7 +444,15 @@ class EventHandler:
 
     # --- Release イベントハンドラ ---
     def _handle_release_create(self, event: MouseEvent, is_outside: bool) -> ZoomState:
-        """ CREATE 状態でのマウス解放: 作成完了またはキャンセル """
+        """CREATE 状態でのマウス解放: 作成完了またはキャンセル
+
+        Args:
+            event: MouseEvent オブジェクト
+            is_outside: 軸外でのリリースか
+
+        Returns:
+            ZoomState: 次の状態
+        """
         self.logger.log(LogLevel.INFO, "ハンドラ：作成完了またはキャンセル")
         final_state = ZoomState.NO_RECT # デフォルトはキャンセル
         if is_outside:
@@ -375,14 +478,28 @@ class EventHandler:
         return final_state
 
     def _handle_release_move(self, event: MouseEvent) -> ZoomState:
-        """ ON_MOVE 状態でのマウス解放: 移動完了 """
+        """ON_MOVE 状態でのマウス解放: 移動完了
+
+        Args:
+            event: MouseEvent オブジェクト
+
+        Returns:
+            ZoomState: 次の状態
+        """
         self.logger.log(LogLevel.INFO, "ハンドラ：移動完了")
         self.rect_manager.edge_change_finishing()
         self._reset_move_state()
         return ZoomState.EDIT
 
     def _handle_release_resizing(self, event: MouseEvent) -> ZoomState:
-        """ RESIZING 状態でのマウス解放: リサイズ完了またはキャンセル/Undo """
+        """RESIZING 状態でのマウス解放: リサイズ完了またはキャンセル/Undo
+
+        Args:
+            event: MouseEvent オブジェクト
+
+        Returns:
+            ZoomState: 次の状態
+        """
         self.logger.log(LogLevel.INFO, "ハンドラ：リサイズ完了")
         self.rect_manager.edge_change_finishing()
         final_state = ZoomState.EDIT
@@ -398,7 +515,14 @@ class EventHandler:
         return final_state
 
     def _handle_release_rotating(self, event: MouseEvent) -> ZoomState:
-        """ ROTATING 状態でのマウス解放: 回転完了 """
+        """ROTATING 状態でのマウス解放: 回転完了
+
+        Args:
+            event: MouseEvent オブジェクト
+
+        Returns:
+            ZoomState: 次の状態
+        """
         self.logger.log(LogLevel.INFO, "ハンドラ：回転完了")
         # スタイル変更は回転中にはないので戻す必要なし
         self._reset_rotate_state()
@@ -407,7 +531,11 @@ class EventHandler:
 
     # --- Key イベントハンドラ ---
     def _handle_key_escape(self, event: KeyEvent):
-        """ Escapeキー押下処理 """
+        """Escapeキー押下処理
+
+        Args:
+            event: KeyEvent オブジェクト
+        """
         state = self.state_handler.get_state()
         if state is ZoomState.NO_RECT:
             self.logger.log(LogLevel.DEBUG, "ESC: NO_RECT -> ズーム確定キャンセル呼出し")
@@ -421,7 +549,11 @@ class EventHandler:
              self.undo_or_cancel_edit()
 
     def _handle_key_alt_press(self, event: KeyEvent):
-        """ Altキー押下処理 """
+        """Altキー押下処理
+
+        Args:
+            event: KeyEvent オブジェクト
+        """
         if not self._alt_pressed:
             self.logger.log(LogLevel.INFO, "ハンドラ：回転モード有効化")
             self._alt_pressed = True
@@ -431,7 +563,11 @@ class EventHandler:
                 # 強制更新が必要ならここで cursor_manager.cursor_update を呼ぶ
 
     def _handle_key_alt_release(self, event: KeyEvent):
-        """ Altキー解放処理 """
+        """Altキー解放処理
+
+        Args:
+            event: KeyEvent オブジェクト
+        """
         if self._alt_pressed:
             self.logger.log(LogLevel.INFO, "ハンドラ：回転モード無効化")
             self._alt_pressed = False
@@ -444,8 +580,12 @@ class EventHandler:
 
     # --- Undo 関連メソッド ---
     def add_history(self, state: Optional[Dict[str, Any]]):
-        """ 編集履歴に状態を追加 """
-        # None (矩形がない状態) を履歴に追加することも許可する
+        """編集履歴に状態を追加
+
+        Args:
+            state (Optional[Dict[str, Any]]): 状態情報
+        """
+        # None (ズーム領域がない状態) を履歴に追加することも許可する
         self.edit_history.append(state)
         self.logger.log(LogLevel.DEBUG, f"履歴追加: 現在の履歴数={len(self.edit_history)}")
         # メモリリークを防ぐため、履歴数に上限を設けることも検討
@@ -454,7 +594,11 @@ class EventHandler:
         #     self.edit_history.pop(0) # 古い履歴を削除
 
     def remove_last_history(self):
-        """ 最後の履歴を削除 """
+        """最後の履歴を削除
+
+        Returns:
+            Optional[Dict[str, Any]]: 削除された状態情報
+        """
         if self.edit_history:
             removed = self.edit_history.pop()
             self.logger.log(LogLevel.DEBUG, f"最後の履歴削除: 削除後の履歴数={len(self.edit_history)}")
@@ -462,7 +606,7 @@ class EventHandler:
         return None
 
     def clear_edit_history(self):
-        """ 編集履歴をクリア """
+        """編集履歴をクリア"""
         self.edit_history.clear()
         self.logger.log(LogLevel.SUCCESS, "編集履歴クリア完了")
 
@@ -505,11 +649,25 @@ class EventHandler:
 
     # --- ヘルパーメソッド ---
     def _calculate_angle(self, cx: float, cy: float, px: float, py: float) -> float:
-        """ 中心点から点へのベクトル角度を計算 (度, -180から180) """
+        """中心点から点へのベクトル角度を計算 (度, -180から180)
+        Args:
+            cx (float): 中心点 x 座標
+            cy (float): 中心点 y 座標
+            px (float): 点 x 座標
+            py (float): 点 y 座標
+        Returns:
+            float: ベクトル角度 (度, -180から180)
+        """
         return math.degrees(math.atan2(py - cy, px - cx))
 
     def _normalize_angle_diff(self, angle1: float, angle2: float) -> float:
-        """ 角度差を -180度から180度の範囲に正規化 """
+        """角度差を -180度から180度の範囲に正規化
+        Args:
+            angle1 (float): 角度1
+            angle2 (float): 角度2
+        Returns:
+            float: 正規化した角度差
+        """
         diff = angle1 - angle2
         while diff <= -180: diff += 360
         while diff > 180: diff -= 360
@@ -518,7 +676,7 @@ class EventHandler:
 
     # --- 状態リセットメソッド群 ---
     def reset_internal_state(self):
-        """ 全ての内部状態と編集履歴をリセット """
+        """全ての内部状態と編集履歴をリセット"""
         self._reset_create_state()
         self._reset_move_state()
         self._reset_resize_state()

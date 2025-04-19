@@ -15,17 +15,31 @@ class ParameterPanel:
     COLORBAR_HEIGHT = 15  # カラーバーの高さ (ピクセル)
 
     def __init__(self, parent, update_callback, reset_callback, logger: DebugLogger):
-        """ パラメータパネルの初期化 """
+        """パラメータパネルのコンストラクタ（親: MainWindow）
+
+        Args:
+            parent (tkinter.Tk): Tkinter ルートウィンドウ
+            update_callback (function): パラメータ更新時のコールバック関数: MainWindow.on_update
+            reset_callback (function): パラメータリセット時のコールバック関数: MainWindow.on_reset
+            logger (DebugLogger): ログ出力用の DebugLogger インスタンス
+        """
         self.logger = logger
         self.parent = parent
-        self.update_callback = update_callback # フラクタル更新用コールバック
+        self.update_callback = update_callback
         self.reset_callback = reset_callback
         self.logger.log(LogLevel.INIT, "パラメータパネルセットアップ開始")
         self.setup_panel()
         self._update_colorbars() # パネル設定後に初期カラーバーを更新
 
     def _create_colorbar_image(self, cmap_name: str) -> ImageTk.PhotoImage:
-        """ 指定されたカラーマップ名からカラーバーのPhotoImageを生成 """
+        """指定されたカラーマップ名からカラーバーの PhotoImage を生成
+
+        Args:
+            cmap_name (str): カラーマップ名
+
+        Returns:
+            ImageTk.PhotoImage: 生成されたカラーバーの PhotoImage
+        """
         self.logger.log(LogLevel.SUCCESS, "カラーバー生成開始")
         try:
             cmap = plt.get_cmap(cmap_name)
@@ -56,7 +70,11 @@ class ParameterPanel:
             return photo_image
 
     def _update_colorbars(self, *args):
-        """ 選択されているカラーマップに基づいてカラーバーの表示を更新 """
+        """選択されているカラーマップに基づいてカラーバーの表示を更新
+
+        Args:
+            *args: 未使用
+        """
         # 発散部
         diverge_cmap_name = self.diverge_colormap_var.get()
         self.logger.log(LogLevel.CALL, "カラーバー更新：発散部")
@@ -71,7 +89,7 @@ class ParameterPanel:
         self.non_diverge_colorbar_label.image = non_diverge_photo # 参照を保持
 
     def setup_panel(self):
-        """ パラメータパネルの設定 """
+        """パラメータパネルの設定"""
         # --- フラクタルタイプ ---
         row = 0
         ttk.Label(self.parent, text="フラクタルタイプ:").grid(row=row, column=0, sticky=tk.W, padx=10, pady=(5,0))
@@ -199,7 +217,7 @@ class ParameterPanel:
         self.parent.columnconfigure(1, weight=1)
 
     def show_formula_display(self):
-        """ 漸化式を表示 """
+        """漸化式を表示"""
         fractal_type = self.fractal_type_var.get()
         if fractal_type == "Julia":
             self.formula_var.set("Z(n+1) = Z(n)² + C")
@@ -207,7 +225,11 @@ class ParameterPanel:
             self.formula_var.set("Z(n+1) = Z(n)² + C\n(Z(0)=0, C=座標)")
 
     def get_parameters(self) -> dict:
-        """ パラメータパネルから値を取得 """
+        """パラメータパネルから値を取得
+
+        Returns:
+            dict: パラメータ辞書
+        """
         try:
             panel_params = {
                 "fractal_type": self.fractal_type_var.get(),

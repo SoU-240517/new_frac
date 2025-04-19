@@ -167,13 +167,22 @@ class ColorCache:
         - FractalCache は別に存在する（render.py）
     """
     def __init__(self, max_size=100, logger=None):
+        """カラーキャッシュのコンストラクタ
+
+        Args:
+            max_size (int, optional): キャッシュの最大サイズ. Defaults to 100.
+        """
         self.cache = {}
         self.max_size = max_size
         self.logger = logger or DebugLogger()  # logger が渡されない場合は新規作成
         self.logger.log(LogLevel.INIT, "DebugLogger 初期化完了（になっちゃう）")
 
     def _create_cache_key(self, params):
-        """ キャッシュキーを生成するためのヘルパーメソッド """
+        """キャッシュキーを生成するためのヘルパーメソッド
+
+        Args:
+            params (dict): 計算パラメータ
+        """
         # キャッシュキーは、パラメータの組み合わせから生成される
         key_params = {
             'zoom_level': params.get('zoom_level', 1),
@@ -185,7 +194,11 @@ class ColorCache:
         return hash(frozenset(key_params.items()))
 
     def get_cache(self, params):
-        """ キャッシュから画像を取得 """
+        """キャッシュから画像を取得
+
+        Args:
+            params (dict): 計算パラメータ
+        """
         key = self._create_cache_key(params)
         self.logger.log(LogLevel.DEBUG, f"キャッシュキー取得試行: {key}")
         if key in self.cache:
@@ -195,7 +208,12 @@ class ColorCache:
         return None
 
     def put_cache(self, params, image):
-        """ キャッシュに画像を追加 """
+        """キャッシュに画像を追加
+
+        Args:
+            params (dict): 計算パラメータ
+            image (np.ndarray): 着色済み画像
+        """
         key = self._create_cache_key(params)
         self.logger.log(LogLevel.DEBUG, f"キャッシュキー書込み試行: {key}")
         # キャッシュが満杯の場合、最古のエントリを削除
@@ -211,12 +229,16 @@ class ColorCache:
         self.logger.log(LogLevel.SUCCESS, "キャッシュエントリ追加")
 
     def clear_cache(self):
-        """ キャッシュをクリア """
+        """キャッシュをクリア"""
         self.logger.log(LogLevel.INFO, "キャッシュクリア")
         self.cache.clear()
 
     def get_cache_stats(self):
-        """ キャッシュの統計情報を取得 """
+        """キャッシュの統計情報を取得
+
+        Returns:
+            dict: キャッシュの統計情報
+        """
         return {
             'size': len(self.cache),
             'max_size': self.max_size,

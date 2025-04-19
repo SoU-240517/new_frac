@@ -9,19 +9,33 @@ class ZoomStateHandler:
         - 状態を更新する
     """
     def __init__(self, initial_state: ZoomState, logger: DebugLogger, event_handler=None, canvas=None):
+        """ズーム状態管理クラスのコンストラクタ（親: ZoomSelector）
+
+        Args:
+            initial_state (ZoomState): 初期状態
+            logger (DebugLogger): ログ出力用の DebugLogger インスタンス
+        """
         self.logger = logger
         self._state: ZoomState = initial_state
         self.event_handler = event_handler
         self.canvas = canvas
 
     def get_state(self) -> ZoomState:
-        """ 現在の状態を取得 """
+        """現在の状態を取得
+
+        Returns:
+            ZoomState: 現在の状態
+        """
         return self._state
 
     def update_state(self, new_state: ZoomState, context: Optional[Dict[str, Any]] = None):
-        """ 状態を更新 """
-        if self._state == new_state:
-            return
+        """状態を更新
+
+        Args:
+            new_state (ZoomState): 更新後の状態
+            context (Optional[Dict[str, Any]]): 更新の理由を記録するコンテキスト情報
+        """
+        if self._state == new_state: return
 
         old_state_name = self._state.name
         self._state = new_state

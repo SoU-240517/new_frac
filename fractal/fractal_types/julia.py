@@ -3,7 +3,14 @@ from ui.zoom_function.debug_logger import DebugLogger
 from ui.zoom_function.enums import LogLevel
 
 def compute_julia(Z, C, max_iter, logger: DebugLogger):
-    """ジュリア集合の計算"""
+    """ジュリア集合の計算
+
+    Args:
+        Z (np.ndarray): 初期値
+        C (complex): 初期値
+        max_iter (int): 最大反復回数
+        logger (DebugLogger): ログ出力クラス
+    """
     shape = Z.shape
     iterations = np.zeros(shape, dtype=int)
     z = Z.copy()
