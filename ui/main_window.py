@@ -32,29 +32,17 @@ class MainWindow:
         self.prev_zoom_params = None
 
         self.logger.log(LogLevel.INIT, "コールバック設定")
-
         self.fractal_canvas.set_zoom_callback(self.on_zoom_confirm, self.on_zoom_cancel)
 
         # 非同期処理用変数
         self.is_drawing = False
         self.draw_thread = None
 
-        self.logger.log(LogLevel.INFO, "非同期でフラクタル描画を開始")
-
-        # 編集ここから ----------
         # アプリケーション起動時の最初の描画スレッド開始前に、ステータスバーアニメーションを開始
         self._start_status_animation()
-        self.logger.log(LogLevel.DEBUG, "__init__: _start_status_animation() を呼び出しました") # 追加ログ
 
+        self.logger.log(LogLevel.DEBUG, "非同期でフラクタル描画を開始")
         # 最初のフラクタル描画スレッドを作成し、開始
-        self.draw_thread = threading.Thread(target=self._update_fractal_thread, daemon=True)
-        self.logger.log(LogLevel.DEBUG, "__init__: 描画スレッドを作成しました") # 追加ログ
-        self.draw_thread.start()
-        self.logger.log(LogLevel.DEBUG, "__init__: 描画スレッドを開始しました") # 追加ログ
-        # 編集ここまで ----------
-
-        self.logger.log(LogLevel.INFO, "非同期でフラクタル描画を開始")
-        # スレッドのターゲットとしてインスタンスメソッドを指定
         self.draw_thread = threading.Thread(target=self._update_fractal_thread, daemon=True)
         self.draw_thread.start()
 
@@ -138,23 +126,23 @@ class MainWindow:
     def _update_fractal_thread(self):
         """フラクタル更新の実際の処理（別スレッドで実行される）"""
         try:
-            self.logger.log(LogLevel.CALL, "描画パラメータ：取得開始 (スレッド内)")
+            self.logger.log(LogLevel.CALL, "描画パラメータ：取得開始（スレッド内）")
             # パラメータパネルから最新の設定を取得
             panel_params = self.parameter_panel.get_parameters()
             # ズーム操作によるパラメータとパラメータパネルの設定を結合
             current_params = self.zoom_params.copy()
             current_params.update(panel_params) # パラメータパネルの設定で上書き（max_iterなど）
 
-            self.logger.log(LogLevel.CALL, "フラクタル描画開始 (スレッド内)")
+            self.logger.log(LogLevel.CALL, "フラクタル描画開始（スレッド内）")
             # フラクタル計算と着色処理を実行
             fractal_image = render_fractal(current_params, self.logger)
 
-            self.logger.log(LogLevel.CALL, "メインスレッドでキャンバス更新要求 (スレッド内)")
-            # Tkinterのウィジェット操作は必ずメインスレッドで行う必要があるため、root.afterを使用
+            self.logger.log(LogLevel.CALL, "メインスレッドでキャンバス更新要求（スレッド内）")
+            # Tkinterのウィジェット操作は必ずメインスレッドで行う必要があるため、root.after を使用
             # update_canvas メソッドをメインスレッドで実行するようにスケジュール
             self.root.after(0, lambda: self.fractal_canvas.update_canvas(fractal_image, current_params))
 
-            self.logger.log(LogLevel.CALL, "メインスレッドでステータスアニメーション停止要求 (スレッド内)")
+            self.logger.log(LogLevel.CALL, "メインスレッドでステータスアニメーション停止要求（スレッド内）")
             # ステータスアニメーション停止もメインスレッドで実行するようにスケジュール
             self.root.after(0, lambda: self._stop_status_animation())
 
@@ -165,8 +153,6 @@ class MainWindow:
         finally: # 描画スレッドの終了処理
             # is_drawing フラグをリセット
             self.is_drawing = False
-            self.logger.log(LogLevel.INFO, "描画スレッド終了")
-
 
     def on_zoom_confirm(self, x: float, y: float, w: float, h: float, angle: float):
         """ズーム確定時のコールバック（ZoomSelectorから呼ばれる）
@@ -277,72 +263,49 @@ class MainWindow:
 
     def _start_status_animation(self):
         """ステータスバーの描画中アニメーションを開始"""
-        self.logger.log(LogLevel.DEBUG, "_start_status_animation 実行") # 追加ログ
         # 既にアニメーションが実行中の場合は何もしない
-        if self.animation_running:
-             self.logger.log(LogLevel.DEBUG, "_start_status_animation: アニメーションは既に実行中です")
-             return
+        if self.animation_running: return
 
         self.animation_running = True # アニメーション実行中フラグをTrueに
         self.animation_dots = 0
-        self.logger.log(LogLevel.DEBUG, "_start_status_animation: アニメーション実行フラグをTrueに設定しました") # 追加ログ
 
-        self.logger.log(LogLevel.DEBUG, "_start_status_animation: アニメーションスレッドを作成します") # 追加ログ
         # アニメーション用のスレッドを作成
         self.animation_thread = threading.Thread(
-            target=self._status_animation_thread, # このメソッドがスレッドで実行されるターゲット
-            daemon=True) # メインスレッド終了時に一緒に終了
+            target=self._status_animation_thread,
+            daemon=True)
 
-        self.logger.log(LogLevel.DEBUG, "_start_status_animation: アニメーションスレッドのstart()を呼び出します") # 追加ログ
         # スレッドを開始
         try:
             self.animation_thread.start()
-            self.logger.log(LogLevel.DEBUG, "_start_status_animation: アニメーションスレッドのstart()呼び出しに成功しました") # 追加ログ
         except Exception as e:
-            self.logger.log(LogLevel.ERROR, f"_start_status_animation: アニメーションスレッドの開始に失敗しました: {e}") # 追加ログ
+            self.logger.log(LogLevel.ERROR, f"アニメーションスレッドの開始失敗: {e}")
             self.animation_running = False # スレッド開始に失敗したらフラグを戻す
-
-
-        self.logger.log(LogLevel.DEBUG, "_start_status_animation 完了") # 追加ログ
 
     def _status_animation_thread(self):
         """ステータスバーのアニメーションを更新するスレッドの処理"""
-        self.logger.log(LogLevel.DEBUG, "_status_animation_thread 開始: アニメーションスレッドが実行されました") # 追加ログ
         while self.animation_running:
-            self.logger.log(LogLevel.DEBUG, "_status_animation_thread ループ実行中") # 追加ログ
             # ドットの数を増やす (最大数に達したら0に戻る)
             self.animation_dots = (self.animation_dots + 1) % (self.animation_max_dots + 1)
             dots = "." * self.animation_dots
             # TkinterのLabel更新はメインスレッドで行う必要があるため、root.afterを使用
-            self.logger.log(LogLevel.DEBUG, f"_status_animation_thread: root.after でテキスト更新をスケジュール ({dots})") # 追加ログ
             self.root.after(0, lambda: self.status_label.config(text=f"描画中{dots}"))
             # 一定時間待機してアニメーションの間隔を調整
             time.sleep(0.1)
-        self.logger.log(LogLevel.DEBUG, "_status_animation_thread: アニメーション実行ループ終了") # 追加ログ
         # アニメーション終了後、ステータスを「完了」に更新
-        self.logger.log(LogLevel.DEBUG, "_status_animation_thread: root.after で完了表示をスケジュール") # 追加ログ
         self.root.after(0, lambda: self.status_label.config(text="完了"))
-        self.logger.log(LogLevel.DEBUG, "_status_animation_thread 終了") # 追加ログ
 
     def _stop_status_animation(self):
         """ステータスバーの描画中アニメーションを停止"""
-        self.logger.log(LogLevel.DEBUG, "_stop_status_animation 実行") # 追加ログ
         if self.animation_running:
-            self.logger.log(LogLevel.DEBUG, "_stop_status_animation: アニメーション停止要求フラグをセットします") # 追加ログ
             self.animation_running = False
             # アニメーションスレッドが終了するのを待つ (短い処理なのですぐに終わるはず)
             if self.animation_thread and self.animation_thread.is_alive():
-                self.logger.log(LogLevel.DEBUG, "_stop_status_animation: アニメーションスレッドのjoinを待ちます") # 追加ログ
                 self.animation_thread.join(timeout=0.5) # タイムアウトを設定
                 if self.animation_thread.is_alive():
-                    self.logger.log(LogLevel.WARNING, "_stop_status_animation: ステータスアニメーションスレッドが終了しませんでした。")
-                else:
-                    self.logger.log(LogLevel.DEBUG, "_stop_status_animation: アニメーションスレッドが正常に終了しました。") # 追加ログ
-
+                    self.logger.log(LogLevel.WARNING, "ステータスアニメーションスレッドが終了不可")
             self.animation_thread = None # スレッド参照をクリア
-            self.logger.log(LogLevel.DEBUG, "_stop_status_animation 完了: アニメーション停止処理が完了しました") # 追加ログ
         else:
-             self.logger.log(LogLevel.DEBUG, "_stop_status_animation: アニメーションは実行されていませんでした") # 追加ログ
+             self.logger.log(LogLevel.ERROR, "アニメーションは実行されていません")
 
     def _on_canvas_frame_configure(self, event):
         """キャンバスフレームのリサイズ時にMatplotlib Figureのサイズを更新し、16:9の縦横比を維持する"""
@@ -387,10 +350,10 @@ class MainWindow:
                 # MatplotlibのFigureサイズを更新。forward=TrueでFigureCanvasTkAggに通知し、再描画を促す。
                 # これによりTkinterキャンバスウィジェットのサイズもFigureサイズに合うように調整されます。
                 self.fractal_canvas.fig.set_size_inches(new_width_inches, new_height_inches, forward=True)
-                self.logger.log(LogLevel.SUCCESS, f"Matplotlib Figureサイズ更新完了: {new_width_inches:.2f}x{new_height_inches:.2f}インチ ({new_width_pixels}x{new_height_pixels}ピクセル)")
+                self.logger.log(LogLevel.SUCCESS, f"Matplotlib Figure サイズ更新完了: {new_width_inches:.2f}x{new_height_inches:.2f}インチ ({new_width_pixels}x{new_height_pixels}ピクセル)")
                 # Figureサイズ変更によりAxesの表示も自動的に更新されるはずですが、必要に応じて
                 # self.fractal_canvas.canvas.draw_idle() を追加しても良いかもしれません。（ただしパフォーマンス注意）
             else:
-                self.logger.log(LogLevel.ERROR, "FractalCanvasまたはFigureが利用できません。Figureサイズ更新をスキップしました。")
+                self.logger.log(LogLevel.ERROR, "FractalCanvas または Figure が利用不可（Figure サイズ更新スキップ）")
         except Exception as e:
-            self.logger.log(LogLevel.ERROR, f"Matplotlib Figureサイズ更新中にエラー: {e}")
+            self.logger.log(LogLevel.ERROR, f"Matplotlib Figure サイズ更新中にエラー: {e}")

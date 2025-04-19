@@ -116,4 +116,3 @@ class CursorManager:
         """
         self.logger.log(LogLevel.INIT, "CursorManager に ZoomSelector インスタンスへの参照を設定")
         self.zoom_selector = zoom_selector
-        self.logger.log(LogLevel.INIT, "CursorManager に設定された ZoomSelector インスタンスへの参照終了")
