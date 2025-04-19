@@ -1,3 +1,4 @@
+import numpy as np # extentの計算にnp.ndarrayが使われる可能性があるのでインポート
 import tkinter as tk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
@@ -27,13 +28,17 @@ class FractalCanvas:
         self.parent = master
 
         # 図（Figure）の設定
-        self.fig = Figure(figsize=(6, 6), dpi=100, facecolor='black') # Matplotlib の Figure オブジェクトを作成
+        # FigureのfigsizeはMainWindowのリサイズイベントで動的に変更されますが、初期値として設定します。
+        # dpiは解像度であり、ピクセル計算に使用されます。
+        self.fig = Figure(figsize=(width/100, height/100), dpi=100, facecolor='black') # Matplotlib の Figure オブジェクトを作成
         # サブプロット（Axes）の設定
         self.ax = self.fig.add_subplot(111, facecolor='black') # Figure に Axes を追加
         self.ax.axis('off')
 
         # Matplotlib の図を Tkinter で表示するためのキャンバス
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.parent) # 作成
+        # Tkinterウィジェットとして配置。fill=tk.BOTH, expand=Trueで親フレームいっぱいに広がるようにします。
+        # aspect比の維持はFigureのサイズとAxesの設定で行います。
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True) # 配置
 
         # ズーム機能の設定
@@ -53,8 +58,6 @@ class FractalCanvas:
         """黒背景を設定"""
         self.ax.set_facecolor('black')
         self.fig.patch.set_facecolor('black')
-#        self.ax.axis('off')
-        self.fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
         self.canvas.draw()
 
     def set_zoom_callback(self, zoom_confirm_callback, zoom_cancel_callback):
@@ -72,7 +75,13 @@ class FractalCanvas:
             h (float): 矩形の高さ
             angle (float): 矩形の回転角度
         """
+        # このメソッドはZoomSelectorから呼ばれますが、MainWindowのon_zoom_confirmに処理を委譲しているため
+        # ここでの直接的な座標変換や描画更新は不要です。
+        # ただし、ログ出力や、MainWindowへのコールバック呼び出しは適切です。
         if self.zoom_confirm_callback:
+            # ZoomSelectorから渡される x, y, w, h, angle はRectManagerが管理する矩形の情報に基づいています。
+            # これらは通常、回転前のデータ座標系の情報ですが、angleは回転角度を示します。
+            # MainWindowのon_zoom_confirmで、これらの情報と現在のFigureの縦横比を使って新しい表示領域のパラメータを計算します。
             self.logger.log(LogLevel.SUCCESS, "ズーム確定時のコールバック呼出し", {"x": x, "y": y, "w": w, "h": h, "angle": angle})
             self.zoom_confirm_callback(x, y, w, h, angle)
 
@@ -89,21 +98,41 @@ class FractalCanvas:
             fractal_image (np.ndarray): フラクタル画像
             params (dict): パラメータ辞書
         """
-        self.ax.clear()
-        self.ax.axis('off')
-        self.fig.subplots_adjust(left=0, right=1, top=1, bottom=0)  # キャンバスのパディングを削除
-        self.ax.set_position((0.0, 0.0, 1.0, 1.0))  # キャンバスの位置を調整
-        aspect_ratio = fractal_image.shape[1] / fractal_image.shape[0]  # 画像のアスペクト比を取得
-        width = params["width"]  # 幅を取得
-        height = width / aspect_ratio  # アスペクト比を維持するために高さを計算
-        self.ax.set_aspect("auto")  # 縦横比を自動調整
-        self.ax.imshow(fractal_image, extent=(
-            params["center_x"] - width / 2,
-            params["center_x"] + width / 2,
-            params["center_y"] - height / 2,
-            params["center_y"] + height / 2
-        ), origin="lower")
+        self.ax.clear() # 現在のAxesの内容をクリア
+        self.ax.axis('off') # 軸を非表示に
+
+        # AxesがFigure全体を占めるように位置を設定（念のため再度設定）
+        self.fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
+        self.ax.set_position([0, 0, 1, 1])
+
+        # 表示したい領域の幅と高さを計算
+        # widthはparams["width"]（データ座標系での幅）を使用します。
+        width = params["width"]
+        # heightは、目標とする16:9の縦横比に基づいて計算します。
+        # width / height = 16 / 9 より height = width * (9 / 16)
+        height = width * (9 / 16)
+        self.logger.log(LogLevel.DEBUG, f"描画範囲の計算: width={width:.4f}, height={height:.4f} (目標16:9)")
+
+        # Axesの縦横比を設定。
+        # 'auto'はAxesのboxのアスペクト比とextentのアスペクト比を一致させようとします。
+        # Figureのサイズを16:9にしているので、Axesも16:9になり、extentもそれに合わせることで、
+        # 期待通りの表示が得られるはずです。
+        self.ax.set_aspect("auto")
+
+        # imshowで画像を描画し、表示範囲 (extent) を設定
+        # extent = [x_min, x_max, y_min, y_max]
+        # 中心座標と幅、高さからextentを計算します。
+        x_min = params["center_x"] - width / 2
+        x_max = params["center_x"] + width / 2
+        y_min = params["center_y"] - height / 2
+        y_max = params["center_y"] + height / 2
+
+        self.ax.imshow(fractal_image, extent=(x_min, x_max, y_min, y_max), origin="lower")
+
+        # Figureの背景を非表示に（Axesのfacecolorが使用されます）
         self.fig.patch.set_visible(False)
+
+        # キャンバスを再描画
         self.canvas.draw()
 
     def reset_zoom_selector(self):
