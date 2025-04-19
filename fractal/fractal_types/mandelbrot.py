@@ -3,7 +3,7 @@ from ui.zoom_function.debug_logger import DebugLogger
 from ui.zoom_function.enums import LogLevel
 
 def compute_mandelbrot(Z, Z0, max_iter, logger: DebugLogger):
-    """ マンデルブロ集合の計算 """
+    """マンデルブロ集合の計算"""
     shape = Z.shape
     iterations = np.zeros(shape, dtype=int)
     z = np.full(shape, Z0, dtype=complex)

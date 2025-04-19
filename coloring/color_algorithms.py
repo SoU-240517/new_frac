@@ -6,69 +6,15 @@ from coloring import gradient
 from ui.zoom_function.debug_logger import DebugLogger
 from ui.zoom_function.enums import LogLevel
 
-class FractalCache:
-    """ フラクタル画像のキャッシュクラス """
-    def __init__(self, max_size=100, logger=None):
-        self.cache = {}
-        self.max_size = max_size
-        self.logger = logger or DebugLogger()  # logger が渡されない場合は新規作成
-        self.logger.log(LogLevel.INIT, "DebugLogger 初期化完了（になっちゃう）")
-
-    def _create_cache_key(self, params):
-        """ キャッシュキーを生成するためのヘルパーメソッド """
-        # キャッシュキーは、パラメータの組み合わせから生成される
-        key_params = {
-            'zoom_level': params.get('zoom_level', 1),
-            'center': params.get('center', (0, 0)),
-            'size': params.get('size', (1, 1)),
-            'max_iterations': params.get('max_iterations', 100),
-            'diverge_algorithm': params.get('diverge_algorithm', 'default')
-        }
-        return hash(frozenset(key_params.items()))
-
-    def get_cache(self, params):
-        """ キャッシュから画像を取得 """
-        key = self._create_cache_key(params)
-        self.logger.log(LogLevel.DEBUG, f"キャッシュキー取得試行: {key}")
-        if key in self.cache:
-            self.logger.log(LogLevel.SUCCESS, "キャッシュヒット")
-            return self.cache[key]
-        self.logger.log(LogLevel.INFO, "キャッシュミス")
-        return None
-
-    def put_cache(self, params, image):
-        """ キャッシュに画像を追加 """
-        key = self._create_cache_key(params)
-        self.logger.log(LogLevel.DEBUG, f"キャッシュキー書込み試行: {key}")
-        # キャッシュが満杯の場合、最古のエントリを削除
-        if len(self.cache) >= self.max_size:
-            oldest_key = next(iter(self.cache))
-            self.logger.log(LogLevel.INFO, f"キャッシュフル（最古エントリ削除）：{oldest_key}")
-            del self.cache[oldest_key]
-        self.cache[key] = {
-            'image': image,
-            'timestamp': time.time(),
-            'params': params
-        }
-        self.logger.log(LogLevel.SUCCESS, "キャッシュエントリ追加")
-
-    def clear_cache(self):
-        """ キャッシュをクリア """
-        self.logger.log(LogLevel.INFO, "キャッシュクリア")
-        self.cache.clear()
-
-    def get_cache_stats(self):
-        """ キャッシュの統計情報を取得 """
-        return {
-            'size': len(self.cache),
-            'max_size': self.max_size,
-            'memory_usage': sum(len(v['image']) for v in self.cache.values())
-        }
-
+"""フラクタルの着色アルゴリズムを実装
+- 役割:
+    - 着色アルゴリズムを適用
+    - 着色アルゴリズムの結果をキャッシュ
+"""
 def apply_coloring_algorithm(results, params, logger: DebugLogger):
     """ 着色アルゴリズムを適用（高速スムージング追加）。float32 [0, 255] RGBA 配列を返す """
     logger.log(LogLevel.INIT, "FractalCache 初期化開始")
-    cache = FractalCache()
+    cache = ColorCache()
     cached = cache.get_cache(params)
     if cached:
         logger.log(LogLevel.INFO, "キャッシュイメージ使用")
@@ -213,3 +159,66 @@ def apply_coloring_algorithm(results, params, logger: DebugLogger):
     # キャッシュに保存
     cache.put_cache(params, colored)
     return colored
+
+class ColorCache:
+    """フラクタル画像をキャッシュするクラス
+    - 役割:
+        - 着色済み画像（RGBA配列）のキャッシュ
+        - FractalCache は別に存在する（render.py）
+    """
+    def __init__(self, max_size=100, logger=None):
+        self.cache = {}
+        self.max_size = max_size
+        self.logger = logger or DebugLogger()  # logger が渡されない場合は新規作成
+        self.logger.log(LogLevel.INIT, "DebugLogger 初期化完了（になっちゃう）")
+
+    def _create_cache_key(self, params):
+        """ キャッシュキーを生成するためのヘルパーメソッド """
+        # キャッシュキーは、パラメータの組み合わせから生成される
+        key_params = {
+            'zoom_level': params.get('zoom_level', 1),
+            'center': params.get('center', (0, 0)),
+            'size': params.get('size', (1, 1)),
+            'max_iterations': params.get('max_iterations', 100),
+            'diverge_algorithm': params.get('diverge_algorithm', 'default')
+        }
+        return hash(frozenset(key_params.items()))
+
+    def get_cache(self, params):
+        """ キャッシュから画像を取得 """
+        key = self._create_cache_key(params)
+        self.logger.log(LogLevel.DEBUG, f"キャッシュキー取得試行: {key}")
+        if key in self.cache:
+            self.logger.log(LogLevel.SUCCESS, "キャッシュヒット")
+            return self.cache[key]
+        self.logger.log(LogLevel.INFO, "キャッシュミス")
+        return None
+
+    def put_cache(self, params, image):
+        """ キャッシュに画像を追加 """
+        key = self._create_cache_key(params)
+        self.logger.log(LogLevel.DEBUG, f"キャッシュキー書込み試行: {key}")
+        # キャッシュが満杯の場合、最古のエントリを削除
+        if len(self.cache) >= self.max_size:
+            oldest_key = next(iter(self.cache))
+            self.logger.log(LogLevel.INFO, f"キャッシュフル（最古エントリ削除）：{oldest_key}")
+            del self.cache[oldest_key]
+        self.cache[key] = {
+            'image': image,
+            'timestamp': time.time(),
+            'params': params
+        }
+        self.logger.log(LogLevel.SUCCESS, "キャッシュエントリ追加")
+
+    def clear_cache(self):
+        """ キャッシュをクリア """
+        self.logger.log(LogLevel.INFO, "キャッシュクリア")
+        self.cache.clear()
+
+    def get_cache_stats(self):
+        """ キャッシュの統計情報を取得 """
+        return {
+            'size': len(self.cache),
+            'max_size': self.max_size,
+            'memory_usage': sum(len(v['image']) for v in self.cache.values())
+        }

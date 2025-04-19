@@ -12,7 +12,11 @@ from .rect_manager import RectManager
 from .zoom_state_handler import ZoomStateHandler
 
 class ZoomSelector:
-    """ マウスドラッグで矩形を描画し、回転やリサイズを行う機能を持つクラス"""
+    """ズーム領域の描画と編集を管理する主要クラス
+    - 役割:
+        - マウスドラッグでズーム領域を描画する
+        - リサイズや回転を管理する
+    """
     def __init__(self,
                  ax: Axes,
                  on_zoom_confirm: Callable[[float, float, float, float, float], None],

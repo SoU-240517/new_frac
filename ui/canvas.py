@@ -5,23 +5,37 @@ from .zoom_function.debug_logger import DebugLogger
 from .zoom_function.enums import LogLevel
 
 class FractalCanvas:
-    """ フラクタル描画キャンバスクラス """
-
+    """キャンバスクラス
+    - 役割:
+        - MatplotlibのFigureをTkinterに埋め込み、フラクタル描画を行うキャンバス
+    """
     def __init__(self, master, width, height, logger, zoom_confirm_callback, zoom_cancel_callback):
-        """ キャンバス初期化（MatplotlibのFigure を Tkinter ウィジェットに埋め込む）"""
+        """キャンバスのコンストラクタ
+
+        Args:
+            master (tkinter.Tk): Tkinter ルートウィンドウ
+            width (int): キャンバスの幅
+            height (int): キャンバスの高さ
+            logger (DebugLogger): ログ出力用の DebugLogger インスタンス
+            zoom_confirm_callback (function): ズーム確定時のコールバック関数: MainWindow.on_zoom_confirm
+            zoom_cancel_callback (function): ズームキャンセル時のコールバック関数: MainWindow.on_zoom_cancel
+
+        Returns:
+            None
+        """
         self.logger = logger
         self.parent = master
         self.fig = Figure(figsize=(6, 6), dpi=100, facecolor='black')
         self.ax = self.fig.add_subplot(111, facecolor='black')
         self.ax.axis('off') # 座標軸非表示
 
-        # キャンバス設定
-        self.canvas = FigureCanvasTkAgg(self.fig, master=self.parent)
-        self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+        # キャンバス設定: Matplotlibライブラリを使って作成したグラフを、Tkinter内で表示する
+        self.canvas = FigureCanvasTkAgg(self.fig, master=self.parent) # FigureCanvasTkAgg を作成
+        self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True) # FigureCanvasTkAgg を配置
 
-        # MainWindow からコールバックを受け取る
-        self.zoom_confirm_callback = zoom_confirm_callback # on_zoom_confirm
-        self.zoom_cancel_callback = zoom_cancel_callback # on_zoom_cancel
+        # 受取ったコールバックを保持
+        self.zoom_confirm_callback = zoom_confirm_callback
+        self.zoom_cancel_callback = zoom_cancel_callback
 
         from ui.zoom_function.zoom_selector import ZoomSelector
         self.logger.log(LogLevel.INIT, "ZoomSelector 初期化開始")
@@ -42,7 +56,15 @@ class FractalCanvas:
         self.canvas.draw()
 
     def set_zoom_callback(self, zoom_confirm_callback, zoom_cancel_callback):
-        """ ズーム確定・キャンセル時のコールバックを設定 """
+        """ズーム確定・キャンセル時のコールバックを設定
+
+        Args:
+            zoom_confirm_callback (function): ズーム確定時のコールバック関数: MainWindow.on_zoom_confirm
+            zoom_cancel_callback (function): ズームキャンセル時のコールバック関数: MainWindow.on_zoom_cancel
+
+        Returns:
+            None
+        """
         self.zoom_confirm_callback = zoom_confirm_callback
         self.zoom_cancel_callback = zoom_cancel_callback
 

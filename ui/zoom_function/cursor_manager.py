@@ -19,8 +19,11 @@ CURSOR_MOVE = "fleur" # 移動カーソル (全方向矢印)
 CURSOR_ROTATE = "exchange" # 回転カーソル (例: exchange, または circle, dotbox など試す)
 
 class CursorManager:
-    """ マウスカーソルの形状を管理するクラス """
-
+    """マウスカーソルの形状を操作状態に応じて変更するクラス
+    - 役割:
+        - イベントと状態に基づいてカーソル形状を更新する
+        - イベントと状態に基づいて矩形を更新する
+    """
     def __init__(self, canvas_widget, logger: Optional[DebugLogger]):
         """
         CursorManager クラスのコンストラクタ

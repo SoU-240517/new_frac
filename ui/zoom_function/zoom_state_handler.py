@@ -3,7 +3,11 @@ from .debug_logger import DebugLogger
 from .enums import ZoomState, LogLevel
 
 class ZoomStateHandler:
-    """ ZoomSelectorの状態を管理するクラス """
+    """ズーム操作の状態（作成中/編集中など）を管理するクラス
+    - 役割:
+        - 状態を取得する
+        - 状態を更新する
+    """
     def __init__(self, initial_state: ZoomState, logger: DebugLogger, event_handler=None, canvas=None):
         self.logger = logger
         self._state: ZoomState = initial_state

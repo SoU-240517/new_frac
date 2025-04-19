@@ -7,7 +7,10 @@ from .zoom_function.debug_logger import DebugLogger
 from .zoom_function.enums import LogLevel
 
 class ParameterPanel:
-    """ パラメータパネルクラス """
+    """パラメータパネルクラス
+    - 役割:
+        - フラクタル生成用のパラメータを設定するパネル
+    """
     COLORBAR_WIDTH = 150 # カラーバーの幅 (ピクセル)
     COLORBAR_HEIGHT = 15  # カラーバーの高さ (ピクセル)
 

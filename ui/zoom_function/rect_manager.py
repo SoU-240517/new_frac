@@ -7,7 +7,13 @@ from .debug_logger import DebugLogger
 from .enums import LogLevel
 
 class RectManager:
-    """ ズーム領域を表す矩形 (Rectangle) の管理クラス """
+    """ズーム領域の矩形（Rectangle）を管理（作成、移動、リサイズ、回転）するクラス
+    - 役割:
+        - ズーム領域を作成
+        - ズーム領域を移動
+        - ズーム領域をリサイズ
+        - ズーム領域を回転
+    """
     MIN_WIDTH = 0.01 # 許容される最小幅 (データ座標系)
     MIN_HEIGHT = 0.01 # 許容される最小高さ (データ座標系)
 

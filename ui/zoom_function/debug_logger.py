@@ -8,7 +8,10 @@ from enum import Enum
 from .enums import LogLevel
 
 class DebugLogger:
-    """ デバッグログを出力するクラス """
+    """デバッグ用のログ出力を管理するクラス
+    - 役割:
+        - ログ出力
+    """
     def __init__(self, debug_enabled=True):
         self.debug_enabled = debug_enabled
         self.start_time = time.time()

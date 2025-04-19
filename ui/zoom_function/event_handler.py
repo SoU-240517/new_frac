@@ -14,7 +14,10 @@ if TYPE_CHECKING:
     from .zoom_state_handler import ZoomStateHandler
 
 class EventHandler:
-    """ matplotlib のイベントを処理し、各コンポーネントに指示を出すクラス """
+    """マウス/キーボードイベントを処理し、適切な操作に変換するクラス
+    - 役割:
+        - matplotlib のイベントを処理し、各コンポーネントに指示を出す
+    """
     # --- ズーム領域回転時の振動を調整するためのパラメータ ---
     # この値以下の角度変化（度単位）は無視して更新しない
     ROTATION_THRESHOLD = 2.6  # 例: 0.1度。大きくすると鈍感になるが、カクつく可能性もある

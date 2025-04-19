@@ -28,8 +28,10 @@ class ValidationResult:
         return self.is_in_axes and self.has_button and self.has_coords
 
 class EventValidator:
-    """イベントの基本的な妥当性をチェックするクラス"""
-
+    """イベントの妥当性を検証するクラス
+    - 役割:
+        - 基本的なイベント検証をまとめて行い、結果を ValidationResult で返す
+    """
     @staticmethod
     def validate_event(event: MouseEvent, ax: Axes, logger: DebugLogger) -> ValidationResult:
         """

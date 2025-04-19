@@ -5,22 +5,10 @@ from fractal.fractal_types import julia, mandelbrot
 from ui.zoom_function.debug_logger import DebugLogger
 from ui.zoom_function.enums import LogLevel
 
-class FractalCache:
-    def __init__(self, max_size=100):
-        self.cache = {}
-        self.max_size = max_size
-
-    def get(self, params):
-        key = hash(frozenset(params.items()))
-        return self.cache.get(key)
-
-    def put(self, params, result):
-        key = hash(frozenset(params.items()))
-        if len(self.cache) >= self.max_size:
-            oldest_key = next(iter(self.cache))
-            del self.cache[oldest_key]
-        self.cache[key] = result
-
+"""フラクタル画像を生成する主要ロジック部分
+- 役割:
+    - 設定されたパラメータでフラクタルを描画
+"""
 def render_fractal(params, logger: DebugLogger, cache=None) -> np.ndarray:
     """ 設定されたパラメータでフラクタルを描画（動的解像度版） """
     # キャッシュから取得
@@ -106,3 +94,23 @@ def calculate_dynamic_resolution(width, base_res=600, min_res=300, max_res=1200)
     zoom_factor = np.log(5.0 / width + 1.0)
     resolution = int(base_res * zoom_factor)
     return np.clip(resolution, min_res, max_res)
+
+class FractalCache:
+    """フラクタル画像をキャッシュするクラス
+        - 計算結果（反復回数など）のキャッシュ
+        - ColorCache は別に存在する（color_algorithms.py）
+    """
+    def __init__(self, max_size=100):
+        self.cache = {}
+        self.max_size = max_size
+
+    def get(self, params):
+        key = hash(frozenset(params.items()))
+        return self.cache.get(key)
+
+    def put(self, params, result):
+        key = hash(frozenset(params.items()))
+        if len(self.cache) >= self.max_size:
+            oldest_key = next(iter(self.cache))
+            del self.cache[oldest_key]
+        self.cache[key] = result

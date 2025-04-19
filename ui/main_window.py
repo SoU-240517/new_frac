@@ -5,26 +5,34 @@ import time
 from tkinter import ttk
 from ui.canvas import FractalCanvas
 from ui.parameter_panel import ParameterPanel
-from fractal.render import render_fractal # render_fractal が rotation パラメータを扱えると仮定
+from fractal.render import render_fractal
 from .zoom_function.debug_logger import DebugLogger
 from .zoom_function.enums import LogLevel
 
 class MainWindow:
-    """
-    フラクタル描画アプリケーションのメインウィンドウクラス
+    """アプリケーションのメインウィンドウクラス
+    - 役割:
+        - アプリケーションのメインウィンドウを管理する
+        - UIの初期化、イベント処理、フラクタル描画の制御を行う
     """
     def __init__(self, root, logger: DebugLogger):
-        """
-        フラクタル描画アプリケーションのメインウィンドウ初期化（ズーム操作の状態管理も行う）
+        """メインウィンドウクラスのコンストラクタ
+
+        Args:
+            root (tkinter.Tk): Tkinter ルートウィンドウ
+            logger (DebugLogger): ログ出力用の DebugLogger インスタンス
+
+        Returns:
+            None
+
         """
         self.logger = logger
-        self.logger = logger
+
         self.init_root_window(root)
 
 		# ズーム操作用パラメータ
         self.zoom_params = {
-            "center_x": 0.0, "center_y": 0.0, "width": 4.0, "height": 4.0, "rotation": 0.0
-        }
+            "center_x": 0.0, "center_y": 0.0, "width": 4.0, "height": 4.0, "rotation": 0.0}
         self.prev_zoom_params = None
 
         self.logger.log(LogLevel.INIT, "コールバック設定")
@@ -38,8 +46,13 @@ class MainWindow:
         threading.Thread(target=self.update_fractal, daemon=True).start()
 
     def init_root_window(self, root):
-        """
-        メインウィンドウの初期化
+        """メインウィンドウの初期化
+
+        Args:
+            root (tkinter.Tk): Tkinter ルートウィンドウ
+
+        Returns:
+            None
         """
         # Tkinter ルートウィンドウの初期化
         self.root = root
@@ -59,8 +72,8 @@ class MainWindow:
             width=800,
             height=600,
             logger=self.logger,
-            zoom_confirm_callback=self.on_zoom_confirm,
-            zoom_cancel_callback=self.on_zoom_cancel)
+            zoom_confirm_callback=self.on_zoom_confirm, # 確定用コールバックをキャンバスに渡す
+            zoom_cancel_callback=self.on_zoom_cancel) # キャンセル用コールバックをキャンバスに渡す
         self.fractal_canvas.set_black_background() # 黒背景
 
         # パラメータフレーム
@@ -70,7 +83,7 @@ class MainWindow:
         self.parameter_panel = ParameterPanel(
             self.parameter_frame,
             self.update_fractal,
-            reset_callback=self.reset_zoom,
+            reset_callback=self.reset_zoom, # リセット用コールバックをパラメータパネルに渡す
             logger=self.logger)
 
         # ステータスバー
@@ -81,7 +94,7 @@ class MainWindow:
         self.status_label = ttk.Label(self.status_frame, text="準備中...") # 作成
         self.status_label.pack(side=tk.LEFT, padx=5, pady=2) # 配置
 
-        # ステータスバーのアニメーション用変数
+        # ステータスバーの文字アニメーション用変数
         self.animation_thread = None
         self.animation_running = False
         self.animation_dots = 0
@@ -113,7 +126,7 @@ class MainWindow:
             fractal_image = render_fractal(current_params, self.logger)
             self.logger.log(LogLevel.CALL, "メインスレッドでキャンバス更新開始（待機中...）")
             self.fractal_canvas.update_canvas(fractal_image, current_params)
-            self.root.after(0, lambda: self.stop_status_animation()) # ステータス更新
+            self.root.after(0, lambda: self.stop_status_animation())
         except Exception as e: # 例外処理
             self.logger.log(LogLevel.ERROR, f"フラクタル更新エラー: {str(e)}")
             self.root.after(0, lambda: self.stop_status_animation())
