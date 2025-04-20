@@ -225,7 +225,6 @@ class MainWindow:
         # 新しいパラメータでフラクタルを再描画
         self.update_fractal()
 
-
     def on_zoom_cancel(self):
         """ズームキャンセル時のコールバック（ZoomSelectorから呼ばれる）
         - ズーム確定前の状態に戻して再描画
@@ -241,7 +240,6 @@ class MainWindow:
             self.prev_zoom_params = None
         else:
             self.logger.log(LogLevel.INFO, "ズーム確定前のパラメータがないため、キャンセル処理はスキップしました。")
-
 
     def reset_zoom(self):
         """操作パネルの「描画リセット」ボタン押下時の処理
@@ -291,6 +289,7 @@ class MainWindow:
             self.root.after(0, lambda: self.status_label.config(text=f"描画中{dots}"))
             # 一定時間待機してアニメーションの間隔を調整
             time.sleep(0.1)
+            self.logger.log(LogLevel.WARNING, f"thread：{self.animation_thread.is_alive()}, {self.animation_running}")
         # アニメーション終了後、ステータスを「完了」に更新
         self.root.after(0, lambda: self.status_label.config(text="完了"))
 
@@ -298,11 +297,18 @@ class MainWindow:
         """ステータスバーの描画中アニメーションを停止"""
         if self.animation_running:
             self.animation_running = False
+            self.logger.log(LogLevel.WARNING, f"stop-1：{self.animation_thread.is_alive()}, {self.animation_running}")
             # アニメーションスレッドが終了するのを待つ (短い処理なのですぐに終わるはず)
             if self.animation_thread and self.animation_thread.is_alive():
-                self.animation_thread.join(timeout=0.5) # タイムアウトを設定
+                self.logger.log(LogLevel.WARNING, f"stop-2：{self.animation_thread.is_alive()}, {self.animation_running}")
+                # スレッドが終了するのを待つ
+                self.animation_thread.join(timeout=0.2) # タイムアウト値を0.2秒に設定
                 if self.animation_thread.is_alive():
-                    self.logger.log(LogLevel.WARNING, "ステータスアニメーションスレッドが終了不可")
+                    # タイムアウトしても警告は出す
+                    self.logger.log(LogLevel.WARNING, "ステータスアニメーションスレッドが終了不可 (タイムアウト)")
+                else:
+                    # タイムアウトせず終了できたらログを出す
+                    self.logger.log(LogLevel.SUCCESS, "ステータスアニメーションスレッド停止完了")
             self.animation_thread = None # スレッド参照をクリア
         else:
              self.logger.log(LogLevel.ERROR, "アニメーションは実行されていません")

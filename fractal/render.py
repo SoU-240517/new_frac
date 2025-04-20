@@ -22,13 +22,6 @@ def render_fractal(params, logger: DebugLogger, cache=None) -> np.ndarray:
     Returns:
         np.ndarray: フラクタル画像 (uint8 [0, 255] RGBA 配列)
     """
-    # キャッシュから取得（現在は使用されていません）
-    # if cache:
-    #     cached_result = cache.get(params)
-    #     if cached_result is not None:
-    #         logger.log(LogLevel.SUCCESS, "キャッシュヒット")
-    #         return cached_result
-
     # 動的解像度計算 - これは描画する画像のピクセル解像度を決定します
     # params["width"] はデータ座標系での幅です
     resolution = calculate_dynamic_resolution(params.get("width", 4.0))
@@ -57,10 +50,8 @@ def render_fractal(params, logger: DebugLogger, cache=None) -> np.ndarray:
     # 表示幅(width) / 表示高さ(height) = 16 / 9
     height = width * (9 / 16)
 
-    # 編集ここから ----------
     # 修正されたログ出力: self.logger を logger に変更
     logger.log(LogLevel.DEBUG, f"フラクタル計算範囲の高さ設定: {height:.4f} (幅 {width:.4f}, 縦横比 16:9)")
-    # 編集ここまで ----------
 
     # 回転角度を取得 (度単位)
     rotation_deg = params.get("rotation", 0.0)
@@ -88,7 +79,6 @@ def render_fractal(params, logger: DebugLogger, cache=None) -> np.ndarray:
         Z *= rotation_operator
         Z += complex(center_x, center_y)
         logger.log(LogLevel.SUCCESS, "グリッド回転適用完了")
-
 
     logger.log(LogLevel.SUCCESS, "グリッドの作成と変換完了",
                context={"中心_x": center_x, "中心_y": center_y, "w": width, "h": height, "角度": rotation_deg})
@@ -148,7 +138,6 @@ def render_fractal(params, logger: DebugLogger, cache=None) -> np.ndarray:
             # ValueError発生時もエラーを示す画像で置き換えるなど
             colored = np.full((resolution, resolution, 4), [255, 0, 0, 255], dtype=np.float32) # 赤色のエラー画像
 
-
     else:
         # ダウンサンプリングしない場合
         # この場合、計算された colored_high_res はすでに resolution x resolution になっているはずですが
@@ -161,13 +150,7 @@ def render_fractal(params, logger: DebugLogger, cache=None) -> np.ndarray:
     colored = np.clip(colored, 0, 255).astype(np.uint8)
     logger.log(LogLevel.DEBUG, f"最終的な render_fractal 出力 dtype: {colored.dtype}, shape: {colored.shape}")
 
-    # キャッシュに保存 (uint8 の最終結果を保存)（現在は使用されていません）
-    # if cache:
-    #     cache.put(params, colored)
-
-    # uint8 [0, 255] 配列を返す
     return colored
-
 
 def calculate_dynamic_resolution(width, base_res=600, min_res=300, max_res=1200):
     """ズームレベルに応じて描画解像度を動的に計算
