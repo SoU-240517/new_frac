@@ -22,8 +22,8 @@ def render_fractal(params, logger: DebugLogger, cache=None) -> np.ndarray:
     Returns:
         np.ndarray: フラクタル画像 (uint8 [0, 255] RGBA 配列)
     """
-    # 動的解像度計算 - これは描画する画像のピクセル解像度を決定します
-    # params["width"] はデータ座標系での幅です
+    # 動的解像度計算 - 描画する画像のピクセル解像度を決定する
+    # params["width"] はデータ座標系の幅
     resolution = calculate_dynamic_resolution(params.get("width", 4.0))
     logger.log(LogLevel.SUCCESS, f"動的解像度計算完了: {resolution}x{resolution} (width={params.get('width', 4.0):.2f})")
 
@@ -33,8 +33,7 @@ def render_fractal(params, logger: DebugLogger, cache=None) -> np.ndarray:
     samples_per_pixel = 2 if zoom_level < 1.0 else 4 # ズームアウト時はサンプル数減らす
     # 必要に応じてサンプル数を増やすことも検討 (例: zoom_levelに応じて動的に計算)
     # samples_per_pixel = max(1, min(4, int(zoom_level**0.5))) # 一例
-
-    logger.log(LogLevel.DEBUG, f"アンチエイリアシング設定：samples_per_pixel={samples_per_pixel}")
+    logger.log(LogLevel.DEBUG, f"アンチエイリアシング設定完了：samples_per_pixel={samples_per_pixel}")
 
     # 実際にフラクタル計算を行うための高解像度グリッドサイズ
     super_resolution_x = resolution * samples_per_pixel

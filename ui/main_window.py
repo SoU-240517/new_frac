@@ -37,7 +37,7 @@ class MainWindow:
             "center_x": 0.0, "center_y": 0.0, "width": 4.0, "height": 4.0, "rotation": 0.0}
         self.prev_zoom_params = None
 
-        self.logger.log(LogLevel.INIT, "コールバック設定")
+        self.logger.log(LogLevel.INIT, "コールバック設定開始")
         self.fractal_canvas.set_zoom_callback(self.on_zoom_confirm, self.on_zoom_cancel)
 
         # 非同期処理用変数
@@ -47,10 +47,10 @@ class MainWindow:
         # アプリケーション起動時の最初の描画スレッド開始前に、ステータスバーアニメーションを開始
         self._start_status_animation()
 
-        self.logger.log(LogLevel.DEBUG, "非同期でフラクタル描画を開始")
-        # 最初のフラクタル描画スレッドを作成し、開始
-        self.draw_thread = threading.Thread(target=self._update_fractal_thread, daemon=True)
-        self.draw_thread.start()
+        # フラクタル描画スレッドを作成後、開始する
+        self.logger.log(LogLevel.DEBUG, "非同期でフラクタル描画開始")
+        self.draw_thread = threading.Thread(target=self._update_fractal_thread, daemon=True) # Daemonスレッドとして作成
+        self.draw_thread.start() # フラクタル描画スレッドを開始
 
     def init_root_window(self, root):
         """メインウィンドウの初期化
@@ -70,17 +70,17 @@ class MainWindow:
         # キャンバスフレーム
         self.canvas_frame = ttk.Frame(self.main_frame) # 作成
         self.main_frame.add(self.canvas_frame, weight=4) # 配置
-
         # キャンバスフレームのリサイズイベントをバインド
         # <Configure> イベントが発生すると、_on_canvas_frame_configure メソッドが呼ばれる
         self.canvas_frame.bind("<Configure>", self._on_canvas_frame_configure)
 
+        # FractalCanvas の初期化
+        # widthとheight は Tkinter ウィジェットの初期サイズに影響
         self.logger.log(LogLevel.INIT, "FractalCanvas 初期化開始")
-        # FractalCanvasの初期化。widthとheightはTkinterウィジェットの初期サイズに影響
         self.fractal_canvas = FractalCanvas(
             self.canvas_frame,
-            width=1067, # これらの初期サイズはキャンバスウィジェット自体のサイズに影響しますが、
-            height=600, # Matplotlib Figureのサイズは_on_canvas_frame_configureで制御されます。
+            width=1067, # これらの初期サイズはキャンバスウィジェット自体のサイズに影響するが、
+            height=600, # Matplotlib Figure のサイズは _on_canvas_frame_configure で制御される
             logger=self.logger,
             zoom_confirm_callback=self.on_zoom_confirm, # 確定用コールバックをキャンバスに渡す
             zoom_cancel_callback=self.on_zoom_cancel) # キャンセル用コールバックをキャンバスに渡す
@@ -117,14 +117,12 @@ class MainWindow:
         """最新パラメータにズーム情報を上書きしてフラクタルを再描画（非同期処理を開始）"""
         # 既に描画中の場合は新しい描画を開始しない
         if self.is_drawing:
-             self.logger.log(LogLevel.INFO, "描画中スキップ：前回の描画が完了していません")
+             self.logger.log(LogLevel.INFO, "描画中スキップ：前回の描画が完了してない")
              return
 
         self.is_drawing = True
         self._start_status_animation()
 
-        # スレッドが終了しているか確認し、新しいスレッドを作成して開始
-        # if self.draw_thread is None or not self.draw_thread.is_alive(): # __init__で開始しているので通常はalive
         self.logger.log(LogLevel.INFO, "新しい描画スレッドを開始")
         # スレッドのターゲットとしてインスタンスメソッドを指定
         self.draw_thread = threading.Thread(target=self._update_fractal_thread, daemon=True)
@@ -134,8 +132,8 @@ class MainWindow:
         """フラクタル更新の実際の処理（別スレッドで実行される）"""
         try:
             self.logger.log(LogLevel.CALL, "描画パラメータ：取得開始（スレッド内）")
-            # パラメータパネルから最新の設定を取得
             panel_params = self.parameter_panel.get_parameters()
+
             # ズーム操作によるパラメータとパラメータパネルの設定を結合
             current_params = self.zoom_params.copy()
             current_params.update(panel_params) # パラメータパネルの設定で上書き（max_iterなど）
@@ -143,8 +141,7 @@ class MainWindow:
             # 描画開始時刻を記録
             self._draw_start_time = time.perf_counter()
 
-            self.logger.log(LogLevel.CALL, "フラクタル描画開始（スレッド内）")
-            # フラクタル計算と着色処理を実行
+            self.logger.log(LogLevel.CALL, "フラクタル計算と着色処理を開始（スレッド内）")
             fractal_image = render_fractal(current_params, self.logger)
 
             self.logger.log(LogLevel.CALL, "メインスレッドでキャンバス更新要求（スレッド内）")
@@ -152,9 +149,10 @@ class MainWindow:
             # update_canvas メソッドをメインスレッドで実行するようにスケジュール
             self.root.after(0, lambda: self.fractal_canvas.update_canvas(fractal_image, current_params))
 
-            self.logger.log(LogLevel.CALL, "メインスレッドでステータスアニメーション停止要求（スレッド内）")
             # アニメーションと時間計測を停止
+            self.logger.log(LogLevel.CALL, "メインスレッドでステータスアニメーション停止要求（スレッド内）")
             self._stop_status_animation()
+
             # 最終描画時間を表示
             final_elapsed_time = time.perf_counter() - self._draw_start_time
             minutes = int(final_elapsed_time // 60)
@@ -184,13 +182,11 @@ class MainWindow:
             h (float): 矩形の高さ (データ座標系)
             angle (float): 矩形の回転角度 (度)
         """
-        self.logger.log(LogLevel.SUCCESS, "ズーム確定処理開始")
-
         # ズーム矩形の中心座標を計算（回転前の座標系）
         center_x = x + w / 2
         center_y = y + h / 2
 
-        self.logger.log(LogLevel.DEBUG, "ズーム確定矩形情報", {
+        self.logger.log(LogLevel.SUCCESS, "ズーム確定矩形情報", {
             "rect_x": x, "rect_y": y, "rect_w": w, "rect_h": h,
             "center_x": center_x, "center_y": center_y, "angle": angle
         })
