@@ -1,4 +1,5 @@
 import tkinter as tk
+from turtle import back
 import numpy as np
 import threading
 import time
@@ -63,7 +64,7 @@ class MainWindow:
 
         # キャンバスフレーム
         self.canvas_frame = ttk.Frame(self.main_frame) # 作成
-        self.main_frame.add(self.canvas_frame, weight=3)
+        self.main_frame.add(self.canvas_frame, weight=4) # 配置
 
         # キャンバスフレームのリサイズイベントをバインド
         # <Configure> イベントが発生すると、_on_canvas_frame_configure メソッドが呼ばれる
@@ -73,12 +74,11 @@ class MainWindow:
         # FractalCanvasの初期化。widthとheightはTkinterウィジェットの初期サイズに影響
         self.fractal_canvas = FractalCanvas(
             self.canvas_frame,
-            width=800, # これらの初期サイズはキャンバスウィジェット自体のサイズに影響しますが、
+            width=1067, # これらの初期サイズはキャンバスウィジェット自体のサイズに影響しますが、
             height=600, # Matplotlib Figureのサイズは_on_canvas_frame_configureで制御されます。
             logger=self.logger,
             zoom_confirm_callback=self.on_zoom_confirm, # 確定用コールバックをキャンバスに渡す
             zoom_cancel_callback=self.on_zoom_cancel) # キャンセル用コールバックをキャンバスに渡す
-
 
         # パラメータフレーム
         self.parameter_frame = ttk.Frame(self.main_frame) # 作成
@@ -89,7 +89,6 @@ class MainWindow:
             self.update_fractal, # パラメータ変更時のコールバックとしてMainWindowのupdate_fractalを渡す
             reset_callback=self.reset_zoom, # リセット用コールバックをパラメータパネルに渡す
             logger=self.logger)
-
 
         # ステータスバー
         self.status_frame = ttk.Frame(self.root) # 作成
@@ -289,7 +288,6 @@ class MainWindow:
             self.root.after(0, lambda: self.status_label.config(text=f"描画中{dots}"))
             # 一定時間待機してアニメーションの間隔を調整
             time.sleep(0.1)
-            self.logger.log(LogLevel.WARNING, f"thread：{self.animation_thread.is_alive()}, {self.animation_running}")
         # アニメーション終了後、ステータスを「完了」に更新
         self.root.after(0, lambda: self.status_label.config(text="完了"))
 
@@ -297,15 +295,13 @@ class MainWindow:
         """ステータスバーの描画中アニメーションを停止"""
         if self.animation_running:
             self.animation_running = False
-            self.logger.log(LogLevel.WARNING, f"stop-1：{self.animation_thread.is_alive()}, {self.animation_running}")
             # アニメーションスレッドが終了するのを待つ (短い処理なのですぐに終わるはず)
             if self.animation_thread and self.animation_thread.is_alive():
-                self.logger.log(LogLevel.WARNING, f"stop-2：{self.animation_thread.is_alive()}, {self.animation_running}")
                 # スレッドが終了するのを待つ
                 self.animation_thread.join(timeout=0.2) # タイムアウト値を0.2秒に設定
                 if self.animation_thread.is_alive():
                     # タイムアウトしても警告は出す
-                    self.logger.log(LogLevel.WARNING, "ステータスアニメーションスレッドが終了不可 (タイムアウト)")
+                    self.logger.log(LogLevel.DEBUG, "ステータスアニメーションスレッドが終了不可 (タイムアウト)")
                 else:
                     # タイムアウトせず終了できたらログを出す
                     self.logger.log(LogLevel.SUCCESS, "ステータスアニメーションスレッド停止完了")

@@ -37,8 +37,9 @@ class FractalCanvas:
 
         # Matplotlib の図を Tkinter で表示するためのキャンバス
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.parent) # 作成
-        # Tkinterウィジェットとして配置。fill=tk.BOTH, expand=Trueで親フレームいっぱいに広がるようにします。
-        # aspect比の維持はFigureのサイズとAxesの設定で行います。
+        self.canvas.get_tk_widget().configure(bg='black') # 背景色を黒に設定
+        # fill=tk.BOTH, expand=True で親フレームいっぱいに広がる設定
+        # aspect 比の維持は Figure のサイズと Axes で設定で
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True) # 配置
 
         # ズーム機能の設定
