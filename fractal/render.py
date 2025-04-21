@@ -33,7 +33,7 @@ def render_fractal(params, logger: DebugLogger, cache=None) -> np.ndarray:
     samples_per_pixel = 2 if zoom_level < 1.0 else 4 # ズームアウト時はサンプル数減らす
     # 必要に応じてサンプル数を増やすことも検討 (例: zoom_levelに応じて動的に計算)
     # samples_per_pixel = max(1, min(4, int(zoom_level**0.5))) # 一例
-    logger.log(LogLevel.DEBUG, f"アンチエイリアシング設定完了：samples_per_pixel={samples_per_pixel}")
+    logger.log(LogLevel.SUCCESS, f"アンチエイリアシング設定完了：samples_per_pixel={samples_per_pixel}")
 
     # 実際にフラクタル計算を行うための高解像度グリッドサイズ
     super_resolution_x = resolution * samples_per_pixel

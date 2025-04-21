@@ -224,7 +224,7 @@ class ParameterPanel:
         else: # Mandelbrot
             self.formula_var.set("Z(n+1) = Z(n)² + C\n(Z(0)=0, C=座標)")
 
-    def get_parameters(self) -> dict:
+    def _get_parameters(self) -> dict:
         """パラメータパネルから値を取得
 
         Returns:

@@ -85,7 +85,7 @@ class MainWindow:
             zoom_confirm_callback=self.on_zoom_confirm, # 確定用コールバックをキャンバスに渡す
             zoom_cancel_callback=self.on_zoom_cancel) # キャンセル用コールバックをキャンバスに渡す
 
-        # パラメータフレーム
+        # ParameterPanel の初期化
         self.parameter_frame = ttk.Frame(self.main_frame) # 作成
         self.main_frame.add(self.parameter_frame, weight=1) # 配置
         self.logger.log(LogLevel.INIT, "ParameterPanel 初期化開始")
@@ -111,7 +111,7 @@ class MainWindow:
         self.animation_thread = None
         self.animation_running = False
         self.animation_dots = 0
-        self.animation_max_dots = 5
+        self.animation_max_dots = 10
 
     def update_fractal(self):
         """最新パラメータにズーム情報を上書きしてフラクタルを再描画（非同期処理を開始）"""
@@ -132,7 +132,7 @@ class MainWindow:
         """フラクタル更新の実際の処理（別スレッドで実行される）"""
         try:
             self.logger.log(LogLevel.CALL, "描画パラメータ：取得開始（スレッド内）")
-            panel_params = self.parameter_panel.get_parameters()
+            panel_params = self.parameter_panel._get_parameters()
 
             # ズーム操作によるパラメータとパラメータパネルの設定を結合
             current_params = self.zoom_params.copy()
@@ -221,8 +221,7 @@ class MainWindow:
         self.logger.log(LogLevel.SUCCESS, "新しいズームパラメータ計算結果", {
             "zoom_factor": zoom_factor, "new_width": new_width, "new_height": new_height,
             "current_max_iter": current_max_iter, "new_max_iterations": new_max_iterations,
-            "new_center_x": center_x, "new_center_y": center_y, "new_rotation": angle
-            })
+            "new_center_x": center_x, "new_center_y": center_y, "new_rotation": angle})
 
         # 新しいズームパラメータを設定
         self.zoom_params = {
@@ -230,8 +229,7 @@ class MainWindow:
             "center_y": center_y,
             "width": new_width,
             "height": new_height, # このheightはrender_fractalでの計算範囲の高さ設定に使用されます
-            "rotation": angle
-        }
+            "rotation": angle}
 
         # 計算された新しい最大反復回数をパラメータパネルに反映
         self.parameter_panel.max_iter_var.set(str(new_max_iterations))

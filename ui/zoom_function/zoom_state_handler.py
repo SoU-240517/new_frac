@@ -43,4 +43,4 @@ class ZoomStateHandler:
         log_context = {"旧": old_state_name, "新": new_state.name}
         if context:
             log_context.update(context) # コンテキストをログコンテキストに追加
-        self.logger.log(LogLevel.SUCCESS, "成功", log_context)
+        self.logger.log(LogLevel.SUCCESS, "状態更新成功", log_context)

@@ -56,17 +56,15 @@ class EventValidator:
         # 1. Axes内かチェック
         result.is_in_axes = (event.inaxes == ax)
         if not result.is_in_axes:
-            logger.log(LogLevel.WARNING, "検証失敗: イベントが期待されるAxes外で発生")
+            logger.log(LogLevel.DEBUG, "検証失敗: イベントが期待されるAxes外で発生")
         # 2. ボタン情報があるかチェック (MouseEventのみ)
         #    KeyEvent など他のイベントタイプを将来的に扱う場合は event の型チェックが必要
         if isinstance(event, MouseEvent):
             result.has_button = (event.button is not None)
-            if not result.has_button:
-                logger.log(LogLevel.DEBUG, "検証情報: マウスボタン情報なし")
         else:
             result.has_button = False # MouseEvent以外はボタン情報なしとする
         # 3. 座標情報があるかチェック
         result.has_coords = (event.xdata is not None and event.ydata is not None)
         if not result.has_coords:
-            logger.log(LogLevel.WARNING, "検証失敗: イベント座標データ(xdata/ydata)なし")
+            logger.log(LogLevel.DEBUG, "検証失敗: イベント座標データ(xdata/ydata)なし")
         return result # すべてのチェックが終わったら結果オブジェクトを返す

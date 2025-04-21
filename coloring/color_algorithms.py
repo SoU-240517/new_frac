@@ -45,7 +45,7 @@ def apply_coloring_algorithm(results, params, logger: DebugLogger):
     # === 発散する場合の処理 ===
     if np.any(divergent):
         algo = params["diverge_algorithm"]
-        logger.log(LogLevel.INFO, f"着色アルゴリズム選択: {algo}")
+        logger.log(LogLevel.DEBUG, f"着色アルゴリズム選択: {algo}")
         # Colormap適用結果は float [0, 1]。これを [0, 255] にスケールする
         cmap_func = plt.cm.get_cmap(params["diverge_colormap"])
         if algo == "反復回数線形マッピング":
@@ -200,7 +200,7 @@ class ColorCache:
             params (dict): 計算パラメータ
         """
         key = self._create_cache_key(params)
-        self.logger.log(LogLevel.DEBUG, f"キャッシュキー取得試行: {key}")
+        self.logger.log(LogLevel.CALL, f"キャッシュキー取得試行: {key}")
         if key in self.cache:
             self.logger.log(LogLevel.SUCCESS, "キャッシュヒット")
             return self.cache[key]

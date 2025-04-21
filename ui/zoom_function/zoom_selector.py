@@ -42,6 +42,7 @@ class ZoomSelector:
 
         # キャッシュの初期化
         self._cached_rect_patch: Optional[patches.Rectangle] = None
+        self._last_cursor_inside_state: Optional[bool] = None # カーソル状態のキャッシュを追加
 
         # 依存コンポーネントの初期化
         self.logger.log(LogLevel.INIT, "ZoomStateHandler 初期化開始")
@@ -86,23 +87,35 @@ class ZoomSelector:
         Returns:
             bool: カーソルがズーム領域内かどうか
         """
+        current_state: Optional[bool] = None # 現在のカーソル状態
+
         if self._cached_rect_patch is None:
             self.logger.log(LogLevel.CALL, "ズーム領域のキャッシュなし：キャッシュを作成")
             self._cached_rect_patch = self.rect_manager.get_patch()
+
         if self._cached_rect_patch is not None:
             # 矩形が見えない場合は False を返すように修正
             if not self._cached_rect_patch.get_visible():
-                 self.logger.log(LogLevel.DEBUG, "カーソル：ズーム領域 外 (非表示)")
+                 current_state = False
+                 if self._last_cursor_inside_state != current_state:
+                     self.logger.log(LogLevel.DEBUG, "カーソル：ズーム領域 外 (非表示)")
+                     self._last_cursor_inside_state = current_state
                  return False
             contains, _ = self._cached_rect_patch.contains(event)
-            if contains:
-                self.logger.log(LogLevel.DEBUG, "カーソル：ズーム領域 内")
-                return True
-            else:
-                self.logger.log(LogLevel.DEBUG, "カーソル：ズーム領域 外")
-                return False
-        self.logger.log(LogLevel.DEBUG, "ズーム領域なし：カーソル判定不可")
-        return False # キャッシュ更新後も None の場合
+            current_state = contains
+            if self._last_cursor_inside_state != current_state:
+                if contains:
+                    self.logger.log(LogLevel.DEBUG, "カーソル：ズーム領域 内")
+                else:
+                    self.logger.log(LogLevel.DEBUG, "カーソル：ズーム領域 外")
+                self._last_cursor_inside_state = current_state
+            return contains
+        else: # ズーム領域がない場合
+            current_state = False
+            if self._last_cursor_inside_state != current_state:
+                self.logger.log(LogLevel.DEBUG, "ズーム領域なし：カーソル判定不可")
+                self._last_cursor_inside_state = current_state
+            return False # キャッシュ更新後も None の場合
 
     def confirm_zoom(self):
         """ズーム確定処理"""
@@ -142,7 +155,6 @@ class ZoomSelector:
         self.event_handler.clear_edit_history() # 履歴クリアを追加
         self.rect_manager.delete_rect()
         self.invalidate_rect_cache()
-        self.logger.log(LogLevel.CALL, "状態更新：NO_RECT")
         self.state_handler.update_state(ZoomState.NO_RECT, {"action": "リセット"})
         self.event_handler.reset_internal_state() # EventHandler の内部状態もリセット
         self.cursor_manager.set_default_cursor()
@@ -187,13 +199,13 @@ class ZoomSelector:
         # dist_pixels = np.sqrt(((disp_coords[1] - disp_coords[0])**2).sum())
         # tol = tol_pixels * min_dim / dist_pixels if dist_pixels > 0 else 0.02
         tol = max(0.1 * min_dim, 0.02) # 短辺の10% or 最小許容範囲 (データ座標系)
-        self.logger.log(LogLevel.DEBUG, f"角判定の許容範囲(tol): {tol:.4f}")
+#        self.logger.log(LogLevel.DEBUG, f"角判定の許容範囲(tol): {tol:.4f}")
 
         # 各回転後コーナーとの距離を計算
         for i, (corner_x, corner_y) in enumerate(rotated_corners):
             if event.xdata is None or event.ydata is None: continue # 型ガード
             distance = np.hypot(event.xdata - corner_x, event.ydata - corner_y)
             if distance < tol:
-                self.logger.log(LogLevel.DEBUG, f"カーソルに近い角 {i} (距離: {distance:.3f} < 許容範囲: {tol:.3f})")
+#                self.logger.log(LogLevel.DEBUG, f"カーソルに近い角 {i} (距離: {distance:.3f} < 許容範囲: {tol:.3f})")
                 return i # 近い角のインデックスを返す
         return None # どの角にも近くない

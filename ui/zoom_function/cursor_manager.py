@@ -52,8 +52,9 @@ class CursorManager:
             near_corner_index: 近接している角のインデックス (0-3)。Noneの場合は角に近くない
             is_rotating: 回転モードが有効かどうか
         """
-        new_cursor = CURSOR_DEFAULT # デフォルトは標準カーソル
-        # --- イベント検証 ---
+        new_cursor = CURSOR_DEFAULT # デフォルトはいったん標準カーソルにする
+
+        # --- イベント検証開始 ---
         validation_result = None
         if event and self.zoom_selector: # イベントと zoom_selector が存在する場合のみ検証
              # EventHandlerが持っているvalidatorインスタンスを使うのが通常
@@ -65,11 +66,22 @@ class CursorManager:
             should_update_cursor = validation_result.is_in_axes and validation_result.has_coords
         else:
             should_update_cursor = False # イベントがない、または検証できない場合は更新しない
-        # --- 検証ここまで ---
+        # --- 検証終了 ---
+
         if should_update_cursor:
-            if is_rotating and near_corner_index is not None: # 回転モードで、かつ角に近い場合
-                new_cursor = CURSOR_ROTATE
-            elif not is_rotating and near_corner_index is not None: # 回転モードでない場合、かつ角に近い場合
+            # 回転モードが有効な場合を最優先で処理
+            if is_rotating:
+                if near_corner_index is not None: # 回転モードで角に近い場合
+                    new_cursor = CURSOR_ROTATE
+                # elif self.zoom_selector and self.zoom_selector.cursor_inside_rect(event):
+                    # 回転モードで領域内だが角に近くない場合、回転カーソルを維持するか、
+                    # デフォルトに戻すか選択できます。ここではデフォルトに戻します。
+                    # new_cursor = CURSOR_ROTATE # 回転カーソルを維持する場合
+                    # new_cursor = CURSOR_DEFAULT # デフォルトに戻す場合
+                else: # 回転モードで領域外、または領域内だが角に近くない場合
+                    new_cursor = CURSOR_DEFAULT # デフォルトカーソルにする
+            # --- 以下は回転モードでない場合の処理 ---
+            elif near_corner_index is not None: # 角に近い場合 (回転モードではない)
                 if near_corner_index in [0, 3]:
                     new_cursor = CURSOR_RESIZE_NW_SE
                 else:
@@ -79,18 +91,16 @@ class CursorManager:
             elif state == ZoomState.ON_MOVE:
                 new_cursor = CURSOR_MOVE
             elif state == ZoomState.EDIT:
-                # zoom_selector が設定されているか、かつ None でないか確認 (should_update_cursorで確認済み)
-                if self.zoom_selector.cursor_inside_rect(event): # cursor_inside_rect は event を引数に取る
-                    new_cursor = CURSOR_MOVE
-                else:
-                    # 角に近くない、かつ矩形の内側でもない場合
-                    new_cursor = CURSOR_DEFAULT # または適切なカーソル
-            else:
-                 # 上記以外の場合 (例: EDIT状態で矩形外かつ角にも近くない)
-                 new_cursor = CURSOR_DEFAULT # デフォルトに戻す
-        else:
-            # 検証失敗またはイベントがない場合はデフォルトカーソル
+                # 回転モードでなく、角にも近くない場合
+                if self.zoom_selector.cursor_inside_rect(event): # 領域内か？
+                    new_cursor = CURSOR_MOVE # 通常の移動カーソル
+                else: # 領域外
+                    new_cursor = CURSOR_DEFAULT
+            else: # 上記のいずれにも当てはまらない場合
+                 new_cursor = CURSOR_DEFAULT
+        else: # 検証失敗またはイベントがない場合はデフォルトカーソル
             new_cursor = CURSOR_DEFAULT
+
         if new_cursor != self._current_cursor:
             try:
                 self.widget.config(cursor=new_cursor)
