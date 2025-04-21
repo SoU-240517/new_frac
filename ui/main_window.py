@@ -30,7 +30,7 @@ class MainWindow:
         self._status_timer_id = None # root.afterでスケジュールされたタイマーのID
         self._time_format = "[{:>3}分 {:>2}秒] " # 時間表示のフォーマット文字列。幅を固定するために使用（例: [ 100分 59秒] の幅）
 
-        self.init_root_window(root)
+        self._init_root_window(root)
 
 		# ズーム操作用パラメータ
         self.zoom_params = {
@@ -52,7 +52,7 @@ class MainWindow:
         self.draw_thread = threading.Thread(target=self._update_fractal_thread, daemon=True) # Daemonスレッドとして作成
         self.draw_thread.start() # フラクタル描画スレッドを開始
 
-    def init_root_window(self, root):
+    def _init_root_window(self, root):
         """メインウィンドウの初期化
 
         Args:

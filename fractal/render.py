@@ -24,7 +24,7 @@ def render_fractal(params, logger: DebugLogger, cache=None) -> np.ndarray:
     """
     # 動的解像度計算 - 描画する画像のピクセル解像度を決定する
     # params["width"] はデータ座標系の幅
-    resolution = calculate_dynamic_resolution(params.get("width", 4.0))
+    resolution = _calculate_dynamic_resolution(params.get("width", 4.0))
     logger.log(LogLevel.SUCCESS, f"動的解像度計算完了: {resolution}x{resolution} (width={params.get('width', 4.0):.2f})")
 
     # アンチエイリアシング設定
@@ -151,7 +151,7 @@ def render_fractal(params, logger: DebugLogger, cache=None) -> np.ndarray:
 
     return colored
 
-def calculate_dynamic_resolution(width, base_res=600, min_res=300, max_res=1200):
+def _calculate_dynamic_resolution(width, base_res=600, min_res=300, max_res=1200):
     """ズームレベルに応じて描画解像度を動的に計算
 
     Args:

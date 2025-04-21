@@ -28,7 +28,7 @@ class ParameterPanel:
         self.update_callback = update_callback
         self.reset_callback = reset_callback
         self.logger.log(LogLevel.INIT, "パラメータパネルセットアップ開始")
-        self.setup_panel()
+        self._setup_panel()
         self._update_colorbars() # パネル設定後に初期カラーバーを更新
 
     def _create_colorbar_image(self, cmap_name: str) -> ImageTk.PhotoImage:
@@ -88,7 +88,7 @@ class ParameterPanel:
         self.non_diverge_colorbar_label.config(image=non_diverge_photo)
         self.non_diverge_colorbar_label.image = non_diverge_photo # 参照を保持
 
-    def setup_panel(self):
+    def _setup_panel(self):
         """パラメータパネルの設定"""
         # --- フラクタルタイプ ---
         row = 0
@@ -106,7 +106,7 @@ class ParameterPanel:
         self.formula_var = tk.StringVar()
         self.formula_label = ttk.Label(self.parent, textvariable=self.formula_var, font=("Courier", 10)) # フォント調整
         self.formula_label.grid(row=row, column=0, columnspan=2, sticky=tk.W, padx=10, pady=2)
-        self.show_formula_display()
+        self._show_formula_display()
 
         # --- パラメータ入力 (最大反復回数, Z, C) ---
         row += 1 # 最大反復回数
@@ -216,7 +216,7 @@ class ParameterPanel:
         # パネル全体の列幅を設定（必要に応じて）
         self.parent.columnconfigure(1, weight=1)
 
-    def show_formula_display(self):
+    def _show_formula_display(self):
         """漸化式を表示"""
         fractal_type = self.fractal_type_var.get()
         if fractal_type == "Julia":

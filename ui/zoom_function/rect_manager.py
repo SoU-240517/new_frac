@@ -170,7 +170,7 @@ class RectManager:
             self.logger.log(LogLevel.DEBUG, f"無効なサイズ：w={width:.4f} (<{self.MIN_WIDTH}), h={height:.4f} (<{self.MIN_HEIGHT})")
         return is_valid
 
-    def temporary_creation(self, start_x: float, start_y: float, end_x: float, end_y: float) -> bool:
+    def _temporary_creation(self, start_x: float, start_y: float, end_x: float, end_y: float) -> bool:
         """ズーム領域作成完了
 
         Args:

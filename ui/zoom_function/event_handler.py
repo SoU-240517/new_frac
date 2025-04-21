@@ -249,7 +249,7 @@ class EventHandler:
         self.cursor_manager.cursor_update(event, state=self.state_handler.get_state())
         self._create_logged = False
         self.canvas.draw_idle()
-        self.add_history(None) # 矩形がない状態を履歴に追加
+        self._add_history(None) # 矩形がない状態を履歴に追加
 
     def _dispatch_press_edit_left(self, event: MouseEvent):
         """EDIT 状態で左クリック: 回転/リサイズ/移動の開始
@@ -277,7 +277,7 @@ class EventHandler:
         current_state_for_history = self.rect_manager.get_state() # 履歴追加のため先に取得
         center = self.rect_manager.get_center()
         if center and event.xdata is not None and event.ydata is not None:
-            self.add_history(current_state_for_history) # 成功しそうなので履歴追加
+            self._add_history(current_state_for_history) # 成功しそうなので履歴追加
             self.rotate_center = center
             self.rotate_start_mouse_pos = (event.xdata, event.ydata)
             start_vector_angle = self._calculate_angle(center[0], center[1], event.xdata, event.ydata)
@@ -301,7 +301,7 @@ class EventHandler:
         current_state_for_history = self.rect_manager.get_state() # 履歴追加のため先に取得
         rotated_corners = self.rect_manager.get_rotated_corners()
         if rotated_corners:
-            self.add_history(current_state_for_history) # 成功しそうなので履歴追加
+            self._add_history(current_state_for_history) # 成功しそうなので履歴追加
             self.state_handler.update_state(ZoomState.RESIZING, {"action": "リサイズ開始", "角": corner_index})
             self.resize_corner_index = corner_index
             self.rect_manager.edge_change_editing() # スタイル変更
@@ -323,7 +323,7 @@ class EventHandler:
         current_state_for_history = self.rect_manager.get_state() # 履歴追加のため先に取得
         rect_props = self.rect_manager.get_properties()
         if rect_props and event.xdata is not None and event.ydata is not None:
-            self.add_history(current_state_for_history) # 成功しそうなので履歴追加
+            self._add_history(current_state_for_history) # 成功しそうなので履歴追加
             self.state_handler.update_state(ZoomState.ON_MOVE, {"action": "移動開始"})
             self.rect_manager.edge_change_editing() # スタイル変更
             self.move_start_x, self.move_start_y = event.xdata, event.ydata
@@ -449,22 +449,22 @@ class EventHandler:
         if is_outside:
             self.logger.log(LogLevel.WARNING, "作成キャンセル: 軸外でリリース")
             self.rect_manager.delete_rect()
-            self.remove_last_history() # 作成前の状態(None)の履歴を削除
+            self._remove_last_history() # 作成前の状態(None)の履歴を削除
         elif event.button == MouseButton.LEFT:
             if self.start_x is not None and self.start_y is not None and \
                event.xdata is not None and event.ydata is not None:
                 # 最終的なサイズで確定を試みる
-                if self.rect_manager.temporary_creation(self.start_x, self.start_y, event.xdata, event.ydata):
+                if self.rect_manager._temporary_creation(self.start_x, self.start_y, event.xdata, event.ydata):
                     self.logger.log(LogLevel.INFO, "作成成功")
                     final_state = ZoomState.EDIT
                 else:
                     self.logger.log(LogLevel.WARNING, "作成失敗: 最終サイズが無効")
                     self.rect_manager.delete_rect()
-                    self.remove_last_history()
+                    self._remove_last_history()
             else:
                 self.logger.log(LogLevel.ERROR, "作成失敗: 座標情報不備")
                 self.rect_manager.delete_rect()
-                self.remove_last_history()
+                self._remove_last_history()
         self._reset_create_state() # 作成関連の内部状態をリセット
         return final_state
 
@@ -498,7 +498,7 @@ class EventHandler:
         rect_props = self.rect_manager.get_properties()
         if not (rect_props and self.rect_manager.is_valid_size(rect_props[2], rect_props[3])):
             self.logger.log(LogLevel.WARNING, "リサイズ中断: 無効なサイズになったためUndo試行")
-            self.undo_last_edit() # 最後の有効な状態に戻す
+            self._undo_last_edit() # 最後の有効な状態に戻す
             if not self.rect_manager.get_rect(): # Undoの結果、矩形が消えた場合
                 final_state = ZoomState.NO_RECT
 
@@ -532,11 +532,11 @@ class EventHandler:
             self.zoom_selector.cancel_zoom() # MainWindow側の処理を呼び出す
         elif state is ZoomState.EDIT:
             self.logger.log(LogLevel.DEBUG, "ESC: EDIT -> Undo/編集キャンセル呼出し")
-            self.undo_or_cancel_edit() # Undoまたは編集キャンセル
+            self._undo_or_cancel_edit() # Undoまたは編集キャンセル
         elif state in [ZoomState.CREATE, ZoomState.ON_MOVE, ZoomState.RESIZING, ZoomState.ROTATING]:
              self.logger.log(LogLevel.DEBUG, f"ESC: {state.name} -> 操作キャンセル呼出し")
              # ドラッグ操作中にESCが押された場合もキャンセル
-             self.undo_or_cancel_edit()
+             self._undo_or_cancel_edit()
 
     def _handle_key_alt_press(self, event: KeyEvent):
         """Altキー押下処理
@@ -567,7 +567,7 @@ class EventHandler:
     # --- プライベートハンドラメソッド ここまで ---
 
     # --- Undo 関連メソッド ---
-    def add_history(self, state: Optional[Dict[str, Any]]):
+    def _add_history(self, state: Optional[Dict[str, Any]]):
         """編集履歴に状態を追加
 
         Args:
@@ -581,7 +581,7 @@ class EventHandler:
         # if len(self.edit_history) > MAX_HISTORY:
         #     self.edit_history.pop(0) # 古い履歴を削除
 
-    def remove_last_history(self):
+    def _remove_last_history(self):
         """最後の履歴を削除
 
         Returns:
@@ -598,7 +598,7 @@ class EventHandler:
         self.edit_history.clear()
         self.logger.log(LogLevel.SUCCESS, "編集履歴クリア完了")
 
-    def undo_last_edit(self):
+    def _undo_last_edit(self):
         """ 最後に行った編集操作を元に戻す """
         if len(self.edit_history) > 0: # 履歴が1つ以上あればUndo可能
             # 現在の状態は破棄し、一つ前の状態を取り出す
@@ -612,10 +612,10 @@ class EventHandler:
         else:
             self.logger.log(LogLevel.WARNING, "Undo不可: 編集履歴なし")
 
-    def undo_or_cancel_edit(self):
+    def _undo_or_cancel_edit(self):
         """ ESCキーによるUndoまたは編集キャンセル """
         if len(self.edit_history) > 1: # 初期状態 + 1回以上の編集履歴があればUndo
-            self.undo_last_edit()
+            self._undo_last_edit()
         elif len(self.edit_history) == 1: # 矩形作成直後などの場合
             self.logger.log(LogLevel.DEBUG, "ESC -> Undo履歴なし: ズーム領域編集キャンセル実行")
             self.clear_edit_history() # 履歴クリア
