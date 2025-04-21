@@ -7,6 +7,7 @@ from tkinter import ttk
 from ui.canvas import FractalCanvas
 from ui.parameter_panel import ParameterPanel
 from fractal.render import render_fractal
+from .status_bar import StatusBarManager
 from .zoom_function.debug_logger import DebugLogger
 from .zoom_function.enums import LogLevel
 
@@ -25,11 +26,6 @@ class MainWindow:
         """
         self.logger = logger
 
-        # 時間計測と表示のための変数
-        self._draw_start_time = None # 描画開始時刻を記録する変数
-        self._status_timer_id = None # root.afterでスケジュールされたタイマーのID
-        self._time_format = "[{:>3}分 {:>2}秒] " # 時間表示のフォーマット文字列。幅を固定するために使用（例: [ 100分 59秒] の幅）
-
         self._init_root_window(root)
 
 		# ズーム操作用パラメータ
@@ -45,10 +41,16 @@ class MainWindow:
         self.draw_thread = None
 
         # アプリケーション起動時の最初の描画スレッド開始前に、ステータスバーアニメーションを開始
-        self._start_status_animation()
+        # ここでは初期表示のみStatusBarManagerに任せます。
+        # 実際の描画開始時のアニメーションはupdate_fractal内で開始されます。
+        self.logger.log(LogLevel.DEBUG, "ステータスバーテキスト設定要求")
+        self.status_bar_manager.set_text("準備中...") # StatusBarManagerのメソッドで初期テキストを設定
 
         # フラクタル描画スレッドを作成後、開始する
         self.logger.log(LogLevel.DEBUG, "非同期でフラクタル描画開始")
+        # アプリケーション起動時はupdate_fractalを経由せず直接スレッドを開始するので、
+        # ここでアニメーションを開始します。
+        self.status_bar_manager.start_animation() # アプリケーション起動時のアニメーション開始
         self.draw_thread = threading.Thread(target=self._update_fractal_thread, daemon=True) # Daemonスレッドとして作成
         self.draw_thread.start() # フラクタル描画スレッドを開始
 
@@ -74,7 +76,7 @@ class MainWindow:
         # <Configure> イベントが発生すると、_on_canvas_frame_configure メソッドが呼ばれる
         self.canvas_frame.bind("<Configure>", self._on_canvas_frame_configure)
 
-        # FractalCanvas の初期化
+        # FractalCanvas のインスタンスを作成し、保持
         # widthとheight は Tkinter ウィジェットの初期サイズに影響
         self.logger.log(LogLevel.INIT, "FractalCanvas 初期化開始")
         self.fractal_canvas = FractalCanvas(
@@ -85,7 +87,7 @@ class MainWindow:
             zoom_confirm_callback=self.on_zoom_confirm, # 確定用コールバックをキャンバスに渡す
             zoom_cancel_callback=self.on_zoom_cancel) # キャンセル用コールバックをキャンバスに渡す
 
-        # ParameterPanel の初期化
+        # ParameterPanel のインスタンスを作成し、保持
         self.parameter_frame = ttk.Frame(self.main_frame) # 作成
         self.main_frame.add(self.parameter_frame, weight=1) # 配置
         self.logger.log(LogLevel.INIT, "ParameterPanel 初期化開始")
@@ -95,23 +97,16 @@ class MainWindow:
             reset_callback=self.reset_zoom, # リセット用コールバックをパラメータパネルに渡す
             logger=self.logger)
 
-        # ステータスバー
-        self.status_frame = ttk.Frame(self.root) # 作成
-        self.status_frame.pack(fill=tk.X, side=tk.BOTTOM) # 配置
+        # ステータスバー用のフレームを作成し、配置
+        status_frame = ttk.Frame(self.root) # 作成
+        status_frame.pack(fill=tk.X, side=tk.BOTTOM) # 配置
 
-        # ステータスバーのラベル
-        # 時間表示分の幅を確保するために width オプションを指定
-        self.status_label = ttk.Label(
-            self.status_frame,
-            text=self._time_format.format(0, 0) + "準備中...", # 初期表示に時間フォーマットを含める
-            width=25) # ある程度の幅（例: [ 999分 59秒] 描画中... が収まる程度）を確保
-        self.status_label.pack(side=tk.LEFT, padx=5, pady=2) # 配置
-
-        # ステータスバーの文字アニメーション用変数
-        self.animation_thread = None
-        self.animation_running = False
-        self.animation_dots = 0
-        self.animation_max_dots = 10
+        # StatusBarManager のインスタンスを作成し、保持
+        self.logger.log(LogLevel.INIT, "StatusBarManager 初期化開始")
+        self.status_bar_manager = StatusBarManager(
+            self.root,
+            status_frame,
+            self.logger)
 
     def update_fractal(self):
         """最新パラメータにズーム情報を上書きしてフラクタルを再描画（非同期処理を開始）"""
@@ -121,7 +116,8 @@ class MainWindow:
              return
 
         self.is_drawing = True
-        self._start_status_animation()
+        # 描画開始時にステータスバーアニメーションを開始
+        self.status_bar_manager.start_animation() # <-- StatusBarManagerのメソッドを呼び出す
 
         self.logger.log(LogLevel.INFO, "新しい描画スレッドを開始")
         # スレッドのターゲットとしてインスタンスメソッドを指定
@@ -138,34 +134,23 @@ class MainWindow:
             current_params = self.zoom_params.copy()
             current_params.update(panel_params) # パラメータパネルの設定で上書き（max_iterなど）
 
-            # 描画開始時刻を記録
-            self._draw_start_time = time.perf_counter()
-
             self.logger.log(LogLevel.CALL, "フラクタル計算と着色処理を開始（スレッド内）")
             fractal_image = render_fractal(current_params, self.logger)
 
             self.logger.log(LogLevel.CALL, "メインスレッドでキャンバス更新要求（スレッド内）")
-            # Tkinterのウィジェット操作は必ずメインスレッドで行う必要があるため、root.after を使用
-            # update_canvas メソッドをメインスレッドで実行するようにスケジュール
+            # Tkinterのウィジェット操作は必ずメインスレッドで行う必要があるため、root.after を使用し、
+            # update_canvas メソッドをメインスレッドで実行するようにスケジュールします。
             self.root.after(0, lambda: self.fractal_canvas.update_canvas(fractal_image, current_params))
 
-            # アニメーションと時間計測を停止
-            self.logger.log(LogLevel.CALL, "メインスレッドでステータスアニメーション停止要求（スレッド内）")
-            self._stop_status_animation()
-
-            # 最終描画時間を表示
-            final_elapsed_time = time.perf_counter() - self._draw_start_time
-            minutes = int(final_elapsed_time // 60)
-            seconds = int(final_elapsed_time % 60)
-            self.root.after(0, lambda: self.status_label.config(text=self._time_format.format(minutes, seconds) + "完了"))
-            self._draw_start_time = None # 描画開始時刻をリセット
+            # アニメーションと時間計測を停止し、最終メッセージを表示
+            # 時間計算とステータス表示はStatusBarManagerに任せます
+            self.status_bar_manager.stop_animation("完了") # <-- StatusBarManagerのメソッドを呼び出す
 
         except Exception as e: # 例外処理
             self.logger.log(LogLevel.ERROR, f"フラクタル更新スレッドエラー: {str(e)}")
-            # エラー発生時もステータスアニメーションを停止
-            self._stop_status_animation()
-            self._draw_start_time = None # エラー時も描画開始時刻をリセット
-            self.root.after(0, lambda: self.status_label.config(text=self._time_format.format(0, 0) + f"エラー: {str(e)}")) # エラー表示
+            # エラー発生時もアニメーションを停止し、エラーメッセージを表示
+            # エラーメッセージの表示もStatusBarManagerに任せます
+            self.status_bar_manager.stop_animation(f"エラー: {str(e)}") # <-- StatusBarManagerのメソッドを呼び出す
         finally: # 描画スレッドの終了処理
             # is_drawing フラグをリセット
             self.is_drawing = False
@@ -271,105 +256,6 @@ class MainWindow:
         # 初期パラメータでフラクタルを再描画
         self.update_fractal()
 
-    def _start_status_animation(self):
-        """ステータスバーの描画中アニメーションを開始"""
-        # 既にアニメーションが実行中の場合は何もしない
-        if self.animation_running: return
-
-        self.animation_running = True # アニメーション実行中フラグをTrueに
-        self.animation_dots = 0
-
-        # アニメーション用のスレッドを作成
-        self.animation_thread = threading.Thread(
-            target=self._status_animation_thread,
-            daemon=True)
-
-        # 時間計測を開始し、UI更新タイマーをスケジュール
-        self._draw_start_time = time.perf_counter() # 描画開始時刻を記録
-        self._schedule_status_time_update() # 時間表示の更新をスケジュール
-
-        # スレッドを開始
-        try:
-            self.animation_thread.start()
-        except Exception as e:
-            self.logger.log(LogLevel.ERROR, f"アニメーションスレッドの開始失敗: {e}")
-            self.animation_running = False # スレッド開始に失敗したらフラグを戻す
-
-    def _status_animation_thread(self):
-        """ステータスバーのアニメーションを更新するスレッドの処理"""
-        while self.animation_running:
-            # ドットの数を増やす (最大数に達したら0に戻る)
-            self.animation_dots = (self.animation_dots + 1) % (self.animation_max_dots + 1)
-            dots = "." * self.animation_dots
-            # TkinterのLabel更新はメインスレッドで行う必要があるため、root.afterを使用
-
-            # 時間表示と組み合わせてラベルを更新
-            # ここではアニメーション部分のみ更新し、時間表示は別のタイマー(_update_status_time)で更新
-            self.root.after(0, lambda: self._update_status_label_text(f"描画中{dots}"))
-
-            # 一定時間待機してアニメーションの間隔を調整
-            time.sleep(0.1)
-        # アニメーション終了後、ステータスを「完了」に更新 (最終的な完了表示は_update_fractal_threadで行う)
-        # アニメーションスレッドが終了した際の処理は不要になるか、または別の最終表示ロジックを検討
-        # self.root.after(0, lambda: self.status_label.config(text="完了")) # この行は削除または修正
-
-    def _update_status_label_text(self, animation_text: str):
-        """ステータスラベルのテキストを更新（時間表示とアニメーションを組み合わせる）"""
-        if self._draw_start_time is not None:
-            elapsed_time = time.perf_counter() - self._draw_start_time
-            minutes = int(elapsed_time // 60)
-            seconds = int(elapsed_time % 60)
-            time_str = self._time_format.format(minutes, seconds)
-            self.status_label.config(text=time_str + animation_text)
-        else:
-            # 描画開始前または終了後の場合
-            self.status_label.config(text=self._time_format.format(0, 0) + animation_text) # 時間部分は0で表示
-
-    def _schedule_status_time_update(self):
-        """ステータスバーの時間表示更新をスケジュール"""
-        if self.animation_running: # アニメーションが実行中の間のみスケジュール
-            # 1秒ごとに更新
-            self._status_timer_id = self.root.after(1000, self._update_status_time)
-            # self.logger.log(LogLevel.DEBUG, "時間更新タイマーをスケジュール") # ログが多い場合はコメントアウト
-        else:
-            # アニメーションが停止したらタイマーも停止
-            if self._status_timer_id:
-                self.root.after_cancel(self._status_timer_id)
-                self._status_timer_id = None
-                # self.logger.log(LogLevel.DEBUG, "時間更新タイマーを停止") # ログが多い場合はコメントアウト
-
-    def _update_status_time(self):
-        """ステータスバーの時間を更新し、次の更新をスケジュール"""
-        if self.animation_running and self._draw_start_time is not None:
-            elapsed_time = time.perf_counter() - self._draw_start_time
-            minutes = int(elapsed_time // 60)
-            seconds = int(elapsed_time % 60)
-            # _update_status_label_text を呼んで時間とアニメーションをまとめて更新
-            self._update_status_label_text(f"描画中{'.' * self.animation_dots}") # 現在のドット数でアニメーションテキストを作成
-            self._schedule_status_time_update() # 次の更新をスケジュール
-
-    def _stop_status_animation(self):
-        """ステータスバーの描画中アニメーションを停止"""
-        if self.animation_running:
-            self.animation_running = False
-            # アニメーションスレッドが終了するのを待つ (短い処理なのですぐに終わるはず)
-            if self.animation_thread and self.animation_thread.is_alive():
-                # スレッドが終了するのを待つ
-                self.animation_thread.join(timeout=0.2) # タイムアウト値を0.2秒に設定
-                if self.animation_thread.is_alive():
-                    # タイムアウトしても警告は出す
-                    self.logger.log(LogLevel.DEBUG, "ステータスアニメーションスレッドが終了不可 (タイムアウト)")
-                else:
-                    # タイムアウトせず終了できたらログを出す
-                    self.logger.log(LogLevel.SUCCESS, "ステータスアニメーションスレッド停止完了")
-            # 時間更新タイマーをキャンセル
-            if self._status_timer_id:
-                self.root.after_cancel(self._status_timer_id)
-                self._status_timer_id = None
-                # self.logger.log(LogLevel.DEBUG, "時間更新タイマーを停止 (stop_animation)") # ログが多い場合はコメントアウト
-            self.animation_thread = None # スレッド参照をクリア
-        else:
-             self.logger.log(LogLevel.ERROR, "アニメーションは実行されていません")
 
     def _on_canvas_frame_configure(self, event):
         """キャンバスフレームのリサイズ時にMatplotlib Figureのサイズを更新し、16:9の縦横比を維持する"""

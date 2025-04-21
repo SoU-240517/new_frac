@@ -45,6 +45,7 @@ class FractalCanvas:
         # ズーム機能の設定
         self.set_zoom_callback(zoom_confirm_callback, zoom_cancel_callback) # 受取ったコールバックを保持
         from ui.zoom_function.zoom_selector import ZoomSelector # ZoomSelector を遅延インポート
+        # ZoomSelector のインスタンスを作成し、保持
         self.logger.log(LogLevel.INIT, "ZoomSelector 初期化開始")
         self.zoom_selector = ZoomSelector(
             self.ax,
@@ -52,7 +53,6 @@ class FractalCanvas:
             on_zoom_cancel=zoom_cancel_callback,
             logger=self.logger)
         self.logger.log(LogLevel.INIT, "キャンバス背景設定開始")
-
         self._set_black_background()
 
     def _set_black_background(self):

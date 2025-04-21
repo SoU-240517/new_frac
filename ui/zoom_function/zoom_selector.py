@@ -45,18 +45,23 @@ class ZoomSelector:
         self._last_cursor_inside_state: Optional[bool] = None # カーソル状態のキャッシュを追加
 
         # 依存コンポーネントの初期化
+        # ZoomStateHandler のインスタンスを作成し、保持
         self.logger.log(LogLevel.INIT, "ZoomStateHandler 初期化開始")
         self.state_handler = ZoomStateHandler(
                                initial_state=ZoomState.NO_RECT,
                                logger=self.logger,
                                canvas=self.canvas)
+        # RectManager のインスタンスを作成し、保持
         self.logger.log(LogLevel.INIT, "RectManager 初期化開始")
         self.rect_manager = RectManager(ax, self.logger)
         tk_widget = getattr(self.canvas, 'get_tk_widget', lambda: None)()
+        # CursorManager のインスタンスを作成し、保持
         self.logger.log(LogLevel.INIT, "CursorManager 初期化開始")
         self.cursor_manager = CursorManager(tk_widget, self.logger)
+        # EventValidator のインスタンスを作成し、保持
         self.logger.log(LogLevel.INIT, "EventValidator 初期化開始")
         self.validator = EventValidator()
+        # EventHandler のインスタンスを作成し、保持
         self.logger.log(LogLevel.INIT, "EventHandler 初期化開始")
         self.event_handler = EventHandler(self,
                                           self.state_handler,

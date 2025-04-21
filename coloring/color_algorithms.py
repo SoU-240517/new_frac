@@ -13,6 +13,7 @@ from ui.zoom_function.enums import LogLevel
 """
 def apply_coloring_algorithm(results, params, logger: DebugLogger):
     """ 着色アルゴリズムを適用（高速スムージング追加）。float32 [0, 255] RGBA 配列を返す """
+    # FractalCache のインスタンスを作成し、保持
     logger.log(LogLevel.INIT, "FractalCache 初期化開始")
     cache = ColorCache()
     cached = cache.get_cache(params)
