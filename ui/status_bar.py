@@ -77,7 +77,7 @@ class StatusBarManager:
         while self.animation_running:
             self.animation_dots = (self.animation_dots + 1) % (self.animation_max_dots + 1)
             animation_text = f"描画中{'.' * self.animation_dots}"
-            # TkinterのLabel更新は必ずメインスレッドで行う必要があるため、root.afterを使用
+            # TkinterのLabel 更新は必ずメインスレッドで行う必要があるため、root.afterを使用
             # root.after(0, ...) は、可能な限り早くメインスレッドで指定された関数を実行するように要求する
             # ラムダ式を使って、現在の animation_text の値を引数として _update_label_text に渡す
             self.root.after(0, lambda t=animation_text: self._update_label_text(t))
@@ -93,8 +93,7 @@ class StatusBarManager:
             animation_text (str): アニメーション部分のテキスト（例: "描画中..."）
         """
         if self._draw_start_time is not None:
-            # 経過時間を計算 (現在の時刻 - 描画開始時刻)
-            elapsed_time = time.perf_counter() - self._draw_start_time
+            elapsed_time = time.perf_counter() - self._draw_start_time # 経過時間を計算
             # 経過時間を分と秒に変換
             minutes = int(elapsed_time // 60) # 60で割った商（分）
             seconds = int(elapsed_time % 60) # 60で割った余り（秒）

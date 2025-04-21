@@ -6,7 +6,7 @@ from typing import Callable, Optional, Tuple
 from .cursor_manager import CursorManager
 from .debug_logger import DebugLogger
 from .enums import ZoomState, LogLevel
-from .event_handler import EventHandler
+from .event_handler_core import EventHandler
 from .event_validator import EventValidator, ValidationResult
 from .rect_manager import RectManager
 from .zoom_state_handler import ZoomStateHandler

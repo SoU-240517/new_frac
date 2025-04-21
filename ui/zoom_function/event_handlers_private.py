@@ -1,0 +1,364 @@
+from matplotlib.backend_bases import MouseEvent, MouseButton, KeyEvent
+from typing import Optional, TYPE_CHECKING, Tuple, List, Dict, Any
+from .enums import LogLevel, ZoomState
+
+if TYPE_CHECKING:
+    from .event_handler_core import EventHandler
+
+class EventHandlersPrivate:
+    """EventHandler から呼び出され、具体的なマウス/キーボードイベント処理を行うクラス
+    - 役割:
+        - EventHandler のディスパッチャから指示を受け、矩形の作成、移動、リサイズ、回転などの具体的な操作を実行する
+        - 親である EventHandler インスタンスを通じて、他のコンポーネント（RectManager, StateHandlerなど）や状態（start_x, _alt_pressedなど）にアクセスする
+    """
+
+    # --- コンストラクタ ---
+    def __init__(self, core: 'EventHandler'):
+        """具体的なイベントハンドラのコンストラクタ
+
+        Args:
+            core: 親である EventHandler インスタンス
+        """
+        self.core = core
+
+    # --- プライベートハンドラメソッド ---
+    # --- Press イベントハンドラ ---
+    def handle_press_no_rect_left(self, event: MouseEvent):
+        """NO_RECT 状態で左クリック: 矩形作成開始
+
+        Args:
+            event: MouseEvent オブジェクト
+        """
+        self.core.state_handler.update_state(ZoomState.CREATE, {"action": "ズーム領域設置開始"})
+        if event.xdata is None or event.ydata is None: return
+        self.core.start_x, self.core.start_y = event.xdata, event.ydata # 親のインスタンス変数に座標を保存
+        self.core.rect_manager.setup_rect(self.core.start_x, self.core.start_y)
+        self.core.zoom_selector.invalidate_rect_cache()
+        self.core.cursor_manager.cursor_update(event, state=self.core.state_handler.get_state())
+        self.core._create_logged = False # 親のログフラグを更新
+        self.core.canvas.draw_idle() # 親の canvas に再描画を依頼
+        self.core.utils._add_history(None) # utils に履歴追加を依頼
+
+    def dispatch_press_edit_left(self, event: MouseEvent):
+        """EDIT 状態で左クリック: 回転/リサイズ/移動の開始
+
+        Args:
+            event: MouseEvent オブジェクト
+        """
+        corner_index = self.core.zoom_selector.pointer_near_corner(event)
+        is_inside = self.core.zoom_selector.cursor_inside_rect(event)
+
+        if self.core._alt_pressed and corner_index is not None:
+            self._handle_press_edit_start_rotating(event, corner_index)
+        elif not self.core._alt_pressed and corner_index is not None:
+            self._handle_press_edit_start_resizing(event, corner_index)
+        elif not self.core._alt_pressed and is_inside:
+            self._handle_press_edit_start_moving(event)
+        # else: 角でも内側でもない場合は何もしない
+
+    def _handle_press_edit_start_rotating(self, event: MouseEvent, corner_index: int):
+        """EDIT 状態 + Alt + 角で左クリック: 回転開始
+
+        Args:
+            event: MouseEvent オブジェクト
+            corner_index: 回転開始する角
+        """
+        current_state_for_history = self.core.rect_manager.get_state()
+        center = self.core.rect_manager.get_center()
+        if center and event.xdata is not None and event.ydata is not None:
+            self.core.utils._add_history(current_state_for_history) # utils に履歴追加を依頼
+            self.core.rotate_center = center # 親のインスタンス変数に情報を保存
+            self.core.rotate_start_mouse_pos = (event.xdata, event.ydata)
+            start_vector_angle = self.core.utils._calculate_angle(center[0], center[1], event.xdata, event.ydata)
+            self.core.previous_vector_angle = start_vector_angle # 親のインスタンス変数に角度を保存
+            self.core.logger.log(LogLevel.DEBUG, f"回転開始パラメータ: 中心={center}, 開始角度={start_vector_angle:.2f}")
+            self.core.state_handler.update_state(ZoomState.ROTATING, {"action": "回転開始", "角": corner_index})
+            self.core.cursor_manager.cursor_update(event, state=self.core.state_handler.get_state(), near_corner_index=corner_index, is_rotating=True)
+            self.core._rotate_logged = False # 親のログフラグを更新
+        else:
+            self.core.logger.log(LogLevel.ERROR, "回転不可：中心座標またはイベント座標なし")
+
+    def _handle_press_edit_start_resizing(self, event: MouseEvent, corner_index: int):
+        """EDIT 状態 + 角で左クリック：リサイズ開始
+
+        Args:
+            event: MouseEvent オブジェクト
+            corner_index: リサイズ開始する角
+        """
+        current_state_for_history = self.core.rect_manager.get_state()
+        rotated_corners = self.core.rect_manager.get_rotated_corners()
+        if rotated_corners:
+            self.core.utils._add_history(current_state_for_history) # utils に履歴追加を依頼
+            self.core.state_handler.update_state(ZoomState.RESIZING, {"action": "リサイズ開始", "角": corner_index})
+            self.core.resize_corner_index = corner_index # 親のインスタンス変数に角のインデックスを保存
+            self.core.rect_manager.edge_change_editing()
+            fixed_corner_idx = 3 - corner_index
+            self.core.fixed_corner_pos = rotated_corners[fixed_corner_idx] # 親のインスタンス変数に固定角の座標を保存
+            self.core.logger.log(LogLevel.DEBUG, f"リサイズ開始パラメータ: 固定角(回転後)={self.core.fixed_corner_pos}")
+            self.core.cursor_manager.cursor_update(
+                event, state=self.core.state_handler.get_state(),
+                near_corner_index=self.core.resize_corner_index,
+                is_rotating=False)
+            self.core._resize_logged = False # 親のログフラグを更新
+            self.core.canvas.draw_idle()
+        else:
+            self.core.logger.log(LogLevel.ERROR, "リサイズ不可：回転後の角座標を取得できず")
+
+    def _handle_press_edit_start_moving(self, event: MouseEvent):
+        """EDIT 状態 + 内部で左クリック: 移動開始
+
+        Args:
+            event: MouseEvent オブジェクト
+        """
+        current_state_for_history = self.core.rect_manager.get_state()
+        rect_props = self.core.rect_manager.get_properties()
+        if rect_props and event.xdata is not None and event.ydata is not None:
+            self.core.utils._add_history(current_state_for_history) # utils に履歴追加を依頼
+            self.core.state_handler.update_state(ZoomState.ON_MOVE, {"action": "移動開始"})
+            self.core.rect_manager.edge_change_editing()
+            # 親のインスタンス変数に開始座標を保存
+            self.core.move_start_x, self.core.move_start_y = event.xdata, event.ydata
+            # 親のインスタンス変数に矩形開始位置を保存
+            self.core.rect_start_pos = (rect_props[0], rect_props[1])
+            self.core.logger.log(LogLevel.DEBUG,f"移動開始パラメータ: マウス=({self.core.move_start_x:.2f}, {self.core.move_start_y:.2f}), 矩形左下={self.core.rect_start_pos}")
+            self.core.cursor_manager.cursor_update(event, state=self.core.state_handler.get_state(), is_rotating=False)
+            self.core._move_logged = False # 親のログフラグを更新
+            self.core.canvas.draw_idle()
+        else:
+            self.core.logger.log(LogLevel.ERROR, "移動不可：矩形プロパティまたはイベント座標なし")
+
+    def handle_press_edit_right_confirm(self, event: MouseEvent):
+        """EDIT 状態で右クリック: ズーム確定
+
+        Args:
+            event: MouseEvent オブジェクト
+        """
+        self.core.zoom_selector.confirm_zoom()
+        self.core.state_handler.update_state(ZoomState.NO_RECT, {"action": "ズーム確定完了"})
+    # --- Press イベントハンドラ ここまで ---
+
+    # --- Motion イベントハンドラ ---
+    def handle_motion_create(self, event: MouseEvent):
+        """CREATE 状態でのマウス移動: 矩形サイズ更新
+
+        Args:
+            event: MouseEvent オブジェクト
+        """
+        # 親のインスタンス変数から開始座標を取得
+        if self.core.start_x is not None and self.core.start_y is not None and event.xdata is not None and event.ydata is not None:
+            self.core.rect_manager.setting_rect_size(self.core.start_x, self.core.start_y, event.xdata, event.ydata)
+            self.core.canvas.draw_idle()
+
+    def handle_motion_edit(self, event: MouseEvent):
+        """EDIT 状態でのマウス移動
+
+        Args:
+            event: MouseEvent オブジェクト
+        """
+        corner_index = self.core.zoom_selector.pointer_near_corner(event)
+        self.core.cursor_manager.cursor_update(event, state=ZoomState.EDIT, near_corner_index=corner_index, is_rotating=self.core._alt_pressed)
+
+    def handle_motion_move(self, event: MouseEvent):
+        """ON_MOVE 状態でのマウス移動: 矩形移動
+
+        Args:
+            event: MouseEvent オブジェクト
+        """
+        # 親のログフラグを確認・更新
+        if not self.core._move_logged:
+            # self.core.logger.log(LogLevel.DEBUG, "移動中...")
+            self.core._move_logged = True
+
+        # 親のインスタンス変数から開始座標と矩形開始位置を取得
+        if self.core.move_start_x is not None and self.core.move_start_y is not None and \
+           self.core.rect_start_pos is not None and event.xdata is not None and event.ydata is not None:
+            dx = event.xdata - self.core.move_start_x
+            dy = event.ydata - self.core.move_start_y
+            new_rect_x = self.core.rect_start_pos[0] + dx
+            new_rect_y = self.core.rect_start_pos[1] + dy
+            self.core.rect_manager.move_rect_to(new_rect_x, new_rect_y)
+            self.core.zoom_selector.invalidate_rect_cache()
+            self.core.canvas.draw_idle()
+
+    def handle_motion_resizing(self, event: MouseEvent):
+        """RESIZING 状態でのマウス移動: リサイズ
+
+        Args:
+            event: MouseEvent オブジェクト
+        """
+        # 親のログフラグを確認・更新
+        if not self.core._resize_logged:
+            # self.core.logger.log(LogLevel.DEBUG, f"リサイズ中...：角={self.core.resize_corner_index}")
+            self.core._resize_logged = True
+        # 親のインスタンス変数から固定角座標を取得
+        if self.core.fixed_corner_pos is not None and event.xdata is not None and event.ydata is not None:
+            fixed_x_rotated, fixed_y_rotated = self.core.fixed_corner_pos
+            current_x, current_y = event.xdata, event.ydata
+            self.core.rect_manager.resize_rect_from_corners(fixed_x_rotated, fixed_y_rotated, current_x, current_y)
+            self.core.zoom_selector.invalidate_rect_cache()
+            self.core.canvas.draw_idle()
+
+    def handle_motion_rotating(self, event: MouseEvent):
+        """ROTATING 状態でのマウス移動: 矩形回転
+
+        Args:
+            event: MouseEvent オブジェクト
+        """
+        # 親のログフラグを確認・更新
+        if not self.core._rotate_logged:
+            # self.core.logger.log(LogLevel.DEBUG, "回転中...")
+            self.core._rotate_logged = True
+
+        # 親のインスタンス変数から回転中心、前回の角度を取得
+        if self.core.rotate_center and self.core.previous_vector_angle is not None and \
+           event.xdata is not None and event.ydata is not None:
+
+            current_vector_angle = self.core.utils._calculate_angle(
+                self.core.rotate_center[0], self.core.rotate_center[1], event.xdata, event.ydata)
+            delta_angle = self.core.utils._normalize_angle_diff(current_vector_angle, self.core.previous_vector_angle)
+
+            # 親の定数、インスタンス変数にアクセス
+            if abs(delta_angle) > self.core.ROTATION_THRESHOLD:
+                adjusted_delta_angle = delta_angle * self.core.ROTATION_SENSITIVITY
+                current_rect_angle = self.core.rect_manager.get_rotation()
+                new_angle = current_rect_angle + adjusted_delta_angle
+                self.core.rect_manager.set_rotation(new_angle)
+                self.core.previous_vector_angle = current_vector_angle # 親のインスタンス変数に現在の角度を保存
+                self.core.logger.log(LogLevel.DEBUG, f"回転 delta:{delta_angle:.2f} adj:{adjusted_delta_angle:.2f} new:{new_angle:.2f}")
+                self.core.zoom_selector.invalidate_rect_cache()
+                self.core.canvas.draw_idle()
+    # --- Motion イベントハンドラ ここまで ---
+
+    # --- Release イベントハンドラ ---
+    def handle_release_create(self, event: MouseEvent, is_outside: bool) -> ZoomState:
+        """CREATE 状態でのマウス解放: 作成完了またはキャンセル
+
+        Args:
+            event: MouseEvent オブジェクト
+            is_outside: 軸外でのリリースか
+
+        Returns:
+            ZoomState: 次の状態
+        """
+        final_state = ZoomState.NO_RECT # デフォルトはキャンセル
+        if is_outside:
+            self.core.logger.log(LogLevel.WARNING, "作成キャンセル: 軸外でリリース")
+            self.core.rect_manager.delete_rect()
+            self.core.utils._remove_last_history()
+        elif event.button == MouseButton.LEFT:
+            # 親のインスタンス変数から開始座標を取得
+            if self.core.start_x is not None and self.core.start_y is not None and \
+               event.xdata is not None and event.ydata is not None:
+                if self.core.rect_manager._temporary_creation(self.core.start_x, self.core.start_y, event.xdata, event.ydata):
+                    self.core.logger.log(LogLevel.INFO, "作成成功")
+                    final_state = ZoomState.EDIT
+                else:
+                    self.core.logger.log(LogLevel.WARNING, "作成失敗: 最終サイズが無効")
+                    self.core.rect_manager.delete_rect()
+                    self.core.utils._remove_last_history()
+            else:
+                self.core.logger.log(LogLevel.ERROR, "作成失敗: 座標情報不備")
+        # どちらの場合でも、一時矩形を削除し、作成前の履歴を削除
+        self.core.rect_manager.delete_rect()
+        self.core.utils._remove_last_history()
+
+        self.core.utils._reset_create_state()
+        return final_state
+
+    def handle_release_move(self, event: MouseEvent) -> ZoomState:
+        """ON_MOVE 状態でのマウス解放: 移動完了
+
+        Args:
+            event: MouseEvent オブジェクト
+
+        Returns:
+            ZoomState: 次の状態
+        """
+        self.core.logger.log(LogLevel.DEBUG, "移動完了")
+        self.core.rect_manager.edge_change_finishing()
+        self.core.utils._reset_move_state()
+        return ZoomState.EDIT
+
+    def handle_release_resizing(self, event: MouseEvent) -> ZoomState:
+        """RESIZING 状態でのマウス解放: リサイズ完了またはキャンセル/Undo
+
+        Args:
+            event: MouseEvent オブジェクト
+
+        Returns:
+            ZoomState: 次の状態
+        """
+        self.core.logger.log(LogLevel.DEBUG, "リサイズ完了")
+        self.core.rect_manager.edge_change_finishing()
+        final_state = ZoomState.EDIT
+        rect_props = self.core.rect_manager.get_properties()
+        if not (rect_props and self.core.rect_manager.is_valid_size(rect_props[2], rect_props[3])):
+            self.core.logger.log(LogLevel.WARNING, "リサイズ中断: 無効なサイズになったためUndo試行")
+            self.core.utils._undo_last_edit()
+            if not self.core.rect_manager.get_rect(): # Undoの結果、矩形が消えた場合
+                final_state = ZoomState.NO_RECT
+
+        self.core.utils._reset_resize_state()
+        return final_state
+
+    def handle_release_rotating(self, event: MouseEvent) -> ZoomState:
+        """ROTATING 状態でのマウス解放: 回転完了
+
+        Args:
+            event: MouseEvent オブジェクト
+
+        Returns:
+            ZoomState: 次の状態
+        """
+        self.core.logger.log(LogLevel.DEBUG, "回転完了")
+        self.core.utils._reset_rotate_state()
+        return ZoomState.EDIT
+    # --- Release イベントハンドラ ここまで ---
+
+    # --- Key イベントハンドラ ---
+    def _handle_key_escape(self, event: KeyEvent):
+        """Escapeキー押下処理
+
+        Args:
+            event: KeyEvent オブジェクト
+        """
+        # 親の state_handler から現在の状態を取得
+        state = self.core.state_handler.get_state()
+        if state is ZoomState.NO_RECT:
+            self.core.logger.log(LogLevel.DEBUG, "ESC: NO_RECT -> ズーム確定キャンセル呼出し")
+            self.core.zoom_selector.cancel_zoom() # MainWindow側の処理を呼び出す
+        elif state is ZoomState.EDIT:
+            self.core.logger.log(LogLevel.DEBUG, "ESC: EDIT -> Undo/編集キャンセル呼出し")
+            self.core.utils._undo_or_cancel_edit() # Undoまたは編集キャンセル
+        elif state in [ZoomState.CREATE, ZoomState.ON_MOVE, ZoomState.RESIZING, ZoomState.ROTATING]:
+             self.core.logger.log(LogLevel.DEBUG, f"ESC: {state.name} -> 操作キャンセル呼出し")
+             # ドラッグ操作中にESCが押された場合もキャンセル
+             # utils に Undo またはキャンセルを依頼
+             self.core.utils._undo_or_cancel_edit()
+
+    def handle_key_alt_press(self, event: KeyEvent):
+        """Altキー押下処理
+
+        Args:
+            event: KeyEvent オブジェクト
+        """
+        # 親の _alt_pressed 状態を確認・更新
+        if not self.core._alt_pressed: # Altキーが押されていなかったら
+            # self.core.logger.log(LogLevel.INFO, "回転モード有効化")
+            self.core._alt_pressed = True
+            if self.core.state_handler.get_state() == ZoomState.EDIT:
+                self.core.logger.log(LogLevel.DEBUG, "Alt押下: EDIT状態")
+
+    def handle_key_alt_release(self, event: KeyEvent):
+        """Altキー解放処理
+
+        Args:
+            event: KeyEvent オブジェクト
+        """
+        # 親の _alt_pressed 状態を確認・更新
+        if self.core._alt_pressed: # Altキーが押されていたら
+            # self.core.logger.log(LogLevel.INFO, "回転モード無効化")
+            self.core._alt_pressed = False
+            if self.core.state_handler.get_state() == ZoomState.EDIT:
+                self.core.logger.log(LogLevel.DEBUG, "Alt解放: EDIT状態")
+    # --- Key イベントハンドラ ここまで ---
