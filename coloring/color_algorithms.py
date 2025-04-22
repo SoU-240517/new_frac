@@ -6,6 +6,22 @@ from coloring import gradient
 from ui.zoom_function.debug_logger import DebugLogger
 from ui.zoom_function.enums import LogLevel
 
+# fast_smoothing 関数をモジュールレベルに移動
+def fast_smoothing(z, iters, out):
+    """ 高速スムージングアルゴリズム """
+    with np.errstate(divide='ignore', invalid='ignore'):
+        abs_z = np.abs(z)
+        # abs_z が 2 より大きい場合のみスムージング計算を行う
+        # log(log(abs_z)) は abs_z > 1 で定義されるが、スムージングは通常 abs_z > 2 で適用
+        mask_smooth = abs_z > 2
+        # np.log(2) は定数なので事前に計算しておく
+        log2 = np.log(2)
+        # マスクされた部分にのみ計算を適用
+        smooth_values = iters[mask_smooth] - np.log(np.log(abs_z[mask_smooth])) / log2
+        # 結果を out 配列に書き込む
+        out[...] = iters # まず全要素を iters で初期化
+        out[mask_smooth] = smooth_values # スムージング計算結果で上書き
+
 """フラクタルの着色アルゴリズムを実装
 - 役割:
     - 着色アルゴリズムを適用
@@ -27,22 +43,9 @@ def apply_coloring_algorithm(results, params, logger: DebugLogger):
     # float32 配列で初期化
     colored = np.zeros((*iterations.shape, 4), dtype=np.float32)
     divergent = iterations > 0 # 発散した点のマスク
-    # 中間データを必要最小限に
-    if params["diverge_algorithm"] == "高速スムージング":
-        smooth_iter = np.zeros_like(iterations, dtype=np.float32)
-        fast_smoothing(z_vals, iterations, smooth_iter)
-        del z_vals  # これ以降不要なので削除
-    # 高速スムージング用の事前計算
-    def fast_smoothing(z, iters, out):
-        """ 高速スムージングアルゴリズム """
-        with np.errstate(divide='ignore', invalid='ignore'):
-            abs_z = np.abs(z)
-            smooth = np.where(
-                abs_z > 2,
-                iters - np.log(np.log(abs_z)) / np.log(2),
-                iters
-            )
-            out[...] = smooth  # 既存の配列を更新
+
+    # 不要な事前計算ブロックを削除
+
     # === 発散する場合の処理 ===
     if np.any(divergent):
         algo = params["diverge_algorithm"]
@@ -66,13 +69,21 @@ def apply_coloring_algorithm(results, params, logger: DebugLogger):
             colored[divergent] = cmap_func(norm(smooth_iter[divergent])) * 255.0
         elif algo == "高速スムージング":
             start_time = time.perf_counter()
-            smooth_iter = fast_smoothing(z_vals, iterations)
+            # smooth_iter 配列を作成
+            smooth_iter = np.zeros_like(iterations, dtype=np.float32)
+            # モジュールレベルの fast_smoothing を呼び出し、smooth_iter を更新
+            fast_smoothing(z_vals, iterations, smooth_iter)
             elapsed = time.perf_counter() - start_time
             logger.log(LogLevel.INFO, f"高速スムージング処理時間: {elapsed:.5f}秒")
+            # smooth_iter を使用して正規化と着色
             valid_vals = smooth_iter[divergent & np.isfinite(smooth_iter)]
             vmin = np.min(valid_vals) if len(valid_vals) > 0 else 0
             vmax = np.max(valid_vals) if len(valid_vals) > 0 else params["max_iterations"]
+            # vmin と vmax が同じ場合、Normalize はエラーを起こす可能性があるため、微小な差をつける
+            if vmin == vmax:
+                vmax += 1e-9
             norm = Normalize(vmin=vmin, vmax=vmax)
+            # divergent マスクを適用して着色
             colored[divergent] = cmap_func(norm(smooth_iter[divergent])) * 255.0
         elif algo == "指数スムージング":
             with np.errstate(divide='ignore', invalid='ignore'):
@@ -89,8 +100,8 @@ def apply_coloring_algorithm(results, params, logger: DebugLogger):
             colored[divergent] = cmap_func(remapped) * 255.0
         elif algo == "反復回数対数マッピング":
             iter_log = np.zeros_like(iterations, dtype=float)
-            valid_iter = iterations[divergent] > 0 # log(0) を避ける
-            iter_log[divergent][valid_iter] = np.log(iterations[divergent][valid_iter]) / np.log(params["max_iterations"])
+            valid_iter_mask = divergent & (iterations > 0) # log(0) を避けるためのマスク
+            iter_log[valid_iter_mask] = np.log(iterations[valid_iter_mask]) / np.log(params["max_iterations"])
             colored[divergent] = cmap_func(iter_log[divergent]) * 255.0
         elif algo == "距離カラーリング":
             dist = np.abs(z_vals)
@@ -128,6 +139,7 @@ def apply_coloring_algorithm(results, params, logger: DebugLogger):
             # norm_dist = 1.0 - (trap_dist - min_dist) / (max_dist - min_dist + 1e-9)
             norm = Normalize(vmin=min_dist, vmax=max_dist)
             colored[divergent] = cmap_func(norm(trap_dist[divergent])) * 255.0
+
     non_divergent = ~divergent
     logger.log(LogLevel.DEBUG, f"発散する点の数: {np.sum(divergent)}, 発散しない点の数: {np.sum(non_divergent)}")
     if np.any(non_divergent):
@@ -144,9 +156,12 @@ def apply_coloring_algorithm(results, params, logger: DebugLogger):
                 c_val = complex(params["c_real"], params["c_imag"])
                 angle = (np.angle(c_val) / (2 * np.pi)) + 0.5
                 # 非発散領域全体に同じ色を適用
-                color_val = plt.cm.get_cmap(params["non_diverge_colormap"])(angle) * 255.0 # RGBAを[0, 255]範囲に
+                # タプルを NumPy 配列に変換してから乗算する
+                color_val_normalized = plt.cm.get_cmap(params["non_diverge_colormap"])(angle) # [0, 1] のタプルを取得
+                color_val = np.array(color_val_normalized) * 255.0 # NumPy 配列に変換して [0, 255] にスケール
                 colored[non_divergent] = color_val
             else: # Mandelbrotの場合、各点のC（座標値）を使う
+                logger.log(LogLevel.WARNING, "Mandelbrotの非発散部パラメータ(C)着色は現在z_valsを使用しており、意図通りでない可能性があります。")
                 c_real, c_imag = np.real(z_vals[non_divergent]), np.imag(z_vals[non_divergent])
                 angle = (np.arctan2(c_imag, c_real) / (2 * np.pi)) + 0.5
                 colored[non_divergent] = plt.cm.get_cmap(params["non_diverge_colormap"])(angle) * 255.0
@@ -185,14 +200,30 @@ class ColorCache:
             params (dict): 計算パラメータ
         """
         # キャッシュキーは、パラメータの組み合わせから生成される
+        # より多くのパラメータを含めて、キャッシュの衝突を防ぐ
         key_params = {
-            'zoom_level': params.get('zoom_level', 1),
-            'center': params.get('center', (0, 0)),
-            'size': params.get('size', (1, 1)),
-            'max_iterations': params.get('max_iterations', 100),
-            'diverge_algorithm': params.get('diverge_algorithm', 'default')
+            'center_x': params.get('center_x'),
+            'center_y': params.get('center_y'),
+            'width': params.get('width'),
+            'rotation': params.get('rotation'),
+            'max_iterations': params.get('max_iterations'),
+            'fractal_type': params.get('fractal_type'),
+            'c_real': params.get('c_real'),
+            'c_imag': params.get('c_imag'),
+            'z_real': params.get('z_real'),
+            'z_imag': params.get('z_imag'),
+            'diverge_algorithm': params.get('diverge_algorithm'),
+            'diverge_colormap': params.get('diverge_colormap'),
+            'non_diverge_algorithm': params.get('non_diverge_algorithm'),
+            'non_diverge_colormap': params.get('non_diverge_colormap'),
+            # 解像度に関わるパラメータもキーに含めるべき
+            # 'resolution': _calculate_dynamic_resolution(params.get("width", 4.0)) # render.pyから持ってくる必要あり
+            # 'samples_per_pixel': ... # render.pyから持ってくる必要あり
         }
-        return hash(frozenset(key_params.items()))
+        # None 値を除外してハッシュ化
+        frozen_items = frozenset(item for item in key_params.items() if item[1] is not None)
+        return hash(frozen_items)
+
 
     def get_cache(self, params):
         """キャッシュから画像を取得
@@ -204,7 +235,7 @@ class ColorCache:
         self.logger.log(LogLevel.CALL, f"キャッシュキー取得試行: {key}")
         if key in self.cache:
             self.logger.log(LogLevel.SUCCESS, "キャッシュヒット")
-            return self.cache[key]
+            return self.cache[key]['image'] # 画像のみ返すように修正
         self.logger.log(LogLevel.INFO, "キャッシュミス")
         return None
 
@@ -217,15 +248,15 @@ class ColorCache:
         """
         key = self._create_cache_key(params)
         self.logger.log(LogLevel.DEBUG, f"キャッシュキー書込み試行: {key}")
-        # キャッシュが満杯の場合、最古のエントリを削除
+        # キャッシュが満杯の場合、最古のエントリを削除 (LRUではない単純なFIFO)
         if len(self.cache) >= self.max_size:
             oldest_key = next(iter(self.cache))
             self.logger.log(LogLevel.INFO, f"キャッシュフル（最古エントリ削除）：{oldest_key}")
             del self.cache[oldest_key]
         self.cache[key] = {
-            'image': image,
+            'image': image.copy(), # 念のためコピーを保存
             'timestamp': time.time(),
-            'params': params
+            # 'params': params # デバッグ用には有用だが、メモリを消費する
         }
         self.logger.log(LogLevel.SUCCESS, "キャッシュエントリ追加")
 
@@ -240,8 +271,10 @@ class ColorCache:
         Returns:
             dict: キャッシュの統計情報
         """
+        # メモリ使用量の計算をより正確に
+        memory_usage_bytes = sum(v['image'].nbytes for v in self.cache.values())
         return {
             'size': len(self.cache),
             'max_size': self.max_size,
-            'memory_usage': sum(len(v['image']) for v in self.cache.values())
+            'memory_usage_bytes': memory_usage_bytes
         }
