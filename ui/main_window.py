@@ -1,3 +1,5 @@
+# main_window.py の修正案
+
 import tkinter as tk
 import numpy as np
 import threading
@@ -26,7 +28,7 @@ class MainWindow:
 
         self._init_root_window(root)
 
-		# ズーム操作用パラメータ
+        # ズーム操作用パラメータ
         self.zoom_params = {
             "center_x": 0.0, "center_y": 0.0, "width": 4.0, "height": 4.0, "rotation": 0.0}
         self.prev_zoom_params = None
@@ -60,42 +62,47 @@ class MainWindow:
         self.root.title("フラクタル描画アプリケーション")
         self.root.geometry("1200x800")
 
-        # メインフレームのフレームを作成、配置
-        self.main_frame = ttk.PanedWindow(root, orient=tk.HORIZONTAL) # 作成
-        self.main_frame.pack(fill=tk.BOTH, expand=True) # 配置
+        # --- パラメータパネルフレームの作成と配置 (pack で右側固定) ---
+        self.parameter_frame = ttk.Frame(root, width=300) # 作成（width=300）
+        # 右側に幅 300px 固定で配置、Y方向にのみ引き伸ばす
+        # expand=False でウィンドウリサイズ時に幅が変わらないようにする
+        self.parameter_frame.pack(side=tk.RIGHT, fill=tk.Y, padx=(0, 5), pady=5, expand=False) # 配置
+        # widthで指定した幅を維持するため、フレーム内のウィジェットサイズに合わせてフレームサイズが変わるのを防ぐ
+        self.parameter_frame.pack_propagate(False) # フレームのサイズを固定
 
-        # キャンバスフレームのフレームを作成、配置
-        self.canvas_frame = ttk.Frame(self.main_frame) # 作成
-        self.main_frame.add(self.canvas_frame, weight=4) # 配置
+        # --- キャンバスフレームの作成と配置 (pack で残り領域) ---
+        self.canvas_frame = ttk.Frame(root) # 作成
+        # 左側の残りスペース全体に配置、両方向に引き伸ばす
+        # expand=True でウィンドウリサイズ時に残りスペースを埋めるように広がる
+        self.canvas_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(5, 0), pady=5) # 配置
+
         # キャンバスフレームのリサイズイベントをバインド
         # <Configure> イベントが発生すると、_on_canvas_frame_configure メソッドが呼ばれる
         self.canvas_frame.bind("<Configure>", self._on_canvas_frame_configure)
 
         # FractalCanvas のインスタンスを作成、保持
-        # widthとheight は Tkinter ウィジェットの初期サイズに影響
+        # 親を canvas_frame に設定 (PanedWindow を使わないため直接 root の子フレームになる)
         self.logger.log(LogLevel.INIT, "FractalCanvas 初期化開始")
         self.fractal_canvas = FractalCanvas(
-            self.canvas_frame,
-            width=1067, # これらの初期サイズはキャンバスウィジェット自体のサイズに影響するが、
-            height=600, # Matplotlib Figure のサイズは _on_canvas_frame_configure で制御される
+            self.canvas_frame, # 親ウィジェットを更新
+            width=1067, # この初期サイズは configure イベントで上書きされる可能性がある
+            height=600,
             logger=self.logger,
             zoom_confirm_callback=self.on_zoom_confirm, # 確定用コールバックをキャンバスに渡す
             zoom_cancel_callback=self.on_zoom_cancel) # キャンセル用コールバックをキャンバスに渡す
 
-        # パラメータパネルのフレームを作成、配置
-        self.parameter_frame = ttk.Frame(self.main_frame) # 作成
-        self.main_frame.add(self.parameter_frame, weight=1) # 配置
         # ParameterPanel のインスタンスを作成、保持
+        # 親を parameter_frame に設定
         self.logger.log(LogLevel.INIT, "ParameterPanel 初期化開始")
         self.parameter_panel = ParameterPanel(
-            self.parameter_frame,
+            self.parameter_frame, # 親ウィジェットを更新
             self.update_fractal, # パラメータ変更時のコールバックとしてMainWindowのupdate_fractalを渡す
             reset_callback=self.reset_zoom, # リセット用コールバックをパラメータパネルに渡す
             logger=self.logger)
 
         # ステータスバーのフレームを作成、配置
         status_frame = ttk.Frame(self.root) # 作成
-        status_frame.pack(fill=tk.X, side=tk.BOTTOM) # 配置
+        status_frame.pack(fill=tk.X, side=tk.BOTTOM, pady=(0, 5))
         # StatusBarManager のインスタンスを作成、保持
         self.logger.log(LogLevel.INIT, "StatusBarManager 初期化開始")
         self.status_bar_manager = StatusBarManager(
@@ -253,7 +260,7 @@ class MainWindow:
         else:
             # フレームが目標より縦長、または同じ縦横比の場合、フレームの幅を基準にFigureサイズを計算
             new_width_pixels = frame_width_pixels
-             # 目標縦横比が 0 でないことを確認して計算（ゼロ除算を防ぐ）
+            # 目標縦横比が 0 でないことを確認して計算（ゼロ除算を防ぐ）
             new_height_pixels = int(new_width_pixels / target_aspect) if target_aspect > 0 else frame_height_pixels
             self.logger.log(LogLevel.DEBUG, f"縦長/同等フレーム：幅を基準に Figure サイズ計算 ({new_width_pixels}x{new_height_pixels})")
 
@@ -271,8 +278,7 @@ class MainWindow:
                 # forward=True で FigureCanvasTkAgg に通知し、再描画を促す
                 # これにより Tkinter キャンバスウィジェットのサイズも Figure サイズに合うように調整される
                 self.fractal_canvas.fig.set_size_inches(new_width_inches, new_height_inches, forward=True)
-                self.logger.log(LogLevel.SUCCESS, f"Matplotlib Figure サイズ更新完了: {
-                    new_width_inches:.2f}x{new_height_inches:.2f}インチ ({new_width_pixels}x{new_height_pixels}ピクセル)")
+                self.logger.log(LogLevel.SUCCESS, f"Matplotlib Figure サイズ更新完了: {new_width_inches:.2f}x{new_height_inches:.2f}インチ ({new_width_pixels}x{new_height_pixels}ピクセル)")
                 # Figure サイズ変更により Axes の表示も自動的に更新されるはずだが、
                 # 必要に応じて self.fractal_canvas.canvas.draw_idle() を追加しても良い（ただしパフォーマンス注意）
             else:

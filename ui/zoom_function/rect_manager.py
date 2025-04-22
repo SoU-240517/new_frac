@@ -16,6 +16,7 @@ class RectManager:
     """
     MIN_WIDTH = 0.01 # 許容される最小幅 (データ座標系)
     MIN_HEIGHT = 0.01 # 許容される最小高さ (データ座標系)
+    ASPECT_RATIO_W_H = 16 / 9 # 目標とするアスペクト比 (幅 / 高さ)
 
     def __init__(self,
                  ax: Axes,
@@ -70,10 +71,30 @@ class RectManager:
             self.logger.log(LogLevel.ERROR, "ズーム領域なし：サイズ更新不可")
             return
 
-        width = abs(current_x - start_x)
-        height = abs(current_y - start_y)
-        x = min(start_x, current_x)
-        y = min(start_y, current_y)
+        # マウスの移動量を計算
+        dx = current_x - start_x
+        dy = current_y - start_y
+
+        # 幅と高さをアスペクト比に基づいて計算
+        # 幅の移動量の方がアスペクト比に対して大きいか等しい場合
+        if abs(dx) >= abs(dy) * self.ASPECT_RATIO_W_H:
+            width = abs(dx)
+            height = width / self.ASPECT_RATIO_W_H
+        else: # 高さの移動量の方がアスペクト比に対して大きい場合
+            height = abs(dy)
+            width = height * self.ASPECT_RATIO_W_H
+
+        # 矩形の左下座標 (x, y) を計算
+        if dx >= 0: # current_x が start_x より右にあるか (dx >= 0)
+            x = start_x
+        else: # current_x が start_x より左にある (dx < 0)
+            x = start_x - width
+
+        if dy >= 0: # current_y が start_y より上にあるか (dy >= 0)
+            y = start_y
+        else: # current_y が start_y より下にある (dy < 0)
+            y = start_y - height
+
         self.rect.set_width(width)
         self.rect.set_height(height)
         self.rect.set_xy((x, y))
@@ -134,11 +155,30 @@ class RectManager:
         # --- 逆回転ここまで ---
 
         # --- 回転前の座標系で新しい矩形を計算 ---
-        new_width = abs(current_x_unrotated - fixed_x_unrotated)
-        new_height = abs(current_y_unrotated - fixed_y_unrotated)
-        new_x = min(fixed_x_unrotated, current_x_unrotated)
-        new_y = min(fixed_y_unrotated, current_y_unrotated)
-        # --- 計算ここまで ---
+        # 幅と高さの変化量を計算
+        dx_unrotated = current_x_unrotated - fixed_x_unrotated
+        dy_unrotated = current_y_unrotated - fixed_y_unrotated
+
+        # 新しい幅と高さをアスペクト比に基づいて計算
+        # 幅の変化量の方がアスペクト比に対して大きいか等しい場合
+        if abs(dx_unrotated) >= abs(dy_unrotated) * self.ASPECT_RATIO_W_H:
+            new_width = abs(dx_unrotated)
+            new_height = new_width / self.ASPECT_RATIO_W_H
+        else: # 高の変化量の方がアスペクト比に対して大きい場合
+            new_height = abs(dy_unrotated)
+            new_width = new_height * self.ASPECT_RATIO_W_H
+
+        # 新しい左下座標 (new_x, new_y) を計算
+        # current_x_unrotated が fixed_x_unrotated より右にあるか (dx_unrotated >= 0)
+        if dx_unrotated >= 0:
+            new_x = fixed_x_unrotated
+        else: # current_x_unrotated が fixed_x_unrotated より左にある (dx_unrotated < 0)
+            new_x = fixed_x_unrotated - new_width
+        # current_y_unrotated が fixed_y_unrotated より上にあるか (dy_unrotated >= 0)
+        if dy_unrotated >= 0:
+            new_y = fixed_y_unrotated
+        else: # current_y_unrotated が fixed_y_unrotated より下にある (dy_unrotated < 0)
+            new_y = fixed_y_unrotated - new_height
 
         # サイズチェック
         if not self.is_valid_size(new_width, new_height):
@@ -186,10 +226,27 @@ class RectManager:
             self.logger.log(LogLevel.ERROR, "ズーム領域作成不可：ズーム領域なし")
             return False # Indicate failure
 
-        width = abs(end_x - start_x)
-        height = abs(end_y - start_y)
-        x = min(start_x, end_x)
-        y = min(start_y, end_y)
+        # マウスの移動量を計算
+        dx = end_x - start_x
+        dy = end_y - start_y
+
+        # 幅と高さをアスペクト比に基づいて計算 (setting_rect_size と同じロジック)
+        if abs(dx) >= abs(dy) * self.ASPECT_RATIO_W_H:
+            width = abs(dx)
+            height = width / self.ASPECT_RATIO_W_H
+        else:
+            height = abs(dy)
+            width = height * self.ASPECT_RATIO_W_H
+
+        # 矩形の左下座標 (x, y) を計算
+        if dx >= 0:
+            x = start_x
+        else:
+            x = start_x - width
+        if dy >= 0:
+            y = start_y
+        else:
+            y = start_y - height
 
         # 作成完了時にもサイズチェック
         if not self.is_valid_size(width, height):
@@ -233,11 +290,9 @@ class RectManager:
                 else:
                      # すでに追加されていない（remove済みか、非表示のみ）場合は何もしない
                      self.logger.log(LogLevel.DEBUG, "ズーム領域は既に削除済み、または非表示")
-                     self.rect.set_visible(False) # 念のため非表示に
             except Exception as e:
                  # remove中に予期せぬエラーが発生した場合
                  self.logger.log(LogLevel.ERROR, f"ズーム領域削除中にエラー: {e}")
-                 self.rect.set_visible(False) # エラーでも非表示にする
             finally:
                 self.rect = None # 参照をクリア
                 self._angle = 0.0 # 角度もリセット
@@ -276,7 +331,10 @@ class RectManager:
                 "edgecolor": self.rect.get_edgecolor(), # エッジの色も保存
                 "linestyle": self.rect.get_linestyle() # 線のスタイルも保存
             }
-        return None
+        # 矩形がない場合も None を返すことを明示
+        elif not self.rect:
+             self.logger.log(LogLevel.DEBUG, "get_state: 矩形が存在しないため None を返します")
+             return None
 
     def set_state(self, state: Optional[Dict[str, Any]]):
         """指定された状態に矩形を復元 (Undo用)
@@ -340,6 +398,9 @@ class RectManager:
         props = self.get_properties()
         if props:
             x, y, w, h = props
+            if w <= 0 or h <= 0: # 幅や高さが0の場合も考慮
+                self.logger.log(LogLevel.DEBUG, f"get_center: 幅({w})または高さ({h})が0以下")
+                return None
             center_x = x + w / 2
             center_y = y + h / 2
             return center_x, center_y
