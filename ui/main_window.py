@@ -34,92 +34,53 @@ class MainWindow:
         self.root.title("フラクタル描画アプリケーション")
         self.root.geometry("1200x800")
 
-        self._create_status_bar()
-        self._create_parameter_panel()
-        self._create_canvas()
+        # --- パラメータパネルフレームの作成と配置 (pack で右側固定) ---
+        self.parameter_frame = ttk.Frame(root, width=300) # 作成（width=300）
+        # 右側に幅 300px 固定で配置、Y方向にのみ引き伸ばす
+        # expand=False でウィンドウリサイズ時に幅が変わらないようにする
+        self.parameter_frame.pack(side=tk.RIGHT, fill=tk.Y, padx=(0, 5), pady=5, expand=False) # 配置
+        # widthで指定した幅を維持するため、フレーム内のウィジェットサイズに合わせてフレームサイズが変わるのを防ぐ
+        self.parameter_frame.pack_propagate(False) # フレームのサイズを固定
 
-    def _create_status_bar(self):
-        """ステータスバーの作成と設定"""
-        status_frame = ttk.Frame(self.root) # 作成
-        status_frame.pack(fill=tk.X, side=tk.BOTTOM, pady=(0, 5)) # 配置
+        # --- キャンバスフレームの作成と配置 (pack で残り領域) ---
+        self.canvas_frame = ttk.Frame(root) # 作成
+        # 左側の残りスペース全体に配置、両方向に引き伸ばす
+        # expand=True でウィンドウリサイズ時に残りスペースを埋めるように広がる
+        self.canvas_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(5, 0), pady=5) # 配置
 
-        self.logger.log(LogLevel.INIT, "StatusBarManager 初期化開始")
-        self.status_bar_manager = StatusBarManager(
-            self.root,
-            status_frame,
-            self.logger)
+        # キャンバスフレームのリサイズイベントをバインド
+        # <Configure> イベントが発生すると、_on_canvas_frame_configure メソッドが呼ばれる
+        self.canvas_frame.bind("<Configure>", self._on_canvas_frame_configure)
 
-    def _create_parameter_panel(self):
-        """パラメータパネルの作成と設定"""
-        self.parameter_frame = ttk.Frame(self.root, width=300) # 作成
-        self.parameter_frame.pack(
-            side=tk.RIGHT,
-            fill=tk.Y,
-            padx=(0, 5),
-            pady=5,
-            expand=False) # 配置
-        self.parameter_frame.pack_propagate(False) # サイズ固定
-
-        self.logger.log(LogLevel.INIT, "ParameterPanel 初期化開始")
-        self.parameter_panel = ParameterPanel(
-            self.parameter_frame,
-            self.update_fractal,
-            reset_callback=self.reset_zoom,
-            logger=self.logger)
-
-    def _create_canvas(self):
-        """キャンバスの作成と設定"""
-        self.canvas_frame = ttk.Frame(self.root)# 作成
-        self.canvas_frame.pack(
-            side=tk.LEFT,
-            fill=tk.BOTH,
-            expand=True,
-            padx=(5, 0),
-            pady=5) # 配置
-
-        self.canvas_frame.bind("<Configure>", self._on_canvas_frame_configure) # キャンバスサイズ変更時に描画更新
-
+        # FractalCanvas のインスタンスを作成、保持
+        # 親を canvas_frame に設定 (PanedWindow を使わないため直接 root の子フレームになる)
         self.logger.log(LogLevel.INIT, "FractalCanvas 初期化開始")
         self.fractal_canvas = FractalCanvas(
             self.canvas_frame,
             width=1067,
             height=600,
             logger=self.logger,
-            zoom_confirm_callback=self.on_zoom_confirm,
-            zoom_cancel_callback=self.on_zoom_cancel)
+            zoom_confirm_callback=self.on_zoom_confirm, # 確定用コールバックをキャンバスに渡す
+            zoom_cancel_callback=self.on_zoom_cancel) # キャンセル用コールバックをキャンバスに渡す
 
-    def _setup_event_handlers(self):
-        """イベントハンドラの設定"""
-        self.fractal_canvas.set_zoom_callback(self.on_zoom_confirm, self.on_zoom_cancel)
+        # ParameterPanel のインスタンスを作成、保持
+        # 親を parameter_frame に設定
+        self.logger.log(LogLevel.INIT, "ParameterPanel 初期化開始")
+        self.parameter_panel = ParameterPanel(
+            self.parameter_frame, # 親ウィジェットを更新
+            self.update_fractal, # パラメータ変更時のコールバックとしてMainWindowのupdate_fractalを渡す
+            reset_callback=self.reset_zoom, # リセット用コールバックをパラメータパネルに渡す
+            logger=self.logger)
 
-    def _setup_initial_state(self):
-        """初期状態の設定"""
-        self.zoom_params = {
-            "center_x": 0.0,
-            "center_y": 0.0,
-            "width": 4.0,
-            "height": 4.0,
-            "rotation": 0.0
-        }
-        self.prev_zoom_params = None
-        self.is_drawing = False
-        self.draw_thread = None
-
-    def _start_initial_render(self):
-        """初期描画の開始"""
-        self.logger.log(LogLevel.DEBUG, "ステータスバーテキスト設定要求")
-        self.status_bar_manager.set_text("準備中...")
-
-        self.logger.log(LogLevel.DEBUG, "非同期でフラクタル描画開始")
-        self.status_bar_manager.start_animation()
-        self._start_render_thread()
-
-    def _start_render_thread(self):
-        """描画スレッドの開始"""
-        self.draw_thread = threading.Thread(
-            target=self._update_fractal_thread,
-            daemon=True)
-        self.draw_thread.start()
+        # ステータスバーのフレームを作成、配置
+        status_frame = ttk.Frame(self.root) # 作成
+        status_frame.pack(fill=tk.X, side=tk.BOTTOM, pady=(0, 5))
+        # StatusBarManager のインスタンスを作成、保持
+        self.logger.log(LogLevel.INIT, "StatusBarManager 初期化開始")
+        self.status_bar_manager = StatusBarManager(
+            self.root,
+            status_frame,
+            self.logger)
 
     def update_fractal(self):
         """フラクタルの更新を要求する"""
