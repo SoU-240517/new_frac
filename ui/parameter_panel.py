@@ -90,6 +90,7 @@ class ParameterPanel:
 
     def _setup_panel(self):
         """パラメータパネルの設定"""
+
         # --- フラクタルタイプ ---
         row = 0
         ttk.Label(self.parent, text="フラクタルタイプ:").grid(row=row, column=0, sticky=tk.W, padx=10, pady=(5,0))
@@ -163,22 +164,24 @@ class ParameterPanel:
         diverge_algo_combo.grid(row=row, column=1, sticky=tk.W+tk.E, padx=10, pady=(5,0))
         diverge_algo_combo.bind("<<ComboboxSelected>>", lambda e: [self.update_callback(), self._update_colorbars()])
 
-        row += 1 # カラーマップ選択
-        ttk.Label(self.parent, text="カラーマップ:").grid(row=row, column=0, sticky=tk.W, padx=10, pady=(5,0))
+        # 追加: 修正ここから ----------
+        row += 1 # カラーバー表示用ラベル (コンボボックスの上に移動)
+        self.diverge_colorbar_label = tk.Label(self.parent) # ここにカラーバー画像を表示
+        self.diverge_colorbar_label.grid(row=row, column=1, sticky=tk.W, padx=10, pady=(5, 0)) # 上部に少しパディングを追加
+
+        row += 1 # カラーマップ選択 (カラーバー表示ラベルの下に移動)
+        ttk.Label(self.parent, text="カラーマップ:").grid(row=row, column=0, sticky=tk.W, padx=10, pady=(2, 5)) # 上部のパディングを調整
         self.colormaps = sorted([m for m in plt.colormaps() if not m.endswith('_r')])
         self.diverge_colormap_var = tk.StringVar(value="viridis")
         diverge_colormap_combo = ttk.Combobox(self.parent, textvariable=self.diverge_colormap_var,
                                               values=self.colormaps, state="readonly", width=18) # 幅調整
-        diverge_colormap_combo.grid(row=row, column=1, sticky=tk.W, padx=10, pady=(5,0)) # 右寄せ解除
+        diverge_colormap_combo.grid(row=row, column=1, sticky=tk.W, padx=10, pady=(2, 5)) # 上部のパディングを調整
         # カラーマップ変更時は、メインの更新コールバックに加えてカラーバー更新も呼ぶ
         diverge_colormap_combo.bind("<<ComboboxSelected>>", lambda e: [self.update_callback(), self._update_colorbars()])
-
-        row += 1 # カラーバー表示用ラベル
-        self.diverge_colorbar_label = tk.Label(self.parent) # ここにカラーバー画像を表示
-        self.diverge_colorbar_label.grid(row=row, column=1, sticky=tk.W, padx=10, pady=(0, 5))
+        # 追加: 修正ここまで ----------
 
         # --- 非発散部の着色設定 ---
-        row += 1
+        row += 1 # ここは発散部カラーマップセクションの後の新しい row から始まる
         ttk.Label(self.parent, text="--- 非発散部 ---").grid(row=row, column=0, columnspan=2, pady=(10, 0))
 
         row += 1 # アルゴリズム選択
@@ -190,21 +193,24 @@ class ParameterPanel:
         non_diverge_algo_combo.grid(row=row, column=1, sticky=tk.W+tk.E, padx=10, pady=(5,0))
         non_diverge_algo_combo.bind("<<ComboboxSelected>>", lambda e: [self.update_callback(), self._update_colorbars()])
 
-        row += 1 # カラーマップ選択
-        ttk.Label(self.parent, text="カラーマップ:").grid(row=row, column=0, sticky=tk.W, padx=10, pady=(5,0))
+        # 追加: 修正ここから ----------
+        row += 1 # カラーバー表示用ラベル (コンボボックスの上に移動)
+        self.non_diverge_colorbar_label = tk.Label(self.parent) # ここにカラーバー画像を表示
+        self.non_diverge_colorbar_label.grid(row=row, column=1, sticky=tk.W, padx=10, pady=(5, 0)) # 上部に少しパディングを追加
+
+        row += 1 # カラーマップ選択 (カラーバー表示ラベルの下に移動)
+        ttk.Label(self.parent, text="カラーマップ:").grid(row=row, column=0, sticky=tk.W, padx=10, pady=(2, 5)) # 上部のパディングを調整
         self.non_diverge_colormap_var = tk.StringVar(value="plasma")
         non_diverge_colormap_combo = ttk.Combobox(self.parent, textvariable=self.non_diverge_colormap_var,
-                                              values=self.colormaps, state="readonly", width=18) # 幅調整
-        non_diverge_colormap_combo.grid(row=row, column=1, sticky=tk.W, padx=10, pady=(5,0)) # 右寄せ解除
+                                          values=self.colormaps, state="readonly", width=18) # 幅調整
+        non_diverge_colormap_combo.grid(row=row, column=1, sticky=tk.W, padx=10, pady=(2, 5)) # 上部のパディングを調整
         # カラーマップ変更時は、メインの更新コールバックに加えてカラーバー更新も呼ぶ
         non_diverge_colormap_combo.bind("<<ComboboxSelected>>", lambda e: [self.update_callback(), self._update_colorbars()])
+        # 追加: 修正ここまで ----------
 
-        row += 1 # カラーバー表示用ラベル
-        self.non_diverge_colorbar_label = tk.Label(self.parent) # ここにカラーバー画像を表示
-        self.non_diverge_colorbar_label.grid(row=row, column=1, sticky=tk.W, padx=10, pady=(0, 5))
 
         # --- ボタン ---
-        row += 1
+        row += 1 # ここは非発散部カラーマップセクションの後の新しい row から始まる
         render_button = ttk.Button(self.parent, text="描画", command=lambda: [self.update_callback(), self._update_colorbars()])
         render_button.grid(row=row, column=0, columnspan=2, sticky=tk.W+tk.E, padx=10, pady=10)
 
