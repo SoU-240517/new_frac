@@ -15,9 +15,8 @@ class MainWindow:
         - アプリケーションのメインウィンドウを管理する
         - UIの初期化、イベント処理、フラクタル描画の制御を行う
     """
-
     def __init__(self, root, logger: DebugLogger):
-        """メインウィンドウクラスのコンストラクタ
+        """MainWindow クラスのコンストラクタ
 
         Args:
             root (tkinter.Tk): Tkinter ルートウィンドウ
