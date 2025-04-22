@@ -34,7 +34,9 @@ class EventHandlersPrivate:
         self.core.start_x, self.core.start_y = event.xdata, event.ydata # 親のインスタンス変数に座標を保存
         self.core.rect_manager.setup_rect(self.core.start_x, self.core.start_y)
         self.core.zoom_selector.invalidate_rect_cache()
-        self.core.cursor_manager.cursor_update(event, state=self.core.state_handler.get_state())
+        self.core.cursor_manager.cursor_update(
+            event,
+            state=self.core.state_handler.get_state())
         self.core._create_logged = False # 親のログフラグを更新
         self.core.canvas.draw_idle() # 親の canvas に再描画を依頼
         self.core.utils._add_history(None) # utils に履歴追加を依頼
@@ -73,7 +75,11 @@ class EventHandlersPrivate:
             self.core.previous_vector_angle = start_vector_angle # 親のインスタンス変数に角度を保存
             self.core.logger.log(LogLevel.DEBUG, f"回転開始パラメータ: 中心={center}, 開始角度={start_vector_angle:.2f}")
             self.core.state_handler.update_state(ZoomState.ROTATING, {"action": "回転開始", "角": corner_index})
-            self.core.cursor_manager.cursor_update(event, state=self.core.state_handler.get_state(), near_corner_index=corner_index, is_rotating=True)
+            self.core.cursor_manager.cursor_update(
+                event,
+                state=self.core.state_handler.get_state(),
+                near_corner_index=corner_index,
+                is_rotating=True)
             self.core._rotate_logged = False # 親のログフラグを更新
         else:
             self.core.logger.log(LogLevel.ERROR, "回転不可：中心座標またはイベント座標なし")
@@ -96,7 +102,8 @@ class EventHandlersPrivate:
             self.core.fixed_corner_pos = rotated_corners[fixed_corner_idx] # 親のインスタンス変数に固定角の座標を保存
             self.core.logger.log(LogLevel.DEBUG, f"リサイズ開始パラメータ: 固定角(回転後)={self.core.fixed_corner_pos}")
             self.core.cursor_manager.cursor_update(
-                event, state=self.core.state_handler.get_state(),
+                event,
+                state=self.core.state_handler.get_state(),
                 near_corner_index=self.core.resize_corner_index,
                 is_rotating=False)
             self.core._resize_logged = False # 親のログフラグを更新
@@ -120,8 +127,11 @@ class EventHandlersPrivate:
             self.core.move_start_x, self.core.move_start_y = event.xdata, event.ydata
             # 親のインスタンス変数に矩形開始位置を保存
             self.core.rect_start_pos = (rect_props[0], rect_props[1])
-            self.core.logger.log(LogLevel.DEBUG,f"移動開始パラメータ: マウス=({self.core.move_start_x:.2f}, {self.core.move_start_y:.2f}), 矩形左下={self.core.rect_start_pos}")
-            self.core.cursor_manager.cursor_update(event, state=self.core.state_handler.get_state(), is_rotating=False)
+            self.core.logger.log(LogLevel.DEBUG, f"移動開始パラメータ: マウス=({self.core.move_start_x:.2f}, {self.core.move_start_y:.2f}), 矩形左下={self.core.rect_start_pos}")
+            self.core.cursor_manager.cursor_update(
+                event,
+                state=self.core.state_handler.get_state(),
+                is_rotating=False)
             self.core._move_logged = False # 親のログフラグを更新
             self.core.canvas.draw_idle()
         else:
@@ -145,8 +155,11 @@ class EventHandlersPrivate:
             event: MouseEvent オブジェクト
         """
         # 親のインスタンス変数から開始座標を取得
-        if self.core.start_x is not None and self.core.start_y is not None and event.xdata is not None and event.ydata is not None:
-            self.core.rect_manager.setting_rect_size(self.core.start_x, self.core.start_y, event.xdata, event.ydata)
+        if self.core.start_x is not None and self.core.start_y is not None and \
+            event.xdata is not None and event.ydata is not None:
+
+            self.core.rect_manager.setting_rect_size(
+                self.core.start_x, self.core.start_y, event.xdata, event.ydata)
             self.core.canvas.draw_idle()
 
     def handle_motion_edit(self, event: MouseEvent):
@@ -156,7 +169,11 @@ class EventHandlersPrivate:
             event: MouseEvent オブジェクト
         """
         corner_index = self.core.zoom_selector.pointer_near_corner(event)
-        self.core.cursor_manager.cursor_update(event, state=ZoomState.EDIT, near_corner_index=corner_index, is_rotating=self.core._alt_pressed)
+        self.core.cursor_manager.cursor_update(
+            event,
+            state=ZoomState.EDIT,
+            near_corner_index=corner_index,
+            is_rotating=self.core._alt_pressed)
 
     def handle_motion_move(self, event: MouseEvent):
         """ON_MOVE 状態でのマウス移動: 矩形移動
@@ -171,7 +188,9 @@ class EventHandlersPrivate:
 
         # 親のインスタンス変数から開始座標と矩形開始位置を取得
         if self.core.move_start_x is not None and self.core.move_start_y is not None and \
-           self.core.rect_start_pos is not None and event.xdata is not None and event.ydata is not None:
+           self.core.rect_start_pos is not None and event.xdata is not None and \
+            event.ydata is not None:
+
             dx = event.xdata - self.core.move_start_x
             dy = event.ydata - self.core.move_start_y
             new_rect_x = self.core.rect_start_pos[0] + dx
@@ -191,10 +210,13 @@ class EventHandlersPrivate:
             # self.core.logger.log(LogLevel.DEBUG, f"リサイズ中...：角={self.core.resize_corner_index}")
             self.core._resize_logged = True
         # 親のインスタンス変数から固定角座標を取得
-        if self.core.fixed_corner_pos is not None and event.xdata is not None and event.ydata is not None:
+        if self.core.fixed_corner_pos is not None and event.xdata is not None and \
+            event.ydata is not None:
+
             fixed_x_rotated, fixed_y_rotated = self.core.fixed_corner_pos
             current_x, current_y = event.xdata, event.ydata
-            self.core.rect_manager.resize_rect_from_corners(fixed_x_rotated, fixed_y_rotated, current_x, current_y)
+            self.core.rect_manager.resize_rect_from_corners(
+                fixed_x_rotated, fixed_y_rotated, current_x, current_y)
             self.core.zoom_selector.invalidate_rect_cache()
             self.core.canvas.draw_idle()
 
@@ -215,7 +237,9 @@ class EventHandlersPrivate:
 
             current_vector_angle = self.core.utils._calculate_angle(
                 self.core.rotate_center[0], self.core.rotate_center[1], event.xdata, event.ydata)
-            delta_angle = self.core.utils._normalize_angle_diff(current_vector_angle, self.core.previous_vector_angle)
+            delta_angle = self.core.utils._normalize_angle_diff(
+                current_vector_angle,
+                self.core.previous_vector_angle)
 
             # 親の定数、インスタンス変数にアクセス
             if abs(delta_angle) > self.core.ROTATION_THRESHOLD:
@@ -249,7 +273,9 @@ class EventHandlersPrivate:
             # 親のインスタンス変数から開始座標を取得
             if self.core.start_x is not None and self.core.start_y is not None and \
                event.xdata is not None and event.ydata is not None:
-                if self.core.rect_manager._temporary_creation(self.core.start_x, self.core.start_y, event.xdata, event.ydata):
+                if self.core.rect_manager._temporary_creation(
+                    self.core.start_x, self.core.start_y, event.xdata, event.ydata):
+
                     self.core.logger.log(LogLevel.INFO, "作成成功")
                     final_state = ZoomState.EDIT
                 else:
@@ -259,10 +285,10 @@ class EventHandlersPrivate:
             else:
                 self.core.logger.log(LogLevel.ERROR, "作成失敗: 座標情報不備")
         # どちらの場合でも、一時矩形を削除し、作成前の履歴を削除
-        self.core.rect_manager.delete_rect()
-        self.core.utils._remove_last_history()
+#        self.core.rect_manager.delete_rect()
+#        self.core.utils._remove_last_history()
 
-        self.core.utils._reset_create_state()
+        self.core.utils._reset_create_state() # 作成関連の内部状態をリセット
         return final_state
 
     def handle_release_move(self, event: MouseEvent) -> ZoomState:
@@ -333,7 +359,6 @@ class EventHandlersPrivate:
         elif state in [ZoomState.CREATE, ZoomState.ON_MOVE, ZoomState.RESIZING, ZoomState.ROTATING]:
              self.core.logger.log(LogLevel.DEBUG, f"ESC: {state.name} -> 操作キャンセル呼出し")
              # ドラッグ操作中にESCが押された場合もキャンセル
-             # utils に Undo またはキャンセルを依頼
              self.core.utils._undo_or_cancel_edit()
 
     def handle_key_alt_press(self, event: KeyEvent):

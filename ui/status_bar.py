@@ -46,12 +46,10 @@ class StatusBarManager:
             self.logger.log(LogLevel.ERROR, "アニメーションは既に実行中")
             return
 
-        self.logger.log(LogLevel.DEBUG, "ステータスアニメーション開始")
+#        self.logger.log(LogLevel.DEBUG, "ステータスアニメーション開始")
         self.animation_running = True
         self.animation_dots = 0
-
         # アニメーション用のスレッドを作成
-        # スレッドのターゲットとしてインスタンスメソッドを指定
         self.animation_thread = threading.Thread(
             target=self._animation_thread_task,
             daemon=True) # プログラム終了時にスレッドも一緒に終了
@@ -64,8 +62,8 @@ class StatusBarManager:
 
         # スレッドを開始
         try:
+            self.logger.log(LogLevel.DEBUG, "ステータスアニメーションスレッドを開始")
             self.animation_thread.start()
-            self.logger.log(LogLevel.SUCCESS, "ステータスアニメーションスレッドを開始")
         except Exception as e:
             # スレッド開始に失敗した場合のエラー処理
             self.logger.log(LogLevel.ERROR, f"アニメーションスレッドの開始失敗: {e}")
@@ -73,7 +71,7 @@ class StatusBarManager:
 
     def _animation_thread_task(self):
         """ステータスバーのアニメーションを更新するスレッドの処理"""
-        self.logger.log(LogLevel.DEBUG, "アニメーションスレッド タスク開始")
+#        self.logger.log(LogLevel.DEBUG, "アニメーションスレッド タスク開始")
         while self.animation_running:
             self.animation_dots = (self.animation_dots + 1) % (self.animation_max_dots + 1)
             animation_text = f"描画中{'.' * self.animation_dots}"
@@ -83,7 +81,7 @@ class StatusBarManager:
             self.root.after(0, lambda t=animation_text: self._update_label_text(t))
             # 一定時間待機してアニメーションの間隔を調整 (0.1秒)
             time.sleep(0.1)
-        self.logger.log(LogLevel.DEBUG, "アニメーションスレッド タスク終了")
+#        self.logger.log(LogLevel.DEBUG, "アニメーションスレッド タスク終了")
 
     def _update_label_text(self, animation_text: str):
         """

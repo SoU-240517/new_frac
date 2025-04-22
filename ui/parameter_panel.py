@@ -27,7 +27,7 @@ class ParameterPanel:
         self.parent = parent
         self.update_callback = update_callback
         self.reset_callback = reset_callback
-        self.logger.log(LogLevel.INIT, "パラメータパネルセットアップ開始")
+#        self.logger.log(LogLevel.INIT, "パラメータパネルセットアップ開始")
         self._setup_panel()
         self._update_colorbars() # パネル設定後に初期カラーバーを更新
 

@@ -20,8 +20,8 @@ class EventHandler:
         - イベントの種類と現在の状態に応じて、具体的な処理を行うクラスに処理を委譲する（振り分ける）
     """
     # ズーム領域回転時の振動を調整するためのパラメータ
-    ROTATION_THRESHOLD = 2.6 # この値以下の角度変化（度単位）は無視して更新しない
-    ROTATION_SENSITIVITY = 1.3 # 角度変化の感度係数 (0.0 < 値 <= 1.0)。1.0で変更なし。小さくすると鈍くなる
+    ROTATION_THRESHOLD = 2.0 # この値以下の角度変化（度単位）は無視して更新しない
+    ROTATION_SENSITIVITY = 1.0 # 角度変化の感度係数 (0.0 < 値 <= 1.0)。1.0で変更なし。小さくすると鈍くなる
 
     # スロットリングの設定
     ROTATION_THROTTLE_INTERVAL = 1 / 60 # 秒 (60fps相当に制限)
@@ -158,8 +158,6 @@ class EventHandler:
         elif state == ZoomState.ROTATING:
             if event.button == MouseButton.LEFT:
                 self.private_handlers.handle_motion_rotating(event)
-        else: # その他の状態でのマウス移動でもカーソル更新は必要かもしれない
-             self.private_handlers.handle_motion_edit(event)
 
     def on_release(self, event: MouseEvent):
         """マウスボタン解放イベントのディスパッチャ
