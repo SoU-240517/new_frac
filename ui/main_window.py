@@ -62,6 +62,16 @@ class MainWindow:
         self.root.title("フラクタル描画アプリケーション")
         self.root.geometry("1200x800")
 
+        # ステータスバーのフレームを作成、配置
+        status_frame = ttk.Frame(self.root) # 作成
+        status_frame.pack(fill=tk.X, side=tk.BOTTOM, pady=(0, 5))
+        # StatusBarManager のインスタンスを作成、保持
+        self.logger.log(LogLevel.INIT, "StatusBarManager 初期化開始")
+        self.status_bar_manager = StatusBarManager(
+            self.root,
+            status_frame,
+            self.logger)
+
         # --- パラメータパネルフレームの作成と配置 (pack で右側固定) ---
         self.parameter_frame = ttk.Frame(root, width=300) # 作成（width=300）
         # 右側に幅 300px 固定で配置、Y方向にのみ引き伸ばす
@@ -99,16 +109,6 @@ class MainWindow:
             self.update_fractal, # パラメータ変更時のコールバックとしてMainWindowのupdate_fractalを渡す
             reset_callback=self.reset_zoom, # リセット用コールバックをパラメータパネルに渡す
             logger=self.logger)
-
-        # ステータスバーのフレームを作成、配置
-        status_frame = ttk.Frame(self.root) # 作成
-        status_frame.pack(fill=tk.X, side=tk.BOTTOM, pady=(0, 5))
-        # StatusBarManager のインスタンスを作成、保持
-        self.logger.log(LogLevel.INIT, "StatusBarManager 初期化開始")
-        self.status_bar_manager = StatusBarManager(
-            self.root,
-            status_frame,
-            self.logger)
 
     def update_fractal(self):
         """最新パラメータにズーム情報を上書きしてフラクタルを再描画（非同期処理を開始）"""
