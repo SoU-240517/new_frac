@@ -41,8 +41,8 @@ class MainWindow:
 
     def _create_status_bar(self):
         """ステータスバーの作成と設定"""
-        status_frame = ttk.Frame(self.root)
-        status_frame.pack(fill=tk.X, side=tk.BOTTOM, pady=(0, 5))
+        status_frame = ttk.Frame(self.root) # 作成
+        status_frame.pack(fill=tk.X, side=tk.BOTTOM, pady=(0, 5)) # 配置
 
         self.logger.log(LogLevel.INIT, "StatusBarManager 初期化開始")
         self.status_bar_manager = StatusBarManager(
@@ -52,14 +52,14 @@ class MainWindow:
 
     def _create_parameter_panel(self):
         """パラメータパネルの作成と設定"""
-        self.parameter_frame = ttk.Frame(self.root, width=300)
+        self.parameter_frame = ttk.Frame(self.root, width=300) # 作成
         self.parameter_frame.pack(
             side=tk.RIGHT,
             fill=tk.Y,
             padx=(0, 5),
             pady=5,
-            expand=False)
-        self.parameter_frame.pack_propagate(False)
+            expand=False) # 配置
+        self.parameter_frame.pack_propagate(False) # サイズ固定
 
         self.logger.log(LogLevel.INIT, "ParameterPanel 初期化開始")
         self.parameter_panel = ParameterPanel(
@@ -70,15 +70,15 @@ class MainWindow:
 
     def _create_canvas(self):
         """キャンバスの作成と設定"""
-        self.canvas_frame = ttk.Frame(self.root)
+        self.canvas_frame = ttk.Frame(self.root)# 作成
         self.canvas_frame.pack(
             side=tk.LEFT,
             fill=tk.BOTH,
             expand=True,
             padx=(5, 0),
-            pady=5)
+            pady=5) # 配置
 
-        self.canvas_frame.bind("<Configure>", self._on_canvas_frame_configure)
+        self.canvas_frame.bind("<Configure>", self._on_canvas_frame_configure) # キャンバスサイズ変更時に描画更新
 
         self.logger.log(LogLevel.INIT, "FractalCanvas 初期化開始")
         self.fractal_canvas = FractalCanvas(
