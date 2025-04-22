@@ -4,7 +4,7 @@ from .enums import ZoomState, LogLevel
 
 class CanvasProtocol(Protocol):
     """Canvasのインターフェースを定義"""
-    def refresh(self) -> None: ...
+    def draw_idle(self) -> None: ...
 
 class EventHandlerProtocol(Protocol):
     """イベントハンドラーのインターフェースを定義"""
@@ -83,4 +83,4 @@ class ZoomStateHandler:
             self._event_handler.on_state_changed(old_state, new_state)
 
         if self._canvas:
-            self._canvas.refresh()
+            self._canvas.draw_idle()  # draw_idleを使用して非同期描画
