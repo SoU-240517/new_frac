@@ -90,7 +90,7 @@ def render_fractal(params, logger: DebugLogger, cache=None) -> np.ndarray:
         start_time = time.perf_counter()
         # compute_julia は iterations, mask, z_vals を含む辞書を返すことを期待
         results = julia.compute_julia(Z, c_val, params.get("max_iterations", 100), logger)
-        # イテレーション数は通常整数ですが、uint16で十分な範囲をカバーできます
+        # イテレーション数は通常整数だが、uint16 で十分な範囲をカバーできる
         results['iterations'] = results['iterations'].astype(np.uint16)
         elapsed = time.perf_counter() - start_time
         logger.log(LogLevel.INFO, f"ジュリア集合計算時間：{elapsed:.3f}秒")
@@ -101,7 +101,7 @@ def render_fractal(params, logger: DebugLogger, cache=None) -> np.ndarray:
         start_time = time.perf_counter()
         # compute_mandelbrot は iterations, mask, z_vals を含む辞書を返すことを期待
         results = mandelbrot.compute_mandelbrot(Z, z0_val, params.get("max_iterations", 100), logger)
-        # イテレーション数は通常整数ですが、uint16で十分な範囲をカバーできます
+        # イテレーション数は通常整数だが、uint16 で十分な範囲をカバーできる
         results['iterations'] = results['iterations'].astype(np.uint16)
         elapsed = time.perf_counter() - start_time
         logger.log(LogLevel.INFO, f"マンデルブロ集合計算時間：{elapsed:.3f}秒")
@@ -111,17 +111,17 @@ def render_fractal(params, logger: DebugLogger, cache=None) -> np.ndarray:
     colored_high_res = color_algorithms.apply_coloring_algorithm(results, params, logger)
 
     # ダウンサンプリング（アンチエイリアシング効果）
-    # 高解像度で計算した画像を、目的の解像度(resolution)に縮小します。
+    # 高解像度で計算した画像を、目的の解像度(resolution)に縮小する
     if samples_per_pixel > 1:
         logger.log(LogLevel.DEBUG, "ダウンサンプリング実行")
         # 高解像度画像 colored_high_res を resolution x resolution に平均化して縮小
-        # colored_high_res の形状は (super_resolution_y, super_resolution_x, 4) です
-        # reshapeを使ってサンプルピクセルをまとめ、axis=(1, 3)で平均を取ります
+        # colored_high_res の形状は (super_resolution_y, super_resolution_x, 4)
+        # reshape を使ってサンプルピクセルをまとめ、axis=(1, 3) で平均を取る
         # 元形状: (res*spp, res*spp, 4)
-        # reshape後: (res, spp, res, spp, 4)
+        # reshape 後: (res, spp, res, spp, 4)
         # mean(axis=(1, 3))で spp x spp のブロックごとに平均
         try:
-            # colored_high_res の形状が期待通りであることを確認してからreshape
+            # colored_high_res の形状が期待通りであることを確認してから reshape
             expected_shape = (super_resolution_y, super_resolution_x, 4)
             if colored_high_res.shape == expected_shape:
                 colored = colored_high_res.reshape((resolution, samples_per_pixel, resolution, samples_per_pixel, 4)).mean(axis=(1, 3))
@@ -129,7 +129,7 @@ def render_fractal(params, logger: DebugLogger, cache=None) -> np.ndarray:
                  # 形状が異なる場合はエラーログを出力し、ダウンサンプリングをスキップするか、エラー処理を行う
                  logger.log(LogLevel.ERROR, f"ダウンサンプリングエラー: colored_high_resの形状が不正です。期待値: {expected_shape}, 実際: {colored_high_res.shape}")
                  # エラーを示す画像で置き換えるか、ダウンサンプリングしない処理に進む
-                 # ここではエラーを示す単色画像を例として返します
+                 # ここではエラーを示す単色画像を例として返す
                  colored = np.full((resolution, resolution, 4), [255, 0, 0, 255], dtype=np.float32) # 赤色のエラー画像
 
         except ValueError as e:
@@ -139,9 +139,9 @@ def render_fractal(params, logger: DebugLogger, cache=None) -> np.ndarray:
 
     else:
         # ダウンサンプリングしない場合
-        # この場合、計算された colored_high_res はすでに resolution x resolution になっているはずですが
-        # 念のため最終的なサイズに調整する必要があるかもしれません。
-        # 現在のロジックでは samples_per_pixel=1 のとき super_resolution == resolution なので問題ありません。
+        # この場合、計算された colored_high_res はすでに resolution x resolution になっているはずだが
+        # 念のため最終的なサイズに調整する必要があるかもしれない
+        # 現在のロジックでは samples_per_pixel=1 のとき super_resolution == resolution なので問題なし
         colored = colored_high_res
 
     # 最終的な結果を uint8 [0, 255] に変換
@@ -164,9 +164,10 @@ def _calculate_dynamic_resolution(width, base_res=600, min_res=300, max_res=1200
     Returns:
         int: 計算された描画解像度（一辺のピクセル数）。実際にはこれにsamples_per_pixelをかけた高解像度で計算し、後で縮小します。
     """
-    # 対数スケールでズームファクターを計算。width=4.0を基準（ズームなし）とするとlog(5)あたり。
-    # widthが小さくなる（ズームイン）ほどzoom_factorは大きくなります。
-    # +1.0 は width が非常に小さい場合に log(ほぼ0) にならないようにするため。
+    # 対数スケールでズームファクターを計算
+    # width=4.0 を基準（ズームなし）とすると log(5) あたり
+    # width が小さくなる（ズームイン）ほど zoom_factor は大きくなりる
+    # +1.0 は width が非常に小さい場合に log(ほぼ0) にならないようにするため
     zoom_factor = np.log(5.0 / width + 1.0) # 調整可能なマジックナンバー (5.0)
 
     # zoom_factorにbase_resを掛けて基本解像度を決定

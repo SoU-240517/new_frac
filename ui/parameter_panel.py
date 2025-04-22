@@ -100,7 +100,8 @@ class ParameterPanel:
             values=["Julia", "Mandelbrot"], state="readonly")
         fractal_type_combo.grid(row=row, column=1, sticky=tk.W+tk.E, padx=10, pady=(5,0))
         # フラクタルタイプ変更時に、描画更新をし、その後にカラーバー更新を行う
-        fractal_type_combo.bind("<<ComboboxSelected>>", lambda e: [self.update_callback(), self._update_colorbars()])
+        fractal_type_combo.bind(
+            "<<ComboboxSelected>>", lambda e: [self.update_callback(), self._update_colorbars()])
 
         # --- 漸化式表示 ---
         row += 1
@@ -193,10 +194,10 @@ class ParameterPanel:
         non_diverge_algo_combo.grid(row=row, column=1, sticky=tk.W+tk.E, padx=10, pady=(5,0))
         non_diverge_algo_combo.bind("<<ComboboxSelected>>", lambda e: [self.update_callback(), self._update_colorbars()])
 
-        # 追加: 修正ここから ----------
         row += 1 # カラーバー表示用ラベル (コンボボックスの上に移動)
         self.non_diverge_colorbar_label = tk.Label(self.parent) # ここにカラーバー画像を表示
-        self.non_diverge_colorbar_label.grid(row=row, column=1, sticky=tk.W, padx=10, pady=(5, 0)) # 上部に少しパディングを追加
+        self.non_diverge_colorbar_label.grid(
+            row=row, column=1, sticky=tk.W, padx=10, pady=(5, 0)) # 上部に少しパディングを追加
 
         row += 1 # カラーマップ選択 (カラーバー表示ラベルの下に移動)
         ttk.Label(self.parent, text="カラーマップ:").grid(row=row, column=0, sticky=tk.W, padx=10, pady=(2, 5)) # 上部のパディングを調整
@@ -205,19 +206,22 @@ class ParameterPanel:
                                           values=self.colormaps, state="readonly", width=18) # 幅調整
         non_diverge_colormap_combo.grid(row=row, column=1, sticky=tk.W, padx=10, pady=(2, 5)) # 上部のパディングを調整
         # カラーマップ変更時は、メインの更新コールバックに加えてカラーバー更新も呼ぶ
-        non_diverge_colormap_combo.bind("<<ComboboxSelected>>", lambda e: [self.update_callback(), self._update_colorbars()])
-        # 追加: 修正ここまで ----------
-
+        non_diverge_colormap_combo.bind(
+            "<<ComboboxSelected>>", lambda e: [self.update_callback(), self._update_colorbars()])
 
         # --- ボタン ---
         row += 1 # ここは非発散部カラーマップセクションの後の新しい row から始まる
-        render_button = ttk.Button(self.parent, text="描画", command=lambda: [self.update_callback(), self._update_colorbars()])
-        render_button.grid(row=row, column=0, columnspan=2, sticky=tk.W+tk.E, padx=10, pady=10)
+        render_button = ttk.Button(
+            self.parent, text="描画", command=lambda: [self.update_callback(), self._update_colorbars()])
+        render_button.grid(
+            row=row, column=0, columnspan=2, sticky=tk.W+tk.E, padx=10, pady=10)
 
         row += 1
         if self.reset_callback is not None:
-            reset_button = ttk.Button(self.parent, text="描画リセット", command=lambda: [self.reset_callback(), self._update_colorbars()])
-            reset_button.grid(row=row, column=0, columnspan=2, sticky=tk.W+tk.E, padx=10, pady=10)
+            reset_button = ttk.Button(
+                self.parent, text="描画リセット", command=lambda: [self.reset_callback(), self._update_colorbars()])
+            reset_button.grid(
+                row=row, column=0, columnspan=2, sticky=tk.W+tk.E, padx=10, pady=10)
 
         # パネル全体の列幅を設定（必要に応じて）
         self.parent.columnconfigure(1, weight=1)
