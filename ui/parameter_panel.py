@@ -7,238 +7,253 @@ from .zoom_function.debug_logger import DebugLogger
 from .zoom_function.enums import LogLevel
 
 class ParameterPanel:
-    """パラメータパネルクラス
+    """ParameterPanel クラス
     - 役割:
         - フラクタル生成用のパラメータを設定するパネル
     """
-    COLORBAR_WIDTH = 150 # カラーバーの幅 (ピクセル)
-    COLORBAR_HEIGHT = 15  # カラーバーの高さ (ピクセル)
+    COLORBAR_WIDTH = 150
+    COLORBAR_HEIGHT = 15
 
     def __init__(self, parent, update_callback, reset_callback, logger: DebugLogger):
-        """パラメータパネルのコンストラクタ（親: MainWindow）
+        """ParameterPanel クラスのコンストラクタ
 
         Args:
-            parent (tkinter.Tk): Tkinter ルートウィンドウ
-            update_callback (function): パラメータ更新時のコールバック関数: MainWindow.on_update
-            reset_callback (function): パラメータリセット時のコールバック関数: MainWindow.on_reset
-            logger (DebugLogger): ログ出力用の DebugLogger インスタンス
+            parent: 親ウィジェット
+            update_callback: 描画更新コールバック関数
+            reset_callback: 描画リセットコールバック関数
+            logger: デバッグロガーインスタンス
         """
         self.logger = logger
         self.parent = parent
         self.update_callback = update_callback
         self.reset_callback = reset_callback
-#        self.logger.log(LogLevel.INIT, "パラメータパネルセットアップ開始")
         self._setup_panel()
-        self._update_colorbars() # パネル設定後に初期カラーバーを更新
+        self._update_colorbars()
 
-    def _create_colorbar_image(self, cmap_name: str) -> ImageTk.PhotoImage:
-        """指定されたカラーマップ名からカラーバーの PhotoImage を生成
+    def _setup_panel(self):
+        """パネルのセットアップを行う"""
+        self._setup_fractal_type_section()
+        self._setup_formula_section()
+        self._setup_parameter_section()
+        self._setup_diverge_section()
+        self._setup_non_diverge_section()
+        self._setup_buttons()
+        self.parent.columnconfigure(1, weight=1)
+
+    # --- セクションごとのメソッド ---
+    def _setup_fractal_type_section(self):
+        row = 0
+        self._add_label("フラクタルタイプ:", row, 0, pady=(5,0))
+        self.fractal_type_var = tk.StringVar(value="Julia")
+        combo = self._add_combobox(row, 1, self.fractal_type_var, ["Julia", "Mandelbrot"])
+        combo.bind("<<ComboboxSelected>>", self._common_callback)
+        self._fractal_type_row = row
+
+    def _setup_formula_section(self):
+        """数式表示セクションのセットアップ"""
+        row = self._fractal_type_row + 1
+        self.formula_var = tk.StringVar()
+        self.formula_label = ttk.Label(self.parent, textvariable=self.formula_var, font=("Courier", 10))
+        self.formula_label.grid(row=row, column=0, columnspan=2, sticky=tk.W, padx=10, pady=2)
+        self._show_formula_display()
+        self._formula_row = row
+
+    def _setup_parameter_section(self):
+        """パラメータ表示セクションのセットアップ"""
+        row = self._formula_row + 1
+        # 最大反復回数
+        self._add_label("最大反復回数:", row, 0)
+        self.max_iter_var = tk.StringVar(value="100")
+        entry = self._add_entry(row, 1, self.max_iter_var)
+        entry.bind("<Return>", self._common_callback)
+        params = [("Z (実部):", "z_real_var", "0.0"),
+                  ("Z (虚部):", "z_imag_var", "0.0"),
+                  ("C (実部):", "c_real_var", "-0.7"),
+                  ("C (虚部):", "c_imag_var", "0.27015")]
+        for label, varname, default in params:
+            row += 1
+            self._add_label(label, row, 0)
+            setattr(self, varname, tk.StringVar(value=default))
+            entry = self._add_entry(row, 1, getattr(self, varname))
+            entry.bind("<Return>", self._common_callback)
+        self._param_section_last_row = row
+
+    def _setup_diverge_section(self):
+        """発散部セクションのセットアップ"""
+        row = self._param_section_last_row + 1
+        self._add_label("--- 発散部 ---", row, 0, columnspan=2, pady=(10, 0))
+        row += 1
+        self._add_label("着色アルゴリズム:", row, 0, pady=(5,0))
+        self.diverge_algo_var = tk.StringVar(value="スムージングカラーリング")
+        self.diverge_algorithms = [
+            "スムージングカラーリング", "高速スムージング", "指数スムージング", "反復回数線形マッピング", "ヒストグラム平坦化法",
+            "反復回数対数マッピング", "距離カラーリング", "角度カラーリング",
+            "ポテンシャル関数法", "軌道トラップ法"
+        ]
+        combo = self._add_combobox(row, 1, self.diverge_algo_var, self.diverge_algorithms)
+        combo.bind("<<ComboboxSelected>>", self._common_callback)
+        row += 1
+        self.diverge_colorbar_label = tk.Label(self.parent)
+        self.diverge_colorbar_label.grid(row=row, column=1, sticky=tk.W, padx=10, pady=(5,0))
+        row += 1
+        self.colormaps = sorted([m for m in plt.colormaps() if not m.endswith('_r')])
+        self._add_label("カラーマップ:", row, 0, pady=(2,5))
+        self.diverge_colormap_var = tk.StringVar(value="viridis")
+        combo = self._add_combobox(row, 1, self.diverge_colormap_var, self.colormaps, width=18)
+        combo.bind("<<ComboboxSelected>>", self._common_callback)
+        self._diverge_section_last_row = row
+
+    def _setup_non_diverge_section(self):
+        """非発散部セクションのセットアップ"""
+        row = self._diverge_section_last_row + 1
+        self._add_label("--- 非発散部 ---", row, 0, columnspan=2, pady=(10, 0))
+        row += 1
+        self._add_label("着色アルゴリズム:", row, 0, pady=(5,0))
+        self.non_diverge_algo_var = tk.StringVar(value="単色")
+        self.non_diverge_algorithms = ["単色", "グラデーション", "パラメータ(C)", "パラメータ(Z)"]
+        combo = self._add_combobox(row, 1, self.non_diverge_algo_var, self.non_diverge_algorithms)
+        combo.bind("<<ComboboxSelected>>", self._common_callback)
+        row += 1
+        self.non_diverge_colorbar_label = tk.Label(self.parent)
+        self.non_diverge_colorbar_label.grid(row=row, column=1, sticky=tk.W, padx=10, pady=(5,0))
+        row += 1
+        self._add_label("カラーマップ:", row, 0, pady=(2,5))
+        self.non_diverge_colormap_var = tk.StringVar(value="plasma")
+        combo = self._add_combobox(row, 1, self.non_diverge_colormap_var, self.colormaps, width=18)
+        combo.bind("<<ComboboxSelected>>", self._common_callback)
+        self._non_diverge_section_last_row = row
+
+    def _setup_buttons(self):
+        """ボタンのセットアップ"""
+        row = self._non_diverge_section_last_row + 1
+        self._add_button("描画", row, 0, 2, lambda: [self.update_callback(), self._update_colorbars()])
+        row += 1
+        if self.reset_callback is not None:
+            self._add_button("描画リセット", row, 0, 2, lambda: [self.reset_callback(), self._update_colorbars()])
+
+    # --- ヘルパーメソッド ---
+    def _add_label(self, text, row, col, columnspan=1, padx=10, pady=2):
+        """ラベルを追加する
 
         Args:
-            cmap_name (str): カラーマップ名
+            text: ラベルのテキスト
+            row: 行
+            col: 列
+            columnspan: 列のスパン
+            padx: 横方向のパディング
+            pady: 縦方向のパディング
+        """
+        ttk.Label(self.parent, text=text).grid(row=row, column=col, columnspan=columnspan, sticky=tk.W, padx=padx, pady=pady)
+
+    def _add_entry(self, row, col, var, padx=10, pady=2):
+        """入力欄を追加する
+
+        Args:
+            row: 行
+            col: 列
+            var: 文字列変数
+            padx: 横方向のパディング
+            pady: 縦方向のパディング
+        """
+        entry = ttk.Entry(self.parent, textvariable=var)
+        entry.grid(row=row, column=col, sticky=tk.W+tk.E, padx=padx, pady=pady)
+        return entry
+
+    def _add_combobox(self, row, col, var, values, width=None, padx=10, pady=2):
+        """コンボックスボックスを追加する
+
+        Args:
+            row: 行
+            col: 列
+            var: 文字列変数
+            values: コンボックスボックスの値リスト
+            width: コンボックスボックスの幅
+            padx: 横方向のパディング
+            pady: 縦方向のパディング
+        """
+        kwargs = {"textvariable": var, "values": values, "state": "readonly"}
+        if width:
+            kwargs["width"] = width
+        combo = ttk.Combobox(self.parent, **kwargs)
+        combo.grid(row=row, column=col, sticky=tk.W, padx=padx, pady=pady)
+        return combo
+
+    def _add_button(self, text, row, col, colspan, command):
+        """ボタンを追加する
+
+        Args:
+            text: ボタンのテキスト
+            row: 行
+            col: 列
+            colspan: 列のスパン
+            command: コマンド
+        """
+        btn = ttk.Button(self.parent, text=text, command=command)
+        btn.grid(row=row, column=col, columnspan=colspan, sticky=tk.W+tk.E, padx=10, pady=10)
+        return btn
+
+    def _common_callback(self, event=None):
+        """共通のコールバック関数"""
+        self.update_callback()
+        self._update_colorbars()
+
+    def _create_colorbar_image(self, cmap_name: str) -> ImageTk.PhotoImage:
+        """カラーバー画像を生成する
+
+        Args:
+            cmap_name: カラーマップ名
 
         Returns:
-            ImageTk.PhotoImage: 生成されたカラーバーの PhotoImage
+            カラーバー画像のPhotoImageオブジェクト
         """
         self.logger.log(LogLevel.SUCCESS, "カラーバー生成開始")
         try:
             cmap = plt.get_cmap(cmap_name)
-            # NumPyでグラデーションデータを作成 (幅 x 高さ x RGBA)
             gradient = np.linspace(0, 1, self.COLORBAR_WIDTH)
-            colors = cmap(gradient) # (width, 4) の RGBA配列 (0.0-1.0)
-            # (height, width, 4) に拡張し、uint8に変換
+            colors = cmap(gradient)
             rgba_image = np.uint8(np.tile(colors, (self.COLORBAR_HEIGHT, 1, 1)) * 255)
-            # NumPy配列からPIL Imageへ変換
             pil_image = Image.fromarray(rgba_image, 'RGBA')
-            # PIL ImageからPhotoImageへ変換
             photo_image = ImageTk.PhotoImage(pil_image)
             return photo_image
         except ValueError:
-            # 無効なカラーマップ名の場合、単色のダミー画像を返すなど
             self.logger.log(LogLevel.WARNING, f"無効なカラーマップ名: {cmap_name}")
-            # 透明なダミー画像を生成
             dummy_rgba = np.zeros((self.COLORBAR_HEIGHT, self.COLORBAR_WIDTH, 4), dtype=np.uint8)
             pil_image = Image.fromarray(dummy_rgba, 'RGBA')
             photo_image = ImageTk.PhotoImage(pil_image)
             return photo_image
         except Exception as e:
             self.logger.log(LogLevel.ERROR, f"カラーバー生成中にエラー ({cmap_name}): {e}")
-             # 透明なダミー画像を生成
             dummy_rgba = np.zeros((self.COLORBAR_HEIGHT, self.COLORBAR_WIDTH, 4), dtype=np.uint8)
             pil_image = Image.fromarray(dummy_rgba, 'RGBA')
             photo_image = ImageTk.PhotoImage(pil_image)
             return photo_image
 
     def _update_colorbars(self, *args):
-        """選択されているカラーマップに基づいてカラーバーの表示を更新
-
-        Args:
-            *args: 未使用
-        """
-        # 発散部
+        """カラーバーを更新する"""
         diverge_cmap_name = self.diverge_colormap_var.get()
         self.logger.log(LogLevel.CALL, "カラーバー更新：発散部")
         diverge_photo = self._create_colorbar_image(diverge_cmap_name)
         self.diverge_colorbar_label.config(image=diverge_photo)
-        self.diverge_colorbar_label.image = diverge_photo # 参照を保持
-        # 非発散部
+        self.diverge_colorbar_label.image = diverge_photo
         non_diverge_cmap_name = self.non_diverge_colormap_var.get()
         self.logger.log(LogLevel.CALL, "カラーバー更新：非発散部")
         non_diverge_photo = self._create_colorbar_image(non_diverge_cmap_name)
         self.non_diverge_colorbar_label.config(image=non_diverge_photo)
-        self.non_diverge_colorbar_label.image = non_diverge_photo # 参照を保持
-
-    def _setup_panel(self):
-        """パラメータパネルの設定"""
-
-        # --- フラクタルタイプ ---
-        row = 0
-        ttk.Label(self.parent, text="フラクタルタイプ:").grid(row=row, column=0, sticky=tk.W, padx=10, pady=(5,0))
-        self.fractal_type_var = tk.StringVar(value="Julia")
-        fractal_type_combo = ttk.Combobox(
-            self.parent, textvariable=self.fractal_type_var,
-            values=["Julia", "Mandelbrot"], state="readonly")
-        fractal_type_combo.grid(row=row, column=1, sticky=tk.W+tk.E, padx=10, pady=(5,0))
-        # フラクタルタイプ変更時に、描画更新をし、その後にカラーバー更新を行う
-        fractal_type_combo.bind(
-            "<<ComboboxSelected>>", lambda e: [self.update_callback(), self._update_colorbars()])
-
-        # --- 漸化式表示 ---
-        row += 1
-        self.formula_var = tk.StringVar()
-        self.formula_label = ttk.Label(self.parent, textvariable=self.formula_var, font=("Courier", 10)) # フォント調整
-        self.formula_label.grid(row=row, column=0, columnspan=2, sticky=tk.W, padx=10, pady=2)
-        self._show_formula_display()
-
-        # --- パラメータ入力 (最大反復回数, Z, C) ---
-        row += 1 # 最大反復回数
-        ttk.Label(self.parent, text="最大反復回数:").grid(row=row, column=0, sticky=tk.W, padx=10, pady=2)
-        self.max_iter_var = tk.StringVar(value="100")
-        max_iter_entry = ttk.Entry(self.parent, textvariable=self.max_iter_var)
-        max_iter_entry.grid(row=row, column=1, sticky=tk.W+tk.E, padx=10, pady=2)
-        max_iter_entry.bind("<Return>", lambda e: [self.update_callback(), self._update_colorbars()]) # エントリーの変更時にも描画更新とカラーバー更新を行う
-# サンプルとして残す
-#        max_iter_entry.bind("<FocusOut>", lambda e: [self.update_callback(), self._update_colorbars()])
-
-        row += 1 # Z (実部)
-        ttk.Label(self.parent, text="Z (実部):").grid(row=row, column=0, sticky=tk.W, padx=10, pady=2)
-        self.z_real_var = tk.StringVar(value="0.0")
-        z_real_entry = ttk.Entry(self.parent, textvariable=self.z_real_var)
-        z_real_entry.grid(row=row, column=1, sticky=tk.W+tk.E, padx=10, pady=2)
-        z_real_entry.bind("<Return>", lambda e: [self.update_callback(), self._update_colorbars()])
-
-        row += 1 # Z (虚部)
-        ttk.Label(self.parent, text="Z (虚部):").grid(row=row, column=0, sticky=tk.W, padx=10, pady=2)
-        self.z_imag_var = tk.StringVar(value="0.0")
-        z_imag_entry = ttk.Entry(self.parent, textvariable=self.z_imag_var)
-        z_imag_entry.grid(row=row, column=1, sticky=tk.W+tk.E, padx=10, pady=2)
-        z_imag_entry.bind("<Return>", lambda e: [self.update_callback(), self._update_colorbars()])
-
-        row += 1 # C (実部)
-        ttk.Label(self.parent, text="C (実部):").grid(row=row, column=0, sticky=tk.W, padx=10, pady=2)
-        self.c_real_var = tk.StringVar(value="-0.7")
-        c_real_entry = ttk.Entry(self.parent, textvariable=self.c_real_var)
-        c_real_entry.grid(row=row, column=1, sticky=tk.W+tk.E, padx=10, pady=2)
-        c_real_entry.bind("<Return>", lambda e: [self.update_callback(), self._update_colorbars()])
-
-        row += 1 # C (虚部)
-        ttk.Label(self.parent, text="C (虚部):").grid(row=row, column=0, sticky=tk.W, padx=10, pady=2)
-        self.c_imag_var = tk.StringVar(value="0.27015")
-        c_imag_entry = ttk.Entry(self.parent, textvariable=self.c_imag_var)
-        c_imag_entry.grid(row=row, column=1, sticky=tk.W+tk.E, padx=10, pady=2)
-        c_imag_entry.bind("<Return>", lambda e: [self.update_callback(), self._update_colorbars()])
-
-        # --- 発散部の着色設定 ---
-        row += 1
-        ttk.Label(self.parent, text="--- 発散部 ---").grid(row=row, column=0, columnspan=2, pady=(10, 0))
-
-        row += 1 # アルゴリズム選択
-        ttk.Label(self.parent, text="着色アルゴリズム:").grid(row=row, column=0, sticky=tk.W, padx=10, pady=(5,0))
-        self.diverge_algo_var = tk.StringVar(value="スムージングカラーリング") # デフォルト変更
-        self.diverge_algorithms = [
-            "スムージングカラーリング", "高速スムージング", "指数スムージング", "反復回数線形マッピング", "ヒストグラム平坦化法",
-            "反復回数対数マッピング", "距離カラーリング", "角度カラーリング",
-            "ポテンシャル関数法", "軌道トラップ法"
-        ]
-        diverge_algo_combo = ttk.Combobox(self.parent, textvariable=self.diverge_algo_var,
-                                          values=self.diverge_algorithms, state="readonly")
-        diverge_algo_combo.grid(row=row, column=1, sticky=tk.W+tk.E, padx=10, pady=(5,0))
-        diverge_algo_combo.bind("<<ComboboxSelected>>", lambda e: [self.update_callback(), self._update_colorbars()])
-
-        # 追加: 修正ここから ----------
-        row += 1 # カラーバー表示用ラベル (コンボボックスの上に移動)
-        self.diverge_colorbar_label = tk.Label(self.parent) # ここにカラーバー画像を表示
-        self.diverge_colorbar_label.grid(row=row, column=1, sticky=tk.W, padx=10, pady=(5, 0)) # 上部に少しパディングを追加
-
-        row += 1 # カラーマップ選択 (カラーバー表示ラベルの下に移動)
-        ttk.Label(self.parent, text="カラーマップ:").grid(row=row, column=0, sticky=tk.W, padx=10, pady=(2, 5)) # 上部のパディングを調整
-        self.colormaps = sorted([m for m in plt.colormaps() if not m.endswith('_r')])
-        self.diverge_colormap_var = tk.StringVar(value="viridis")
-        diverge_colormap_combo = ttk.Combobox(self.parent, textvariable=self.diverge_colormap_var,
-                                              values=self.colormaps, state="readonly", width=18) # 幅調整
-        diverge_colormap_combo.grid(row=row, column=1, sticky=tk.W, padx=10, pady=(2, 5)) # 上部のパディングを調整
-        # カラーマップ変更時は、メインの更新コールバックに加えてカラーバー更新も呼ぶ
-        diverge_colormap_combo.bind("<<ComboboxSelected>>", lambda e: [self.update_callback(), self._update_colorbars()])
-        # 追加: 修正ここまで ----------
-
-        # --- 非発散部の着色設定 ---
-        row += 1 # ここは発散部カラーマップセクションの後の新しい row から始まる
-        ttk.Label(self.parent, text="--- 非発散部 ---").grid(row=row, column=0, columnspan=2, pady=(10, 0))
-
-        row += 1 # アルゴリズム選択
-        ttk.Label(self.parent, text="着色アルゴリズム:").grid(row=row, column=0, sticky=tk.W, padx=10, pady=(5,0))
-        self.non_diverge_algo_var = tk.StringVar(value="単色")
-        self.non_diverge_algorithms = ["単色", "グラデーション", "パラメータ(C)", "パラメータ(Z)"]
-        non_diverge_algo_combo = ttk.Combobox(self.parent, textvariable=self.non_diverge_algo_var,
-                                              values=self.non_diverge_algorithms, state="readonly")
-        non_diverge_algo_combo.grid(row=row, column=1, sticky=tk.W+tk.E, padx=10, pady=(5,0))
-        non_diverge_algo_combo.bind("<<ComboboxSelected>>", lambda e: [self.update_callback(), self._update_colorbars()])
-
-        row += 1 # カラーバー表示用ラベル (コンボボックスの上に移動)
-        self.non_diverge_colorbar_label = tk.Label(self.parent) # ここにカラーバー画像を表示
-        self.non_diverge_colorbar_label.grid(
-            row=row, column=1, sticky=tk.W, padx=10, pady=(5, 0)) # 上部に少しパディングを追加
-
-        row += 1 # カラーマップ選択 (カラーバー表示ラベルの下に移動)
-        ttk.Label(self.parent, text="カラーマップ:").grid(row=row, column=0, sticky=tk.W, padx=10, pady=(2, 5)) # 上部のパディングを調整
-        self.non_diverge_colormap_var = tk.StringVar(value="plasma")
-        non_diverge_colormap_combo = ttk.Combobox(self.parent, textvariable=self.non_diverge_colormap_var,
-                                          values=self.colormaps, state="readonly", width=18) # 幅調整
-        non_diverge_colormap_combo.grid(row=row, column=1, sticky=tk.W, padx=10, pady=(2, 5)) # 上部のパディングを調整
-        # カラーマップ変更時は、メインの更新コールバックに加えてカラーバー更新も呼ぶ
-        non_diverge_colormap_combo.bind(
-            "<<ComboboxSelected>>", lambda e: [self.update_callback(), self._update_colorbars()])
-
-        # --- ボタン ---
-        row += 1 # ここは非発散部カラーマップセクションの後の新しい row から始まる
-        render_button = ttk.Button(
-            self.parent, text="描画", command=lambda: [self.update_callback(), self._update_colorbars()])
-        render_button.grid(
-            row=row, column=0, columnspan=2, sticky=tk.W+tk.E, padx=10, pady=10)
-
-        row += 1
-        if self.reset_callback is not None:
-            reset_button = ttk.Button(
-                self.parent, text="描画リセット", command=lambda: [self.reset_callback(), self._update_colorbars()])
-            reset_button.grid(
-                row=row, column=0, columnspan=2, sticky=tk.W+tk.E, padx=10, pady=10)
-
-        # パネル全体の列幅を設定（必要に応じて）
-        self.parent.columnconfigure(1, weight=1)
+        self.non_diverge_colorbar_label.image = non_diverge_photo
 
     def _show_formula_display(self):
-        """漸化式を表示"""
+        """式を表示する"""
         fractal_type = self.fractal_type_var.get()
         if fractal_type == "Julia":
             self.formula_var.set("Z(n+1) = Z(n)² + C")
-        else: # Mandelbrot
+        else:
             self.formula_var.set("Z(n+1) = Z(n)² + C\n(Z(0)=0, C=座標)")
 
     def _get_parameters(self) -> dict:
-        """パラメータパネルから値を取得
+        """パラメータを取得する
 
         Returns:
-            dict: パラメータ辞書
+            dict: パラメータの辞書
         """
         try:
             panel_params = {
@@ -253,14 +268,10 @@ class ParameterPanel:
                 "diverge_colormap": self.diverge_colormap_var.get(),
                 "non_diverge_colormap": self.non_diverge_colormap_var.get()
             }
-            # 数値パラメータのバリデーションを追加するとより堅牢になります
             if panel_params["max_iterations"] <= 0:
                 self.logger.log(LogLevel.WARNING, "最大反復回数は正の整数である必要があります。")
-                panel_params["max_iterations"] = 100 # デフォルトに戻すなど
+                panel_params["max_iterations"] = 100
         except ValueError as e:
             self.logger.log(LogLevel.ERROR, f"パラメータ取得エラー: 無効な数値入力 - {e}")
-            # エラーが発生した場合、空の辞書ではなく、デフォルト値やNoneを返すなど、
-            # 呼出し元でのエラーハンドリングを考慮した設計が良いかもしれません。
-            # ここでは簡単な例として、エラーがあった項目を特定するのは難しいので空を返します。
-            panel_params = {} # または一部の有効なパラメータのみ返すなど
+            panel_params = {}
         return panel_params

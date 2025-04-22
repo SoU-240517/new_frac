@@ -36,7 +36,7 @@ class EventHandlersPrivate:
         self.core.zoom_selector.invalidate_rect_cache()
         self.core.cursor_manager.cursor_update(
             event,
-            state=self.core.state_handler.get_state())
+            state=self.core.state_handler.state)
         self.core._create_logged = False # 親のログフラグを更新
         self.core.canvas.draw_idle() # 親の canvas に再描画を依頼
         self.core.utils._add_history(None) # utils に履歴追加を依頼
@@ -77,7 +77,7 @@ class EventHandlersPrivate:
             self.core.state_handler.update_state(ZoomState.ROTATING, {"action": "回転開始", "角": corner_index})
             self.core.cursor_manager.cursor_update(
                 event,
-                state=self.core.state_handler.get_state(),
+                state=self.core.state_handler.state,
                 near_corner_index=corner_index,
                 is_rotating=True)
             self.core._rotate_logged = False # 親のログフラグを更新
@@ -103,7 +103,7 @@ class EventHandlersPrivate:
             self.core.logger.log(LogLevel.DEBUG, f"リサイズ開始パラメータ: 固定角(回転後)={self.core.fixed_corner_pos}")
             self.core.cursor_manager.cursor_update(
                 event,
-                state=self.core.state_handler.get_state(),
+                state=self.core.state_handler.state,
                 near_corner_index=self.core.resize_corner_index,
                 is_rotating=False)
             self.core._resize_logged = False # 親のログフラグを更新
@@ -130,7 +130,7 @@ class EventHandlersPrivate:
             self.core.logger.log(LogLevel.DEBUG, f"移動開始パラメータ: マウス=({self.core.move_start_x:.2f}, {self.core.move_start_y:.2f}), 矩形左下={self.core.rect_start_pos}")
             self.core.cursor_manager.cursor_update(
                 event,
-                state=self.core.state_handler.get_state(),
+                state=self.core.state_handler.state,
                 is_rotating=False)
             self.core._move_logged = False # 親のログフラグを更新
             self.core.canvas.draw_idle()
@@ -171,7 +171,7 @@ class EventHandlersPrivate:
         corner_index = self.core.zoom_selector.pointer_near_corner(event)
         self.core.cursor_manager.cursor_update(
             event,
-            state=ZoomState.EDIT,
+            state=self.core.state_handler.state,
             near_corner_index=corner_index,
             is_rotating=self.core._alt_pressed)
 
@@ -349,7 +349,7 @@ class EventHandlersPrivate:
             event: KeyEvent オブジェクト
         """
         # 親の state_handler から現在の状態を取得
-        state = self.core.state_handler.get_state()
+        state = self.core.state_handler.state
         if state is ZoomState.NO_RECT:
             self.core.logger.log(LogLevel.DEBUG, "ESC: NO_RECT -> ズーム確定キャンセル呼出し")
             self.core.zoom_selector.cancel_zoom() # MainWindow側の処理を呼び出す
@@ -371,7 +371,7 @@ class EventHandlersPrivate:
         if not self.core._alt_pressed: # Altキーが押されていなかったら
             # self.core.logger.log(LogLevel.INFO, "回転モード有効化")
             self.core._alt_pressed = True
-            if self.core.state_handler.get_state() == ZoomState.EDIT:
+            if self.core.state_handler.state == ZoomState.EDIT:
                 self.core.logger.log(LogLevel.DEBUG, "Alt押下: EDIT状態")
 
     def handle_key_alt_release(self, event: KeyEvent):
@@ -384,6 +384,6 @@ class EventHandlersPrivate:
         if self.core._alt_pressed: # Altキーが押されていたら
             # self.core.logger.log(LogLevel.INFO, "回転モード無効化")
             self.core._alt_pressed = False
-            if self.core.state_handler.get_state() == ZoomState.EDIT:
+            if self.core.state_handler.state == ZoomState.EDIT:
                 self.core.logger.log(LogLevel.DEBUG, "Alt解放: EDIT状態")
     # --- Key イベントハンドラ ここまで ---

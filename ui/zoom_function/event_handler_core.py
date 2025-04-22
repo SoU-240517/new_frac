@@ -118,7 +118,7 @@ class EventHandler:
             self.logger.log(LogLevel.ERROR, "基本検証失敗：処理中断")
             return
 
-        state = self.state_handler.get_state()
+        state = self.state_handler.state
         self.logger.log(LogLevel.DEBUG, f"状態取得完了：{state.name}, ボタン={event.button}")
 
         if state == ZoomState.NO_RECT:
@@ -141,7 +141,7 @@ class EventHandler:
             self.logger.log(LogLevel.DEBUG, "Axes外または座標無効のため処理中断")
             return
 
-        state = self.state_handler.get_state()
+        state = self.state_handler.state
         # self.logger.log(LogLevel.DEBUG, f"状態取得完了：{state.name}")
 
         if state == ZoomState.CREATE:
@@ -168,7 +168,7 @@ class EventHandler:
         validation_result = self.validator.validate_event(event, self.zoom_selector.ax, self.logger)
         is_outside = not validation_result.has_coords # 軸外でのリリースか
 
-        state = self.state_handler.get_state()
+        state = self.state_handler.state
         self.logger.log(LogLevel.DEBUG, f"状態取得完了：{state.name}, ボタン={event.button}, 軸外={is_outside}")
 
         operation_ended = False

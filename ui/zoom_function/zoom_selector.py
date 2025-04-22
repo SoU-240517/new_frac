@@ -1,5 +1,5 @@
-import matplotlib.transforms as transforms # 回転計算用
-import matplotlib.patches as patches # キャッシュの型ヒント用
+import matplotlib.transforms as transforms
+import matplotlib.patches as patches
 import numpy as np
 from matplotlib.axes import Axes
 from typing import Callable, Optional, Tuple
@@ -16,201 +16,227 @@ class ZoomSelector:
     - 役割:
         - マウスドラッグでズーム領域を描画する
         - リサイズや回転を管理する
+        - ズーム操作の状態管理を行う
     """
+    
     def __init__(self,
                  ax: Axes,
                  on_zoom_confirm: Callable[[float, float, float, float, float], None],
                  on_zoom_cancel: Callable[[], None],
                  logger: DebugLogger):
-        """ズーム領域のコンストラクタ（親: FractalCanvas）
-
+        """ズーム領域のコンストラクタ
+        
         Args:
             ax (Axes): Matplotlib の Axes オブジェクト
-            on_zoom_confirm (Callable[[float, float, float, float, float], None]): ズーム確定時のコールバック関数
-            on_zoom_cancel (Callable[[], None]): ズームキャンセル時のコールバック関数
+            on_zoom_confirm (Callable): ズーム確定時のコールバック関数
+            on_zoom_cancel (Callable): ズームキャンセル時のコールバック関数
             logger (DebugLogger): ログ出力用の DebugLogger インスタンス
         """
-        self.logger = logger
+        self._initialize_components(ax, logger)
+        self._setup_callbacks(on_zoom_confirm, on_zoom_cancel)
+        self._connect_events()
 
-        #Axes オブジェクトの設定
+    def _initialize_components(self, ax: Axes, logger: DebugLogger):
+        """コンポーネントの初期化を行う"""
+        self.logger = logger
         self.ax = ax
         self.canvas = ax.figure.canvas
+        
+        # キャッシュ初期化
+        self._cached_rect_patch: Optional[patches.Rectangle] = None
+        self._last_cursor_inside_state: Optional[bool] = None
+        
+        # 依存コンポーネントの初期化
+        self._initialize_state_handler()
+        self._initialize_rect_manager()
+        self._initialize_cursor_manager()
+        self._initialize_event_handler()
 
-        #コールバックの設定
+    def _setup_callbacks(self, on_zoom_confirm, on_zoom_cancel):
+        """コールバック関数を設定する"""
         self.on_zoom_confirm = on_zoom_confirm
         self.on_zoom_cancel = on_zoom_cancel
 
-        # キャッシュの初期化
-        self._cached_rect_patch: Optional[patches.Rectangle] = None
-        self._last_cursor_inside_state: Optional[bool] = None # カーソル状態のキャッシュを追加
-
-        # 依存コンポーネントの初期化
-        # ZoomStateHandler のインスタンスを作成し、保持
+    def _initialize_state_handler(self):
+        """ZoomStateHandlerの初期化"""
         self.logger.log(LogLevel.INIT, "ZoomStateHandler 初期化開始")
         self.state_handler = ZoomStateHandler(
-                               initial_state=ZoomState.NO_RECT,
-                               logger=self.logger,
-                               canvas=self.canvas)
-        # RectManager のインスタンスを作成し、保持
+            initial_state=ZoomState.NO_RECT,
+            logger=self.logger,
+            canvas=self.canvas
+        )
+
+    def _initialize_rect_manager(self):
+        """RectManagerの初期化"""
         self.logger.log(LogLevel.INIT, "RectManager 初期化開始")
-        self.rect_manager = RectManager(ax, self.logger)
-        tk_widget = getattr(self.canvas, 'get_tk_widget', lambda: None)()
-        # CursorManager のインスタンスを作成し、保持
+        self.rect_manager = RectManager(self.ax, self.logger)
+
+    def _initialize_cursor_manager(self):
+        """CursorManagerの初期化"""
         self.logger.log(LogLevel.INIT, "CursorManager 初期化開始")
+        tk_widget = getattr(self.canvas, 'get_tk_widget', lambda: None)()
         self.cursor_manager = CursorManager(tk_widget, self.logger)
-        # EventValidator のインスタンスを作成し、保持
-        self.logger.log(LogLevel.INIT, "EventValidator 初期化開始")
-        self.validator = EventValidator()
-        # EventHandler のインスタンスを作成し、保持
-        self.logger.log(LogLevel.INIT, "EventHandler 初期化開始")
-        self.event_handler = EventHandler(self,
-                                          self.state_handler,
-                                          self.rect_manager,
-                                          self.cursor_manager,
-                                          self.validator,
-                                          self.logger,
-                                          self.canvas)
-        # CursorManager に ZoomSelector の参照を設定
         self.cursor_manager.set_zoom_selector(self)
-        # StateHandler に EventHandler の参照を設定 (循環参照に注意しつつ)
+
+    def _initialize_event_handler(self):
+        """EventHandlerの初期化"""
+        self.logger.log(LogLevel.INIT, "EventHandler 初期化開始")
+        self.validator = EventValidator()
+        self.event_handler = EventHandler(
+            self,
+            self.state_handler,
+            self.rect_manager,
+            self.cursor_manager,
+            self.validator,
+            self.logger,
+            self.canvas
+        )
         self.state_handler.event_handler = self.event_handler
 
-        self.logger.log(LogLevel.INIT, "全イベント接続開始")
-        self._connect_events()
-
     def _connect_events(self):
-        """イベントハンドラの接続（マウスモーション以外の全て）"""
+        """イベントハンドラの接続"""
+        self.logger.log(LogLevel.INIT, "全イベント接続開始")
         self.event_handler.connect()
         self.cursor_manager.set_default_cursor()
 
     def cursor_inside_rect(self, event) -> bool:
-        """マウスカーソル位置がズーム領域内か判定する (キャッシュを使用)
-
+        """マウスカーソル位置がズーム領域内か判定する
+        
         Args:
             event: MouseEvent オブジェクト
-
+            
         Returns:
-            bool: カーソルがズーム領域内かどうか
+            bool: カーソルがズーム領域内かどうか
         """
-        current_state: Optional[bool] = None # 現在のカーソル状態
+        if not self._has_valid_rect_cache():
+            return False
+            
+        if not self._cached_rect_patch.get_visible():
+            self.logger.log(LogLevel.DEBUG, "カーソル：ズーム領域 外 (非表示)")
+            return False
+            
+        contains, _ = self._cached_rect_patch.contains(event)
+        if contains != self._last_cursor_inside_state:
+            self.logger.log(LogLevel.DEBUG, f"カーソル：ズーム領域 {'内' if contains else '外'}")
+            self._last_cursor_inside_state = contains
+        
+        return contains
 
+    def _has_valid_rect_cache(self) -> bool:
+        """有効な矩形キャッシュがあるか確認"""
         if self._cached_rect_patch is None:
-            self.logger.log(LogLevel.CALL, "ズーム領域のキャッシュなし：キャッシュを作成")
-            self._cached_rect_patch = self.rect_manager.get_patch()
+            self._update_rect_cache()
+        return self._cached_rect_patch is not None
 
-        if self._cached_rect_patch is not None:
-            # 矩形が見えない場合は False を返すように修正
-            if not self._cached_rect_patch.get_visible():
-                 current_state = False
-                 if self._last_cursor_inside_state != current_state:
-                     self.logger.log(LogLevel.DEBUG, "カーソル：ズーム領域 外 (非表示)")
-                     self._last_cursor_inside_state = current_state
-                 return False
-            contains, _ = self._cached_rect_patch.contains(event)
-            current_state = contains
-            if self._last_cursor_inside_state != current_state:
-                if contains:
-                    self.logger.log(LogLevel.DEBUG, "カーソル：ズーム領域 内")
-                else:
-                    self.logger.log(LogLevel.DEBUG, "カーソル：ズーム領域 外")
-                self._last_cursor_inside_state = current_state
-            return contains
-        else: # ズーム領域がない場合
-            current_state = False
-            if self._last_cursor_inside_state != current_state:
-                self.logger.log(LogLevel.DEBUG, "ズーム領域なし：カーソル判定不可")
-                self._last_cursor_inside_state = current_state
-            return False # キャッシュ更新後も None の場合
+    def _update_rect_cache(self):
+        """矩形キャッシュを更新"""
+        self._cached_rect_patch = self.rect_manager.get_patch()
+        self.logger.log(LogLevel.DEBUG, "矩形キャッシュ更新")
 
     def confirm_zoom(self):
         """ズーム確定処理"""
         self.logger.log(LogLevel.DEBUG, "ズーム確定処理開始")
-        rect_props_tuple = self.rect_manager.get_properties()
-        rotation_angle = self.rect_manager.get_rotation()
-        if rect_props_tuple:
-            x, y, w, h = rect_props_tuple
-            self.event_handler.clear_edit_history() # 履歴クリアを追加
-            self.logger.log(LogLevel.CALL, "ズーム確定：コールバック呼出し", {
-                "x": x, "y": y, "w": w, "h": h, "angle": rotation_angle})
-            self.on_zoom_confirm(x, y, w, h, rotation_angle) # MainWindow on_zoom_confirm を呼出す
-            self.rect_manager.delete_rect() # 矩形削除
-            self.invalidate_rect_cache() # キャッシュ無効化
-            self.cursor_manager.set_default_cursor() # カーソルをデフォルトに
-            self.event_handler.reset_internal_state() # EventHandlerの状態もリセット
-        else:
+        
+        # 矩形プロパティを取得
+        rect_props = self.rect_manager.get_properties()
+        if rect_props is None:
             self.logger.log(LogLevel.WARNING, "決定不可：ズーム領域なし")
+            return
+            
+        x, y, w, h = rect_props
+        rotation_angle = self.rect_manager.get_rotation()
+        
+        self._handle_zoom_confirmation(x, y, w, h, rotation_angle)
 
-    def cancel_rect(self):
-        """ズーム領域編集をキャンセルし、矩形を削除する"""
-        self.event_handler.clear_edit_history() # 履歴クリアを追加
-        self.rect_manager.delete_rect() # 矩形を削除
-        self.invalidate_rect_cache() # キャッシュを無効化
-        self.logger.log(LogLevel.SUCCESS, "ズーム領域編集キャンセル完了 (矩形削除)")
+    def _validate_rect_properties(self, rect_props) -> bool:
+        """矩形プロパティのバリデーション"""
+        if rect_props is None or rect_props[2] <= 0 or rect_props[3] <= 0:
+            self.logger.log(LogLevel.INFO, "角判定不可: 矩形プロパティ無効またはサイズゼロ")
+            return False
+        return True
 
-    def cancel_zoom(self):
-        """ズーム確定操作自体をキャンセルする"""
-        self.event_handler.clear_edit_history() # 履歴クリアを追加
-        self.rect_manager.delete_rect() # 存在する場合、矩形も削除
-        self.invalidate_rect_cache()
-        self.logger.log(LogLevel.SUCCESS, "ズーム確定キャンセル：コールバック呼出し")
-        self.on_zoom_cancel() # MainWindow の on_zoom_cancel を呼出す
+    def _handle_zoom_confirmation(self, x, y, w, h, rotation_angle):
+        """ズーム確定の実際の処理"""
+        self.event_handler.clear_edit_history()
+        self.logger.log(LogLevel.CALL, "ズーム確定：コールバック呼出し", {
+            "x": x, "y": y, "w": w, "h": h, "angle": rotation_angle
+        })
+        self.on_zoom_confirm(x, y, w, h, rotation_angle)
+        self._cleanup_after_zoom()
 
-    def reset(self):
-        """ZoomSelector の状態をリセット（描画リセットボタンから呼ばれる）"""
-        self.event_handler.clear_edit_history() # 履歴クリアを追加
+    def _cleanup_after_zoom(self):
+        """ズーム後のクリーンアップ処理"""
         self.rect_manager.delete_rect()
         self.invalidate_rect_cache()
-        self.state_handler.update_state(ZoomState.NO_RECT, {"action": "リセット"})
-        self.event_handler.reset_internal_state() # EventHandler の内部状態もリセット
         self.cursor_manager.set_default_cursor()
-        # reset 時には MainWindow 側で再描画が実行される
+        self.event_handler.reset_internal_state()
+
+    def cancel_zoom(self):
+        """ズーム確定操作をキャンセル"""
+        self._cleanup_zoom()
+        self.logger.log(LogLevel.SUCCESS, "ズーム確定キャンセル：コールバック呼出し")
+        self.on_zoom_cancel()
+
+    def reset(self):
+        """ZoomSelectorの状態をリセット"""
+        self._cleanup_zoom()
+        self.state_handler.update_state(ZoomState.NO_RECT, {"action": "リセット"})
+        self.event_handler.reset_internal_state()
+        self.cursor_manager.set_default_cursor()
+
+    def _cleanup_zoom(self):
+        """共通のクリーンアップ処理"""
+        self.event_handler.clear_edit_history()
+        self.rect_manager.delete_rect()
+        self.invalidate_rect_cache()
 
     def invalidate_rect_cache(self):
         """ズーム領域のキャッシュを無効化"""
         if self._cached_rect_patch is not None:
-             self.logger.log(LogLevel.DEBUG, "ズーム領域キャッシュ無効化開始")
-             self._cached_rect_patch = None
+            self.logger.log(LogLevel.DEBUG, "ズーム領域キャッシュ無効化")
+            self._cached_rect_patch = None
 
     def pointer_near_corner(self, event) -> Optional[int]:
         """マウスカーソルに近い角の判定
-        - 近い角がある場合は、その角のインデックス (0-3) を返す
-
+        
         Args:
-            event (MouseEvent): マウスイベント
-
+            event: MouseEvent オブジェクト
+            
         Returns:
             Optional[int]: 近い角のインデックス (0-3) または None
         """
-        validation_result = self.validator.validate_event(event, self.ax, self.logger)
-        if not validation_result.is_fully_valid:
+        if not self._validate_event(event):
             return None
-
-        # 回転後の角座標を取得
+            
         rotated_corners = self.rect_manager.get_rotated_corners()
         if rotated_corners is None:
             self.logger.log(LogLevel.INFO, "角判定不可: 回転後の角座標なし")
             return None
-
-        # 許容範囲の計算
+            
         rect_props = self.rect_manager.get_properties()
-        if rect_props is None or rect_props[2] <= 0 or rect_props[3] <= 0:
-             self.logger.log(LogLevel.INFO, "角判定不可: 矩形プロパティ無効またはサイズゼロ")
-             return None
+        if not self._validate_rect_properties(rect_props):
+            return None
+            
         width, height = rect_props[2], rect_props[3]
         min_dim = min(width, height)
-        # 画面上のピクセル単位での許容範囲を考慮した方が良い場合もある
-        # 例: tol_pixels = 5
-        # disp_coords = self.ax.transData.transform([(0,0), (min_dim, min_dim)])
-        # dist_pixels = np.sqrt(((disp_coords[1] - disp_coords[0])**2).sum())
-        # tol = tol_pixels * min_dim / dist_pixels if dist_pixels > 0 else 0.02
+        
         tol = max(0.1 * min_dim, 0.02) # 短辺の10% or 最小許容範囲 (データ座標系)
-#        self.logger.log(LogLevel.DEBUG, f"角判定の許容範囲(tol): {tol:.4f}")
-
-        # 各回転後コーナーとの距離を計算
+        
         for i, (corner_x, corner_y) in enumerate(rotated_corners):
             if event.xdata is None or event.ydata is None: continue # 型ガード
             distance = np.hypot(event.xdata - corner_x, event.ydata - corner_y)
             if distance < tol:
-#                self.logger.log(LogLevel.DEBUG, f"カーソルに近い角 {i} (距離: {distance:.3f} < 許容範囲: {tol:.3f})")
                 return i # 近い角のインデックスを返す
         return None # どの角にも近くない
+
+    def _validate_event(self, event) -> bool:
+        """イベントのバリデーション"""
+        validation_result = self.validator.validate_event(event, self.ax, self.logger)
+        return validation_result.is_fully_valid
+
+    def _validate_rect_properties(self, rect_props) -> bool:
+        """矩形プロパティのバリデーション"""
+        if rect_props is None or rect_props[2] <= 0 or rect_props[3] <= 0:
+            self.logger.log(LogLevel.INFO, "角判定不可: 矩形プロパティ無効またはサイズゼロ")
+            return False
+        return True
