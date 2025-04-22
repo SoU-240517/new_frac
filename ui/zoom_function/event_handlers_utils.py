@@ -115,14 +115,14 @@ class EventHandlersUtils:
         elif len(self.core.edit_history) == 1: # 矩形作成直後などの場合
             self.core.logger.log(LogLevel.DEBUG, "ESC -> Undo履歴なし: ズーム領域編集キャンセル実行")
             self.clear_edit_history() # 履歴クリア
-            self.core.zoom_selector.cancel_rect() # 矩形削除を依頼 (ZoomSelector側)
+            self.core.zoom_selector.cancel_zoom() # ズームキャンセルを依頼 (ZoomSelector側)
             self.reset_internal_state() # 内部状態リセット (ここで再度履歴クリアされる)
             self.core.state_handler.update_state(ZoomState.NO_RECT, {"action": "ESCによる編集キャンセル"})
             self.core.cursor_manager.set_default_cursor()
             self.core.canvas.draw_idle()
         else: # 履歴 0 の場合 (通常 EDIT ではないはず)
             self.core.logger.log(LogLevel.WARNING, "履歴 0：キャンセル試行")
-            self.core.zoom_selector.cancel_rect() # 矩形削除を依頼
+            self.core.zoom_selector.cancel_zoom() # ズームキャンセルを依頼
             self.reset_internal_state()
             self.core.state_handler.update_state(ZoomState.NO_RECT, {"action": "ESCによる編集キャンセル(履歴0)"})
             self.core.cursor_manager.set_default_cursor()
