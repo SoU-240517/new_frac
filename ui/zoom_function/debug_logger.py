@@ -46,7 +46,7 @@ class DebugLogger:
             message: str,
             context: Optional[Dict[str, Any]] = None,
             force: bool = False,
-            stacklevel: int = 2
+            stacklevel: int = 3
     ) -> None:
         """ログ出力の内部実装
         Args:
@@ -54,7 +54,7 @@ class DebugLogger:
             message (str): ログメッセージ
             context (Optional[Dict[str, Any]], optional): コンテキスト情報. Defaults to None.
             force (bool, optional): 強制的にログを出力するかどうか. Defaults to False.
-            stacklevel (int, optional): スタックレベル. Defaults to 2.
+            stacklevel (int, optional): スタックレベル. Defaults to 3.
         """
         try:
             caller_info = self._get_caller_info(stacklevel)
@@ -62,7 +62,7 @@ class DebugLogger:
             color = self._get_color(level)
             level_name = level.name
 
-            log_prefix = f"[{elapsed_time:.3f}s] {level_name}:"
+            log_prefix = f"[{elapsed_time:.3f}s] {level_name}"
             location = f"[{caller_info[0]}: {caller_info[1]}:{caller_info[2]}]"
 
             escaped_message = escape(message)
