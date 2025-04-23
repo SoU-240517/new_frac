@@ -1,7 +1,7 @@
 import inspect
 import os
 import time
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Tuple
 from rich import print as rprint
 from rich.markup import escape
 from enum import Enum
@@ -12,55 +12,102 @@ class DebugLogger:
     - 役割:
         - ログ出力
     """
-    def __init__(self, debug_enabled=True):
+
+    def __init__(self, debug_enabled: bool = True):
+        """DebugLogger クラスのコンストラクタ（親: main）
+        Args:
+            debug_enabled (bool, optional): デバッグログ出力を有効化するかどうか. Defaults to True.
+        """
         self.debug_enabled = debug_enabled
         self.start_time = time.time()
-        logger_dir = os.path.dirname(__file__)
-        self.project_root = os.path.abspath(os.path.join(logger_dir, '..', '..'))
-        # 自分自身の初期化ログを出力 (呼出し元情報は __init__ 自身になる)
-        self._log_internal(LogLevel.INIT, "DebugLogger", force=True, stacklevel=1)
+        self.project_root = self._get_project_root()
+        self._log_internal(LogLevel.INIT, "DebugLogger", force=True)
 
-    def log(
-            self, level: LogLevel,
+    def log(self,
+            level: LogLevel,
             message: str,
             context: Optional[Dict[str, Any]] = None,
-            force: bool = False):
-        """ ログを出力 (外部び出し用) """
+            force: bool = False
+    ) -> None:
+        """ ログを出力（外部び出し用）
+        Args:
+            level (LogLevel): ログレベル
+            message (str): ログメッセージ
+            context (Optional[Dict[str, Any]], optional): コンテキスト情報. Defaults to None.
+            force (bool, optional): 強制的にログを出力するかどうか. Defaults to False.
+        """
         if not self.debug_enabled and not force and level == LogLevel.DEBUG:
             return
-        # 呼出し元を正しく特定するため stacklevel=2
-        self._log_internal(level, message, context, force, stacklevel=2)
+        self._log_internal(level, message, context, force)
 
     def _log_internal(
-            self, level: LogLevel,
+            self,
+            level: LogLevel,
             message: str,
             context: Optional[Dict[str, Any]] = None,
             force: bool = False,
-            stacklevel: int = 1): # スタックレベルを指定可能にする
-        """ ログ出力の内部実装 """
-        # 呼出し元の情報を取得
-        caller_frame_record = None # 呼出し元のフレーム情報
-        file_path = "unknown"
-        line_no = 0
-        func_name = "unknown"
+            stacklevel: int = 2
+    ) -> None:
+        """ログ出力の内部実装
+        Args:
+            level (LogLevel): ログレベル
+            message (str): ログメッセージ
+            context (Optional[Dict[str, Any]], optional): コンテキスト情報. Defaults to None.
+            force (bool, optional): 強制的にログを出力するかどうか. Defaults to False.
+            stacklevel (int, optional): スタックレベル. Defaults to 2.
+        """
+        try:
+            caller_info = self._get_caller_info(stacklevel)
+            elapsed_time = time.time() - self.start_time
+            color = self._get_color(level)
+            level_name = level.name
+
+            log_prefix = f"[{elapsed_time:.3f}s] {level_name}:"
+            location = f"[{caller_info[0]}: {caller_info[1]}:{caller_info[2]}]"
+
+            escaped_message = escape(message)
+            escaped_location = escape(location)
+
+            if context:
+                formatted_context = self._format_context(context)
+                log_message = f"[grey50]{log_prefix}[/grey50][{color}] {escaped_message} | {formatted_context} [/{color}][grey50]{escaped_location}[/grey50]"
+            else:
+                log_message = f"[grey50]{log_prefix}[/grey50][{color}] {escaped_message} [/{color}][grey50]{escaped_location}[/grey50]"
+
+            rprint(log_message)
+
+        except Exception as e:
+            print(f"[DebugLogger Error] Failed to log: {e}")
+
+    def _get_caller_info(self, stacklevel: int) -> Tuple[str, str, int]:
+        """呼出し元の情報を取得
+        Args:
+            stacklevel (int): スタックレベル
+        Returns:
+            Tuple[str, str, int]: 呼出し元の関数名、ファイル名、行番号
+        """
         try:
             stack = inspect.stack()
             if len(stack) > stacklevel:
-                 caller_frame_record = stack[stacklevel] # stacklevel番目のフレーム情報を取得
-            if caller_frame_record:
-                abs_path = os.path.abspath(caller_frame_record.filename)
+                frame = stack[stacklevel]
+                abs_path = os.path.abspath(frame.filename)
                 try:
                     relative_path = os.path.relpath(abs_path, self.project_root)
                     file_path = relative_path.replace('\\', '/')
                 except ValueError:
                     file_path = os.path.basename(abs_path)
-                line_no = caller_frame_record.lineno
-                func_name = caller_frame_record.function # 関数名を取得
-        except Exception as e:
-             print(f"[DebugLogger Error] Failed to get caller info: {e}")
-        finally:
-            pass
-        elapsed_time = time.time() - self.start_time
+                return frame.function, file_path, frame.lineno
+            return "unknown", "unknown", 0
+        except Exception:
+            return "unknown", "unknown", 0
+
+    def _get_color(self, level: LogLevel) -> str:
+        """ログレベルに応じた色を取得
+        Args:
+            level (LogLevel): ログレベル
+        Returns:
+            str: 色名
+        """
         color_map = {
             LogLevel.INIT: "grey50",
             LogLevel.DEBUG: "grey50",
@@ -71,29 +118,29 @@ class DebugLogger:
             LogLevel.ERROR: "red",
             LogLevel.CRITICAL: "bold red",
         }
-        try:
-            color = color_map.get(level, "white")
-            level_name = level.name
-        except AttributeError as e:
-            color = "white"
-            level_name = "UNKNOWN_LEVEL"
-        log_prefix = f"[{elapsed_time:.3f}s] {level_name}:"
-        location = f"[{func_name}: {file_path}:{line_no}]"
-        escaped_message = escape(message)
-        escaped_location = escape(location)
-        log_message = f"[grey50]{log_prefix}[/grey50][{color}] {escaped_message} [/{color}][grey50]{escaped_location}[/grey50]"
-        if context:
-            log_message = f"[grey50]{log_prefix}[/grey50][{color}] {escaped_message} | {self._format_context(context)} [/{color}][grey50]{escaped_location}[/grey50]"
-        rprint(log_message)
+        return color_map.get(level, "white")
+
+    def _get_project_root(self) -> str:
+        """プロジェクトルートのパスを取得
+        Returns:
+            str: プロジェクトルートのパス
+        """
+        logger_dir = os.path.dirname(__file__)
+        return os.path.abspath(os.path.join(logger_dir, '..', '..'))
 
     def _format_context(self, context: Dict[str, Any]) -> str:
-        """ コンテキスト情報を整形 """
-        items = [] # 空のリスト items を初期化
-        for k, v in context.items(): # context のキー（k）と値（v）を1つずつ取得し、それぞれ処理する
-            if isinstance(v, float): # 値 v が浮動小数点型（float）の場合
-                items.append(f"{k} = {v:.3f}") # 小数点以下3桁までのフォーマットに整形
-            elif isinstance(v, Enum): # 値 v が列挙型（Enum）の場合
-                items.append(f"{k} = {v.name}") # v.name プロパティ（列挙値の名前）を使用して整形
+        """コンテキスト情報を整形
+        Args:
+            context (Dict[str, Any]): コンテキスト情報
+        Returns:
+            str: 整形後のコンテキスト情報
+        """
+        items = []
+        for k, v in context.items():
+            if isinstance(v, float):
+                items.append(f"{k} = {v:.3f}")
+            elif isinstance(v, Enum):
+                items.append(f"{k} = {v.name}")
             else:
-                items.append(f"{k} = {v}") # 浮動小数点型や列挙型でない場合、そのまま文字列として追加
-        return ", ".join(items) # items リスト内のすべての文字列をカンマ区切りで結合、1つの文字列として返す
+                items.append(f"{k} = {v}")
+        return ", ".join(items)
