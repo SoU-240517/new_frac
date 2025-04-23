@@ -79,7 +79,7 @@ def _create_fractal_grid(params: dict, super_resolution_x: int, super_resolution
 
     rotation_deg = params.get("rotation", 0.0)
     if rotation_deg != 0:
-        logger.log(LogLevel.DEBUG, f"回転適用: {rotation_deg} 度")
+        logger.log(LogLevel.DEBUG, f"回転適用: {rotation_deg:.2f} 度")
         rotation_rad = np.radians(rotation_deg)
         Z -= complex(center_x, center_y)
         rotation_operator = np.exp(1j * rotation_rad)

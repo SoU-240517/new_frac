@@ -97,7 +97,7 @@ class EventHandlersPrivate:
             self.core.rect_manager.edge_change_editing()
             fixed_corner_idx = 3 - corner_index
             self.core.fixed_corner_pos = rotated_corners[fixed_corner_idx] # 親のインスタンス変数に固定角の座標を保存
-            self.core.logger.log(LogLevel.DEBUG, f"リサイズ開始パラメータ: 固定角(回転後)={self.core.fixed_corner_pos}")
+            self.core.logger.log(LogLevel.DEBUG, f"リサイズ開始パラメータ: 固定角(回転後)={self.core.fixed_corner_pos[0]:.2f}, {self.core.fixed_corner_pos[1]:.2f}")
             self.core.cursor_manager.cursor_update(
                 event,
                 state=self.core.state_handler.state,
@@ -124,7 +124,7 @@ class EventHandlersPrivate:
             self.core.move_start_x, self.core.move_start_y = event.xdata, event.ydata
             # 親のインスタンス変数に矩形開始位置を保存
             self.core.rect_start_pos = (rect_props[0], rect_props[1])
-            self.core.logger.log(LogLevel.DEBUG, f"移動開始パラメータ: マウス=({self.core.move_start_x:.2f}, {self.core.move_start_y:.2f}), 矩形左下={self.core.rect_start_pos}")
+            self.core.logger.log(LogLevel.DEBUG, f"移動開始パラメータ: マウス=({self.core.move_start_x:.2f}, {self.core.move_start_y:.2f}), 矩形左下=({self.core.rect_start_pos[0]:.2f}, {self.core.rect_start_pos[1]:.2f})")
             self.core.cursor_manager.cursor_update(
                 event,
                 state=self.core.state_handler.state,
