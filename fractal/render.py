@@ -9,7 +9,7 @@ from ui.zoom_function.enums import LogLevel
 - 役割:
     - 設定されたパラメータでフラクタルを描画
 """
-def _calculate_dynamic_resolution(width, base_res=600, min_res=300, max_res=1200):
+def _calculate_dynamic_resolution(width, base_res=600, min_res=400, max_res=1200):
     """ズームレベルに応じて描画解像度を動的に計算
     Args:
         width (float): ウィンドウの幅（データ座標系）。ズームレベルの指標として使用。
@@ -139,7 +139,9 @@ def render_fractal(params: dict, logger: DebugLogger, cache=None) -> np.ndarray:
 
     # アンチエイリアシング設定
     zoom_level = 4.0 / params.get("width", 4.0)
-    samples_per_pixel = 2 if zoom_level < 1.0 else 4
+    # アンチエイリアシング設定: 全体表示(widthが大きい)でも一定のサンプル数を保つ
+    # ズームレベルが0.8より小さい場合（ある程度ズームアウトしている場合）も samples_per_pixel=4 とする
+    samples_per_pixel = 2 if zoom_level < 0.8 else 4
     logger.log(LogLevel.SUCCESS, f"アンチエイリアシング設定完了：samples_per_pixel={samples_per_pixel}")
 
     # 高解像度グリッドサイズ

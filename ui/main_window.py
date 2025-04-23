@@ -41,9 +41,13 @@ class MainWindow:
         self._setup_components()
 
         self.zoom_params = {
-            "center_x": 0.0, "center_y": 0.0,
-            "width": 4.0, "height": 4.0, "rotation": 0.0
+            "center_x": 0.0, # 中心X座標を調整
+            "center_y": 0.0,  # 中心Y座標
+            "width": 5.5,     # 幅を広くして多くのフラクタルを表示（16:9考慮）
+            "height": 5.5 * (9/16), # 幅に合わせて高さを設定（不要だがconsistencyのために残す）
+            "rotation": 0.0   # 回転角
         }
+
         self.prev_zoom_params = None
 
         self.is_drawing = False
@@ -245,11 +249,15 @@ class MainWindow:
     def reset_zoom(self):
         """操作パネルの「描画リセット」ボタン押下時の処理"""
         self.zoom_params = {
-            "center_x": 0.0, "center_y": 0.0,
-            "width": 4.0, "height": 4.0, "rotation": 0.0
+            "center_x": 0.0, # 中心X座標を調整
+            "center_y": 0.0,  # 中心Y座標
+            "width": 5.5,     # 幅を広くして多くのフラクタルを表示（16:9考慮）
+            "height": 5.5 * (9/16), # 幅に合わせて高さを設定（不要だがconsistencyのために残す）
+            "rotation": 0.0   # 回転角
         }
+
         self.prev_zoom_params = None
-        self.parameter_panel.max_iter_var.set("100")
+        self.parameter_panel.max_iter_var.set("500")
         self.logger.log(LogLevel.CALL, "ZoomSelector の状態リセット開始")
         self.fractal_canvas.reset_zoom_selector()
         self.update_fractal()
