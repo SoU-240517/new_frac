@@ -5,24 +5,41 @@ from fractal.fractal_types import julia, mandelbrot
 from ui.zoom_function.debug_logger import DebugLogger
 from ui.zoom_function.enums import LogLevel
 
-"""フラクタル画像を生成する主要ロジック部分
-- 役割:
-    - 設定されたパラメータでフラクタルを描画
+"""フラクタル画像生成エンジン
+このモジュールはフラクタル画像の生成を担当する
+主な機能：
+1. 動的解像度制御
+   - ズームレベルに応じて最適な解像度を自動調整
+   - パフォーマンスと品質のバランスを取る
+2. フラクタル計算
+   - Mandelbrot集合とJulia集合の生成
+   - 高精度な複素数計算
+3. レンダリング最適化
+   - スーパーサンプリングによる高品質画像生成
+   - パフォーマンス最適化された計算
 """
+
 def _calculate_dynamic_resolution(width, base_res=600, min_res=400, max_res=1200):
     """ズームレベルに応じて描画解像度を動的に計算
+    - 解像度は対数スケールで調整され、ズームインするほど高解像度になる
+    - 計算された解像度は実際の描画時にさらにサンプリング倍率をかけた高解像度で計算され、
+    - 後で縮小されて最終画像が生成される
     Args:
-        width (float): ウィンドウの幅（データ座標系）。ズームレベルの指標として使用。
-                       widthが小さいほどズームインしており、高解像度が必要。
-        base_res (int, optional): 基準となる解像度. Defaults to 600.
-        min_res (int, optional): 最小解像度. Defaults to 300.
+        width (float): ウィンドウの幅（データ座標系）
+            - ズームレベルの指標として使用
+            - widthが小さいほどズームイン
+            - 例: width=4.0が標準ズーム（全体表示）
+        base_res (int, optional): 基準解像度. Defaults to 600.
+        min_res (int, optional): 最小解像度. Defaults to 400.
         max_res (int, optional): 最大解像度. Defaults to 1200.
     Returns:
-        int: 計算された描画解像度（一辺のピクセル数）。実際にはこれにsamples_per_pixelをかけた高解像度で計算し、後で縮小します。
+        int: 計算された描画解像度（一辺のピクセル数）
+            - 実際の描画時はこれにsamples_per_pixelをかけて使用
+            - 最終的な画像はこの解像度に縮小される
     """
     # 対数スケールでズームファクターを計算
     # width=4.0 を基準（ズームなし）とすると log(5) あたり
-    # width が小さくなる（ズームイン）ほど zoom_factor は大きくなりる
+    # width が小さくなる（ズームイン）ほど zoom_factor は大きくなる
     # +1.0 は width が非常に小さい場合に log(ほぼ0) にならないようにするため
     zoom_factor = np.log(5.0 / width + 1.0) # 調整可能なマジックナンバー (5.0)
 
@@ -35,12 +52,17 @@ def _calculate_dynamic_resolution(width, base_res=600, min_res=400, max_res=1200
 def _create_fractal_grid(params: dict, super_resolution_x: int, super_resolution_y: int, logger: DebugLogger) -> np.ndarray:
     """フラクタルの計算用グリッドを作成
     Args:
-        params (dict): パラメータ辞書
-        super_resolution_x (int): 水平方向の解像度
-        super_resolution_y (int): 垂直方向の解像度
-        logger (DebugLogger): ログ出力クラス
+        params (dict): フラクタルのパラメータ辞書
+            - center_x: 描画中心のX座標
+            - center_y: 描画中心のY座標
+            - width: 描画範囲の幅
+        super_resolution_x (int): 水平方向の解像度（スーパーサンプリング用）
+        super_resolution_y (int): 垂直方向の解像度（スーパーサンプリング用）
+        logger (DebugLogger): デバッグログの出力用クラス
     Returns:
         np.ndarray: 複素数グリッド
+            - サイズ: (super_resolution_y, super_resolution_x)
+            - 各要素は複素数で、フラクタルの計算に使用される
     """
     center_x = params.get("center_x", 0.0)
     center_y = params.get("center_y", 0.0)
@@ -72,13 +94,22 @@ def _compute_fractal(
     params: dict,
     logger: DebugLogger
 ) -> dict:
-    """フラクタルを計算
+    """フラクタルを計算する
     Args:
         Z (np.ndarray): 複素数グリッド
-        params (dict): パラメータ辞書
-        logger (DebugLogger): ログ出力クラス
+        params (dict): フラクタルのパラメータ辞書
+            - fractal_type: フラクタルの種類 (Mandelbrot or Julia)
+            - c_real: Julia集合の場合のcの実部
+            - c_imag: Julia集合の場合のcの虚部
+            - z_real: Mandelbrot集合の場合のzの実部
+            - z_imag: Mandelbrot集合の場合のzの虚部
+            - max_iterations: 最大反復回数
+        logger (DebugLogger): デバッグログの出力用クラス
     Returns:
-        dict: 計算結果（iterations, mask, z_vals）
+        dict: 計算結果
+            - iterations: 反復回数の配列
+            - mask: フラクタル集合に属する点のマスク配列
+            - z_vals: フラクタル集合に属する点の複素数値配列
     """
     start_time = time.perf_counter()
 
@@ -105,7 +136,7 @@ def _downsample_image(
         high_res_image (np.ndarray): 高解像度画像
         resolution (int): 目標解像度
         samples_per_pixel (int): 1ピクセルあたりのサンプル数
-        logger (DebugLogger): ログ出力クラス
+        logger (DebugLogger): デバッグログの出力用クラス
     Returns:
         np.ndarray: ダウンサンプリングされた画像
     """
@@ -127,8 +158,18 @@ def _downsample_image(
 def render_fractal(params: dict, logger: DebugLogger, cache=None) -> np.ndarray:
     """フラクタルを描画
     Args:
-        params (dict): パラメータ辞書
-        logger (DebugLogger): ログ出力クラス
+        params (dict): フラクタルのパラメータ辞書
+            - fractal_type: フラクタルの種類 (Mandelbrot or Julia)
+            - c_real: Julia集合の場合のcの実部
+            - c_imag: Julia集合の場合のcの虚部
+            - z_real: Mandelbrot集合の場合のzの実部
+            - z_imag: Mandelbrot集合の場合のzの虚部
+            - max_iterations: 最大反復回数
+            - center_x: 描画中心のX座標
+            - center_y: 描画中心のY座標
+            - width: 描画範囲の幅
+            - rotation: 回転角度
+        logger (DebugLogger): デバッグログの出力用クラス
         cache (FractalCache): キャッシュクラス
     Returns:
         np.ndarray: フラクタル画像 (uint8 [0, 255] RGBA 配列)
@@ -142,7 +183,7 @@ def render_fractal(params: dict, logger: DebugLogger, cache=None) -> np.ndarray:
     # アンチエイリアシング設定: 全体表示(widthが大きい)でも一定のサンプル数を保つ
     # ズームレベルが0.8より小さい場合（ある程度ズームアウトしている場合）も samples_per_pixel=4 とする
     samples_per_pixel = 2 if zoom_level < 0.8 else 4
-    logger.log(LogLevel.SUCCESS, f"アンチエイリアシング設定完了：samples_per_pixel={samples_per_pixel}")
+    logger.log(LogLevel.SUCCESS, f"アンチエイリアシング設定完了: samples_per_pixel={samples_per_pixel}")
 
     # 高解像度グリッドサイズ
     super_resolution_x = resolution * samples_per_pixel

@@ -7,12 +7,40 @@ from coloring import gradient
 from ui.zoom_function.debug_logger import DebugLogger
 from ui.zoom_function.enums import LogLevel
 
+"""フラクタル画像の着色処理エンジン
+このモジュールはフラクタル画像の着色処理を担当する
+主な機能：
+1. 複数の着色アルゴリズムの実装
+   - 反復回数ベースの着色
+   - スムージングカラーリング
+   - ヒストグラム平坦化
+   - 距離カラーリング
+   - 角度カラーリング
+   - ポテンシャル関数法
+2. パフォーマンス最適化
+   - 高速スムージングアルゴリズム
+   - キャッシュ機能
+   - ベクトル化された計算
+3. 品質最適化
+   - 正規化処理
+   - カラーマップの適用
+   - 発散/非発散部分の別々の着色
+"""
+
 class ColorAlgorithmError(Exception):
-    """着色アルゴリズム関連のエラー"""
+    """着色アルゴリズム関連のエラーを処理する例外クラス
+    この例外は、着色処理中に発生するエラーをキャッチするために使用される
+    主に以下のケースで発生：
+    - 不正な着色アルゴリズムの指定
+    - 計算値の範囲エラー
+    - パラメータの不整合
+    """
     pass
 
 class ColorCache:
-    """フラクタル画像をキャッシュするクラス
+    """フラクタル画像のキャッシュ管理クラス
+    このクラスはフラクタル画像のキャッシュを管理し、
+    既に計算された画像の再利用を可能にする
     Attributes:
         cache (dict): キャッシュデータを保持する辞書
         max_size (int): キャッシュの最大サイズ
@@ -62,20 +90,22 @@ class ColorCache:
             del self.cache[first_key]
         self.cache[key] = {'params': params, 'image': data}
 
-def _normalize_and_color(
-    values: np.ndarray,
-    cmap: Colormap,
-    vmin: float = None,
-    vmax: float = None
-) -> np.ndarray:
-    """値を正規化して着色する
+def _normalize_and_color(values: np.ndarray, cmap: Colormap, vmin: float = None, vmax: float = None) -> np.ndarray:
+    """値を正規化して着色
     Args:
         values (np.ndarray): 着色対象の値
         cmap (Colormap): 色マップ
-        vmin (float): 正規化の最小値
-        vmax (float): 正規化の最大値
+        vmin (float): 正規化の最小値（指定がない場合は自動計算）
+        vmax (float): 正規化の最大値（指定がない場合は自動計算）
     Returns:
         np.ndarray: 着色されたRGBA配列
+            - 形状: (height, width, 4)
+            - 値の範囲: 0-255
+            - RGBA形式（R, G, B, A）
+    Notes:
+        - 自動正規化の場合、最小値と最大値はデータから計算される
+        - RGBA形式の配列は、最後の次元で4つの値（R, G, B, A）を持つ
+        - 色マップはmatplotlibのColormapを使用
     """
     if vmin is None:
         vmin = np.min(values)
@@ -85,18 +115,25 @@ def _normalize_and_color(
     norm = Normalize(vmin=vmin, vmax=vmax)
     return cmap(norm(values)) * 255.0
 
-def _smooth_iterations(
-    z: np.ndarray,
-    iters: np.ndarray,
-    method: str = 'standard'
-) -> np.ndarray:
-    """スムージング処理を実行
+def _smooth_iterations(z: np.ndarray, iters: np.ndarray, method: str = 'standard') -> np.ndarray:
+    """反復回数のスムージング処理を実行
     Args:
         z (np.ndarray): 複素数配列
         iters (np.ndarray): 反復回数配列
-        method (str): スムージング方法 ('standard', 'fast', 'exponential')
+        method (str): スムージング方法
+            - 'standard': 標準的なスムージング
+            - 'fast': 高速なスムージング
+            - 'exponential': 指数的なスムージング
     Returns:
         np.ndarray: スムージングされた反復回数
+            - 形状: (height, width)
+            - 値の範囲: 0-無限大
+    Raises:
+        ColorAlgorithmError: 無効なスムージング方法が指定された場合
+    Notes:
+        - スムージングはフラクタルの境界線を滑らかにするために使用
+        - 数値の不安定性を防ぐため、np.errstateを使用
+        - 各スムージング方法は異なる視覚効果をもたらす
     """
     with np.errstate(invalid='ignore', divide='ignore'):
         if method == 'standard':
@@ -112,18 +149,28 @@ def _smooth_iterations(
         else:
             raise ColorAlgorithmError(f"Unknown smoothing method: {method}")
 
-def apply_coloring_algorithm(
-    results: Dict,
-    params: Dict,
-    logger: DebugLogger
-) -> np.ndarray:
+def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger) -> np.ndarray:
     """フラクタルの着色アルゴリズムを適用
     Args:
         results (dict): フラクタル計算結果
+            - iterations: 反復回数配列
+            - mask: フラクタル集合に属する点のマスク
+            - z_vals: 複素数値配列
         params (dict): 着色パラメータ
+            - diverge_algorithm: 発散部の着色アルゴリズム
+            - diverge_colormap: 発散部のカラーマップ
+            - non_diverge_colormap: 非発散部のカラーマップ
+            - max_iterations: 最大反復回数
         logger (DebugLogger): デバッグログ用ロガー
     Returns:
         np.ndarray: 着色されたRGBA配列
+            - 形状: (height, width, 4)
+            - 値の範囲: 0-255
+            - RGBA形式（R, G, B, A）
+    Notes:
+        - 発散部と非発散部で異なる着色を適用
+        - キャッシュ機能により、同じパラメータでの再計算を避ける
+        - 複数の着色アルゴリズムをサポート
     """
     cache = ColorCache()
     cached = cache.get_cache(params)
