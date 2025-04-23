@@ -2,21 +2,22 @@ import numpy as np
 from ui.zoom_function.debug_logger import DebugLogger
 from ui.zoom_function.enums import LogLevel
 
-def compute_julia(Z, C, max_iter, logger: DebugLogger):
+def compute_julia(Z, C, max_iter, logger: DebugLogger) -> dict:
     """ジュリア集合の計算
-
     Args:
         Z (np.ndarray): 初期値
         C (complex): 初期値
         max_iter (int): 最大反復回数
         logger (DebugLogger): ログ出力クラス
+    Returns:
+        dict: 計算結果
     """
     shape = Z.shape
     iterations = np.zeros(shape, dtype=int)
     z = Z.copy()
-    # 初期マスク：絶対値2以下の点
-    mask = np.abs(z) <= 2.0
+    mask = np.abs(z) <= 2.0 # 初期マスク：絶対値2以下の点
     z_vals = np.zeros(shape, dtype=complex)
+
     for i in range(max_iter):
         mask = np.abs(z) <= 2.0
         if not np.any(mask):
@@ -25,6 +26,7 @@ def compute_julia(Z, C, max_iter, logger: DebugLogger):
         iterations[mask & (np.abs(z) > 2.0)] = i + 1
         z_vals = z.copy()
     iterations[mask] = 0
+
     return {
         'iterations': iterations,
         'mask': mask,
