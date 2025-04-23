@@ -138,11 +138,11 @@ class EventHandler:
         """
         validation_result = self.validator.validate_event(event, self.zoom_selector.ax)
         if not (validation_result.is_in_axes and validation_result.has_coords):
-            self.logger.log(LogLevel.WARNING, "Axes外または座標無効のため処理中断")
+#            self.logger.log(LogLevel.WARNING, "Axes外または座標無効のため処理中断")
             return
 
         state = self.state_handler.state
-        # self.logger.log(LogLevel.DEBUG, f"状態取得完了：{state.name}")
+#        self.logger.log(LogLevel.DEBUG, f"状態取得完了：{state.name}")
 
         if state == ZoomState.CREATE:
             if event.button == MouseButton.LEFT:

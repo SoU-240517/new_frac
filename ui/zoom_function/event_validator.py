@@ -84,8 +84,6 @@ class EventValidator:
             result (ValidationResult): 検証結果を格納するオブジェクト
         """
         result.is_in_axes = (event.inaxes == ax)
-        if not result.is_in_axes:
-            self.logger.log(LogLevel.DEBUG, f"イベントが期待されるAxes外で発生: {event}")
 
     def _validate_button(self, event: MouseEvent, result: ValidationResult) -> None:
         """マウスボタン情報の検証
@@ -94,8 +92,6 @@ class EventValidator:
             result (ValidationResult): 検証結果を格納するオブジェクト
         """
         result.has_button = (event.button is not None)
-        if not result.has_button:
-            self.logger.log(LogLevel.DEBUG, f"マウスボタン情報なし: {event}")
 
     def _validate_coordinates(self, event: MouseEvent, result: ValidationResult) -> None:
         """座標情報の検証
@@ -104,5 +100,3 @@ class EventValidator:
             result (ValidationResult): 検証結果を格納するオブジェクト
         """
         result.has_coords = (event.xdata is not None and event.ydata is not None)
-        if not result.has_coords:
-            self.logger.log(LogLevel.DEBUG, f"イベント座標データ(xdata/ydata)なし: {event}")
