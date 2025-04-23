@@ -114,7 +114,7 @@ class EventHandler:
         Args:
             event: MouseEvent オブジェクト
         """
-        validation_result = self.validator.validate_event(event, self.zoom_selector.ax, self.logger)
+        validation_result = self.validator.validate_event(event, self.zoom_selector.ax)
         if not validation_result.is_press_valid:
             self.logger.log(LogLevel.ERROR, "基本検証失敗：処理中断")
             return
@@ -136,7 +136,7 @@ class EventHandler:
         Args:
             event: MouseEvent オブジェクト
         """
-        validation_result = self.validator.validate_event(event, self.zoom_selector.ax, self.logger)
+        validation_result = self.validator.validate_event(event, self.zoom_selector.ax)
         if not (validation_result.is_in_axes and validation_result.has_coords):
             self.logger.log(LogLevel.WARNING, "Axes外または座標無効のため処理中断")
             return
@@ -164,7 +164,7 @@ class EventHandler:
         Args:
             event: MouseEvent オブジェクト
         """
-        validation_result = self.validator.validate_event(event, self.zoom_selector.ax, self.logger)
+        validation_result = self.validator.validate_event(event, self.zoom_selector.ax)
         is_outside = not validation_result.has_coords # 軸外でのリリースか
 
         state = self.state_handler.state

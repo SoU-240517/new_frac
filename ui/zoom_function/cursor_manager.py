@@ -26,24 +26,20 @@ class CursorManager:
         - カーソルの状態を管理する
     """
 
-    def __init__(self, canvas_widget: tk.Widget, logger: Optional[DebugLogger]) -> None:
-        """CursorManager クラスのコンストラクタ（親: ZoomSelector）
+    def __init__(self, zoom_selector: 'ZoomSelector', logger: DebugLogger) -> None:
+        """CursorManagerの初期化
+        
         Args:
-            canvas_widget: Tkinter Canvas ウィジェット
-            logger: DebugLogger インスタンス
-        """
-        self.widget = canvas_widget
-        self.logger = logger
-        self._current_cursor = CURSORS['default']
-        self.zoom_selector: Optional['ZoomSelector'] = None
-
-    def set_zoom_selector(self, zoom_selector: 'ZoomSelector') -> None:
-        """ZoomSelector のインスタンスへの参照を設定
-        Args:
-            zoom_selector: ZoomSelector インスタンス
+            zoom_selector: ZoomSelectorインスタンス
+            logger: ログ出力用の DebugLogger インスタンス
         """
         self.zoom_selector = zoom_selector
-        self.logger.log(LogLevel.INIT, "CursorManager に ZoomSelector インスタンスへの参照を設定")
+        self.logger = logger
+        self.validator = EventValidator(logger)
+        self._current_cursor = CURSORS['default']
+        self._canvas_widget = getattr(zoom_selector.canvas, 'get_tk_widget', lambda: None)()
+        if self._canvas_widget is None:
+            raise ValueError("Tkinter ウィジェット取得不可：FigureCanvasTkAgg の使用を要確認")
 
     def cursor_update(self,
                       event: Optional[MouseEvent],
@@ -65,19 +61,19 @@ class CursorManager:
         if new_cursor != self._current_cursor:
             self._update_cursor(new_cursor, state)
 
-    def _should_update_cursor(self, event: Optional[MouseEvent]) -> bool:
-        """カーソル更新の必要性を判断する
+    def _should_update_cursor(self, event: MouseEvent) -> bool:
+        """カーソル更新が必要かを判定
+        
         Args:
             event: MouseEvent オブジェクト
+            
         Returns:
-            bool: カーソルを更新するかどうか
+            bool: カーソル更新が必要か
         """
-        if not event or not self.zoom_selector:
+        if not event.inaxes:
             return False
 
-        validation_result = EventValidator.validate_event(
-            event, self.zoom_selector.ax, self.logger
-        )
+        validation_result = self.validator.validate_event(event, self.zoom_selector.ax)
         return validation_result.is_in_axes and validation_result.has_coords
 
     def _determine_cursor(self,
@@ -116,12 +112,11 @@ class CursorManager:
             state: 現在の状態
         """
         try:
-            self.widget.config(cursor=new_cursor)
+            self._canvas_widget.config(cursor=new_cursor)
             self._current_cursor = new_cursor
             self.logger.log(LogLevel.SUCCESS, f"カーソル変更 to '{new_cursor}'", {"state": state.name})
         except tk.TclError as e:
-            self.logger.log(LogLevel.ERROR, f"カーソルの設定に失敗 '{new_cursor}': {e}")
-            self._current_cursor = CURSORS['default']
+            self.logger.log(LogLevel.ERROR, f"カーソル変更失敗: {e}", {"state": state.name})
 
     def set_default_cursor(self) -> None:
         """カーソルをデフォルトに戻す"""
