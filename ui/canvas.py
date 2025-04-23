@@ -1,4 +1,4 @@
-import numpy as np # extentの計算にnp.ndarrayが使われる可能性があるのでインポート
+import numpy as np
 import tkinter as tk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
@@ -7,21 +7,20 @@ from .zoom_function.enums import LogLevel
 from typing import Callable, Optional, Dict, Tuple
 
 class FractalCanvas:
-    """フラクタル描画用のキャンバスクラス
-
+    """FractalCanvas クラス
     キャンバスの主な機能：
     - MatplotlibのFigureをTkinterに埋め込み
     - フラクタル画像の表示と更新
     - ズーム機能の管理
     """
 
-    def __init__(
-        self, master: tk.Tk,
-        width: int, height: int,
-        logger: DebugLogger,
-        zoom_confirm_callback: Callable, zoom_cancel_callback: Callable) -> None:
-        """FractalCanvas クラスのコンストラクタ
-
+    def __init__(self,
+                master: tk.Tk,
+                width: int, height: int,
+                logger: DebugLogger,
+                zoom_confirm_callback: Callable, zoom_cancel_callback: Callable
+    ):
+        """FractalCanvas クラスのコンストラクタ（親: MainWindow）
         Args:
             master: Tkinterのルートウィンドウ
             width: キャンバスの幅（ピクセル）
@@ -39,30 +38,28 @@ class FractalCanvas:
 
     def _setup_figure(self, width: int, height: int) -> None:
         """MatplotlibのFigureとAxesの設定
-
         Args:
             width: キャンバスの幅（ピクセル）
             height: キャンバスの高さ（ピクセル）
         """
-        # Figureの初期設定
+        # Figure の初期設定
         self.fig = Figure(
             figsize=(width/100, height/100),
             dpi=100,
             facecolor='black'
         )
 
-        # Axesの設定
+        # Axes の設定
         self.ax = self.fig.add_subplot(111, facecolor='black')
         self.ax.axis('off')
 
-        # Tkinterキャンバスの設定
+        # Tkinter キャンバスの設定
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.parent)
         self.canvas.get_tk_widget().configure(bg='black')
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
     def set_zoom_callback(self, zoom_confirm_callback: Callable, zoom_cancel_callback: Callable) -> None:
         """ズーム確定・キャンセル時のコールバックを設定
-
         Args:
             zoom_confirm_callback: ズーム確定時のコールバック関数
             zoom_cancel_callback: ズームキャンセル時のコールバック関数
@@ -72,8 +69,10 @@ class FractalCanvas:
 
     def _setup_zoom(self) -> None:
         """ズーム機能の設定"""
+        # ZoomSelector を遅延インポート
         from ui.zoom_function.zoom_selector import ZoomSelector
-        self.logger.log(LogLevel.INIT, "ZoomSelector 初期化開始")
+
+        self.logger.log(LogLevel.INIT, "ZoomSelector クラスのインスタンスを作成")
         self.zoom_selector = ZoomSelector(
             self.ax,
             on_zoom_confirm=self.zoom_confirmed,
@@ -103,7 +102,7 @@ class FractalCanvas:
         """
         if self.zoom_confirm_callback:
             self.logger.log(
-                LogLevel.SUCCESS,
+                LogLevel.CALL,
                 "ズーム確定時のコールバック呼出し",
                 {"x": x, "y": y, "w": w, "h": h, "angle": angle}
             )
@@ -112,7 +111,7 @@ class FractalCanvas:
     def zoom_cancelled(self) -> None:
         """ズームキャンセル時の処理"""
         if hasattr(self, 'zoom_cancel_callback') and self.zoom_cancel_callback:
-            self.logger.log(LogLevel.SUCCESS, "ズームキャンセル時のコールバック呼出し")
+            self.logger.log(LogLevel.CALL, "ズームキャンセル時のコールバック呼出し")
             self.zoom_cancel_callback()
 
     def update_canvas(
@@ -136,7 +135,7 @@ class FractalCanvas:
         # 16:9のアスペクト比を維持
         width = params["width"]
         height = width * (9 / 16)
-        self.logger.log(LogLevel.DEBUG, f"描画範囲の計算: width={width:.4f}, height={height:.4f} (目標16:9)")
+        self.logger.log(LogLevel.SUCCESS, f"描画範囲の計算結果: width={width:.4f}, height={height:.4f} (目標16:9)")
 
         self.ax.set_aspect("auto")
 

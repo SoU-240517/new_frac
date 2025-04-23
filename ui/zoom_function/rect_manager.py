@@ -19,10 +19,10 @@ class RectManager:
     ASPECT_RATIO_W_H = 16 / 9 # 目標とするアスペクト比 (幅 / 高さ)
 
     def __init__(self,
-                 ax: Axes,
-                 logger: DebugLogger):
-        """ズーム領域管理のコンストラクタ（親: ZoomSelector）
-
+                ax: Axes,
+                logger: DebugLogger
+    ):
+        """RectManager クラスのコンストラクタ（親: ZoomSelector）
         Args:
             ax (Axes): Matplotlib の Axes オブジェクト
             logger (DebugLogger): ログ出力用の DebugLogger インスタンス
@@ -34,33 +34,29 @@ class RectManager:
 
     def get_rect(self) -> Optional[patches.Rectangle]:
         """現在のズーム領域を取得
-
         Args:
             ax (Axes): Matplotlib の Axes オブジェクト
-
         Returns:
             Optional[patches.Rectangle]: 現在のズーム領域の Rectangle オブジェクト
         """
         return self.rect
 
-    def setup_rect(self, x: float, y: float):
+    def setup_rect(self, x: float, y: float) -> None:
         """新しいズーム領域の初期設定 (設置サイズ 0：回転なし)
-
         Args:
             x (float): 矩形左上の x 座標
             y (float): 矩形左上の y 座標
         """
-        self.delete_rect() # 古い矩形を消す
+        self.delete_rect()
         self.rect = patches.Rectangle(
             (x, y), 0, 0,
             linewidth=1, edgecolor='gray', facecolor='none', linestyle='--', visible=True)
         self.ax.add_patch(self.rect)
-        self._angle = 0.0 # 角度リセット
+        self._angle = 0.0
         self.logger.log(LogLevel.SUCCESS, "初期のズーム領域設置完了", {"x": x, "y": y})
 
-    def setting_rect_size(self, start_x: float, start_y: float, current_x: float, current_y: float):
+    def setting_rect_size(self, start_x: float, start_y: float, current_x: float, current_y: float) -> None:
         """ズーム領域のサイズと位置を更新 (作成中：回転なし)
-
         Args:
             start_x (float): 矩形左上の x 座標
             start_y (float): 矩形左上の y 座標
@@ -101,7 +97,7 @@ class RectManager:
         self._angle = 0.0 # 作成中は回転しないので角度は0、変換も単純な transData
         self.rect.set_transform(self.ax.transData)
 
-    def edge_change_editing(self):
+    def edge_change_editing(self) -> None:
         """ズーム領域のエッジ変更 (灰色：破線)"""
         if not self.rect:
             self.logger.log(LogLevel.ERROR, "ズーム領域なし：エッジ変更不可")
@@ -110,7 +106,7 @@ class RectManager:
         self.rect.set_edgecolor('gray')
         self.rect.set_linestyle('--')
 
-    def edge_change_finishing(self):
+    def edge_change_finishing(self) -> None:
         """ズーム領域のエッジ変更 (白：実線)"""
         if not self.rect:
             self.logger.log(LogLevel.ERROR, "ズーム領域なし：エッジ変更不可")
@@ -119,9 +115,11 @@ class RectManager:
         self.rect.set_edgecolor('white')
         self.rect.set_linestyle('-')
 
-    def resize_rect_from_corners(self, fixed_x_rotated: float, fixed_y_rotated: float, current_x: float, current_y: float):
+    def resize_rect_from_corners(self,
+                                 fixed_x_rotated: float, fixed_y_rotated: float,
+                                 current_x: float, current_y: float
+                                 ) -> None:
         """固定された回転後の角と現在のマウス位置からズーム領域を更新 (リサイズ中、回転考慮)
-
         Args:
             fixed_x_rotated (float): 固定された回転後の x 座標
             fixed_y_rotated (float): 固定された回転後の y 座標
@@ -182,7 +180,7 @@ class RectManager:
 
         # サイズチェック
         if not self.is_valid_size(new_width, new_height):
-             self.logger.log(LogLevel.DEBUG, f"リサイズ中止：無効なサイズ w={new_width:.4f}, h={new_height:.4f}")
+             self.logger.log(LogLevel.INFO, f"リサイズ中止：無効なサイズ w={new_width:.4f}, h={new_height:.4f}")
              return # サイズが無効なら更新しない
 
         # --- 矩形プロパティを設定 (まだ回転は適用しない) ---
@@ -197,28 +195,24 @@ class RectManager:
 
     def is_valid_size(self, width: float, height: float) -> bool:
         """指定された幅と高さが有効か (最小サイズ以上か)
-
         Args:
             width (float): 幅
             height (float): 高さ
-
         Returns:
             bool: 幅と高さが最小サイズ以上か
         """
         is_valid = width >= self.MIN_WIDTH and height >= self.MIN_HEIGHT
         if not is_valid:
-            self.logger.log(LogLevel.DEBUG, f"無効なサイズ：w={width:.4f} (<{self.MIN_WIDTH}), h={height:.4f} (<{self.MIN_HEIGHT})")
+            self.logger.log(LogLevel.WARNING, f"無効なサイズ：w={width:.4f} (<{self.MIN_WIDTH}), h={height:.4f} (<{self.MIN_HEIGHT})")
         return is_valid
 
     def _temporary_creation(self, start_x: float, start_y: float, end_x: float, end_y: float) -> bool:
         """ズーム領域作成完了
-
         Args:
             start_x (float): 矩形左上の x 座標
             start_y (float): 矩形左上の y 座標
             end_x (float): 矩形右下の x 座標
             end_y (float): 矩形右下の y 座標
-
         Returns:
             bool: 作成成功か
         """
@@ -262,12 +256,11 @@ class RectManager:
         self.rect.set_edgecolor('white')
         self.rect.set_linestyle('-')
         self.rect.set_visible(True)
-        self.logger.log(LogLevel.INFO, "ズーム領域作成完了", {"x": x, "y": y, "w": width, "h": height})
+        self.logger.log(LogLevel.SUCCESS, "ズーム領域作成完了", {"x": x, "y": y, "w": width, "h": height})
         return True # Indicate success
 
     def move_rect_to(self, new_x: float, new_y: float):
         """ズーム領域を移動
-
         Args:
             new_x (float): 矩形左上の x 座標
             new_y (float): 矩形左上の y 座標
@@ -279,7 +272,7 @@ class RectManager:
         self.rect.set_xy((new_x, new_y)) # ズーム領域の基本位置を更新
         self._apply_rotation() # 現在の回転角度を再適用 (中心が変わるため)
 
-    def delete_rect(self):
+    def delete_rect(self) -> None:
         """ズーム領域を削除"""
         if self.rect:
             try:
@@ -297,11 +290,10 @@ class RectManager:
                 self.rect = None # 参照をクリア
                 self._angle = 0.0 # 角度もリセット
         else:
-            self.logger.log(LogLevel.DEBUG, "ズーム領域なし：削除スキップ")
+            self.logger.log(LogLevel.WARNING, "ズーム領域なし：削除スキップ")
 
     def get_properties(self) -> Optional[Tuple[float, float, float, float]]:
         """ズーム領域のプロパティ (x, y, width, height) を取得 (回転前の値)
-
         Returns:
             Tuple[float, float, float, float]: (x, y, width, height) or None
         """
@@ -314,7 +306,6 @@ class RectManager:
     # --- Undo/Redo 用メソッド ---
     def get_state(self) -> Optional[Dict[str, Any]]:
         """現在の状態 (Undo用) を取得
-
         Returns:
             Dict[str, Any]: 状態データ
         """
@@ -333,12 +324,11 @@ class RectManager:
             }
         # 矩形がない場合も None を返すことを明示
         elif not self.rect:
-             self.logger.log(LogLevel.DEBUG, "get_state: 矩形が存在しないため None を返します")
+             self.logger.log(LogLevel.WARNING, "矩形が存在しないため None を返す")
              return None
 
     def set_state(self, state: Optional[Dict[str, Any]]):
         """指定された状態に矩形を復元 (Undo用)
-
         Args:
             state (Optional[Dict[str, Any]]): 状態データ
         """
@@ -374,7 +364,7 @@ class RectManager:
                                          linewidth=1, edgecolor=edgecolor, facecolor='none',
                                          linestyle=linestyle, visible=False) # 最初は非表示
              self.ax.add_patch(self.rect)
-             self.logger.log(LogLevel.DEBUG, "Undo: 矩形が存在しなかったので新規作成")
+             self.logger.log(LogLevel.INFO, "Undo: 矩形が存在しなかったので新規作成")
         else: # 矩形が存在する場合、プロパティを設定
             self.rect.set_x(x)
             self.rect.set_y(y)
@@ -386,20 +376,19 @@ class RectManager:
         self.rect.set_visible(visible) # 可視状態を復元
         # 最後に回転を適用
         self._apply_rotation()
-        self.logger.log(LogLevel.DEBUG, "Undo: 矩形状態を復元", state)
+        self.logger.log(LogLevel.SUCCESS, "Undo: ズーム領域を復元完了", state)
     # --- ここまで Undo/Redo 用メソッド ---
 
     def get_center(self) -> Optional[Tuple[float, float]]:
         """ズーム領域の中心座標を取得 (回転前の座標系)
-
         Returns:
             Optional[Tuple[float, float]]: 中心座標 (x, y) or None
         """
         props = self.get_properties()
         if props:
             x, y, w, h = props
-            if w <= 0 or h <= 0: # 幅や高さが0の場合も考慮
-                self.logger.log(LogLevel.DEBUG, f"get_center: 幅({w})または高さ({h})が0以下")
+            if w <= 0 or h <= 0: # 幅や高さが 0 の場合も考慮
+                self.logger.log(LogLevel.INFO, f"幅({w})または高さ({h})が 0 以下")
                 return None
             center_x = x + w / 2
             center_y = y + h / 2
@@ -408,7 +397,6 @@ class RectManager:
 
     def get_rotated_corners(self) -> Optional[list[Tuple[float, float]]]:
         """回転後の四隅の絶対座標を取得する
-
         Returns:
             Optional[list[Tuple[float, float]]]: 四隅の絶対座標 [(x1, y1), (x2, y2), (x3, y3), (x4, y4)] or None
         """
@@ -417,7 +405,7 @@ class RectManager:
 
         # 矩形がない、またはサイズが0の場合もNoneを返すように修正
         if not self.rect or props is None or center is None or props[2] <= 0 or props[3] <= 0:
-            self.logger.log(LogLevel.DEBUG, "回転後の角取得不可：矩形、プロパティ、中心のいずれか、またはサイズが0")
+            self.logger.log(LogLevel.WARNING, "回転後の角取得不可：矩形、プロパティ、中心のいずれか、またはサイズが 0")
             return None
 
         x, y, width, height = props
@@ -442,7 +430,6 @@ class RectManager:
 
     def get_rotation(self) -> float:
         """現在の回転角度を取得 (度単位)
-
         Returns:
             float: 回転角度 (度単位)
         """
@@ -450,7 +437,6 @@ class RectManager:
 
     def set_rotation(self, angle: float):
         """ズーム領域の回転角度を設定 (度単位)
-
         Args:
             angle (float): 回転角度 (度単位)
         """
@@ -477,7 +463,6 @@ class RectManager:
 
     def get_patch(self) -> Optional[patches.Rectangle]:
         """ズーム領域パッチオブジェクトを取得
-
         Returns:
             Optional[patches.Rectangle]: パッチオブジェクト or None
         """

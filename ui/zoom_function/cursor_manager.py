@@ -24,9 +24,9 @@ class CursorManager:
         - イベントと状態に基づいてカーソル形状を更新する
         - イベントと状態に基づいて矩形を更新する
     """
-    def __init__(self, canvas_widget, logger: Optional[DebugLogger]):
-        """CursorManager クラスのコンストラクタ（親: ZoomSelector)）
 
+    def __init__(self, canvas_widget, logger: Optional[DebugLogger]):
+        """CursorManager クラスのコンストラクタ（親: ZoomSelector）
         Args:
             canvas_widget: Tkinter Canvas ウィジェット (FigureCanvasTkAgg.get_tk_widget())
             logger: DebugLogger インスタンス、または None

@@ -15,8 +15,7 @@ class ParameterPanel:
     COLORBAR_HEIGHT = 15
 
     def __init__(self, parent, update_callback, reset_callback, logger: DebugLogger):
-        """ParameterPanel クラスのコンストラクタ
-
+        """ParameterPanel クラスのコンストラクタ（親: MainWindow）
         Args:
             parent: 親ウィジェット
             update_callback: 描画更新コールバック関数
@@ -30,7 +29,7 @@ class ParameterPanel:
         self._setup_panel()
         self._update_colorbars()
 
-    def _setup_panel(self):
+    def _setup_panel(self) -> None:
         """パネルのセットアップを行う"""
         self._setup_fractal_type_section()
         self._setup_formula_section()
@@ -40,8 +39,8 @@ class ParameterPanel:
         self._setup_buttons()
         self.parent.columnconfigure(1, weight=1)
 
-    # --- セクションごとのメソッド ---
-    def _setup_fractal_type_section(self):
+    def _setup_fractal_type_section(self) -> None:
+        """フラクタルタイプセクションのセットアップ"""
         row = 0
         self._add_label("フラクタルタイプ:", row, 0, pady=(5,0))
         self.fractal_type_var = tk.StringVar(value="Julia")
@@ -49,7 +48,7 @@ class ParameterPanel:
         combo.bind("<<ComboboxSelected>>", self._common_callback)
         self._fractal_type_row = row
 
-    def _setup_formula_section(self):
+    def _setup_formula_section(self) -> None:
         """数式表示セクションのセットアップ"""
         row = self._fractal_type_row + 1
         self.formula_var = tk.StringVar()
@@ -58,7 +57,7 @@ class ParameterPanel:
         self._show_formula_display()
         self._formula_row = row
 
-    def _setup_parameter_section(self):
+    def _setup_parameter_section(self) -> None:
         """パラメータ表示セクションのセットアップ"""
         row = self._formula_row + 1
         # 最大反復回数
@@ -69,7 +68,8 @@ class ParameterPanel:
         params = [("Z (実部):", "z_real_var", "0.0"),
                   ("Z (虚部):", "z_imag_var", "0.0"),
                   ("C (実部):", "c_real_var", "-0.7"),
-                  ("C (虚部):", "c_imag_var", "0.27015")]
+                  ("C (虚部):", "c_imag_var", "0.27015"
+        )]
         for label, varname, default in params:
             row += 1
             self._add_label(label, row, 0)
@@ -78,7 +78,7 @@ class ParameterPanel:
             entry.bind("<Return>", self._common_callback)
         self._param_section_last_row = row
 
-    def _setup_diverge_section(self):
+    def _setup_diverge_section(self) -> None:
         """発散部セクションのセットアップ"""
         row = self._param_section_last_row + 1
         self._add_label("--- 発散部 ---", row, 0, columnspan=2, pady=(10, 0))
@@ -86,9 +86,9 @@ class ParameterPanel:
         self._add_label("着色アルゴリズム:", row, 0, pady=(5,0))
         self.diverge_algo_var = tk.StringVar(value="スムージングカラーリング")
         self.diverge_algorithms = [
-            "スムージングカラーリング", "高速スムージング", "指数スムージング", "反復回数線形マッピング", "ヒストグラム平坦化法",
-            "反復回数対数マッピング", "距離カラーリング", "角度カラーリング",
-            "ポテンシャル関数法", "軌道トラップ法"
+            "スムージングカラーリング", "高速スムージング", "指数スムージング",
+            "反復回数線形マッピング", "ヒストグラム平坦化法","反復回数対数マッピング",
+            "距離カラーリング", "角度カラーリング", "ポテンシャル関数法", "軌道トラップ法"
         ]
         combo = self._add_combobox(row, 1, self.diverge_algo_var, self.diverge_algorithms)
         combo.bind("<<ComboboxSelected>>", self._common_callback)
@@ -103,7 +103,7 @@ class ParameterPanel:
         combo.bind("<<ComboboxSelected>>", self._common_callback)
         self._diverge_section_last_row = row
 
-    def _setup_non_diverge_section(self):
+    def _setup_non_diverge_section(self) -> None:
         """非発散部セクションのセットアップ"""
         row = self._diverge_section_last_row + 1
         self._add_label("--- 非発散部 ---", row, 0, columnspan=2, pady=(10, 0))
@@ -123,7 +123,7 @@ class ParameterPanel:
         combo.bind("<<ComboboxSelected>>", self._common_callback)
         self._non_diverge_section_last_row = row
 
-    def _setup_buttons(self):
+    def _setup_buttons(self) -> None:
         """ボタンのセットアップ"""
         row = self._non_diverge_section_last_row + 1
         self._add_button("描画", row, 0, 2, lambda: [self.update_callback(), self._update_colorbars()])
@@ -131,10 +131,8 @@ class ParameterPanel:
         if self.reset_callback is not None:
             self._add_button("描画リセット", row, 0, 2, lambda: [self.reset_callback(), self._update_colorbars()])
 
-    # --- ヘルパーメソッド ---
-    def _add_label(self, text, row, col, columnspan=1, padx=10, pady=2):
+    def _add_label(self, text, row, col, columnspan=1, padx=10, pady=2) -> None:
         """ラベルを追加する
-
         Args:
             text: ラベルのテキスト
             row: 行
@@ -143,11 +141,11 @@ class ParameterPanel:
             padx: 横方向のパディング
             pady: 縦方向のパディング
         """
-        ttk.Label(self.parent, text=text).grid(row=row, column=col, columnspan=columnspan, sticky=tk.W, padx=padx, pady=pady)
+        ttk.Label(self.parent, text=text).grid(
+            row=row, column=col, columnspan=columnspan, sticky=tk.W, padx=padx, pady=pady)
 
-    def _add_entry(self, row, col, var, padx=10, pady=2):
+    def _add_entry(self, row, col, var, padx=10, pady=2) -> ttk.Entry:
         """入力欄を追加する
-
         Args:
             row: 行
             col: 列
@@ -159,9 +157,8 @@ class ParameterPanel:
         entry.grid(row=row, column=col, sticky=tk.W+tk.E, padx=padx, pady=pady)
         return entry
 
-    def _add_combobox(self, row, col, var, values, width=None, padx=10, pady=2):
+    def _add_combobox(self, row, col, var, values, width=None, padx=10, pady=2) -> ttk.Combobox:
         """コンボックスボックスを追加する
-
         Args:
             row: 行
             col: 列
@@ -170,6 +167,8 @@ class ParameterPanel:
             width: コンボックスボックスの幅
             padx: 横方向のパディング
             pady: 縦方向のパディング
+        Returns:
+            コンボックスボックス
         """
         kwargs = {"textvariable": var, "values": values, "state": "readonly"}
         if width:
@@ -178,35 +177,33 @@ class ParameterPanel:
         combo.grid(row=row, column=col, sticky=tk.W, padx=padx, pady=pady)
         return combo
 
-    def _add_button(self, text, row, col, colspan, command):
+    def _add_button(self, text, row, col, colspan, command) -> ttk.Button:
         """ボタンを追加する
-
         Args:
             text: ボタンのテキスト
             row: 行
             col: 列
             colspan: 列のスパン
             command: コマンド
+        Returns:
+            ボタン
         """
         btn = ttk.Button(self.parent, text=text, command=command)
         btn.grid(row=row, column=col, columnspan=colspan, sticky=tk.W+tk.E, padx=10, pady=10)
         return btn
 
-    def _common_callback(self, event=None):
+    def _common_callback(self, event=None) -> None:
         """共通のコールバック関数"""
         self.update_callback()
         self._update_colorbars()
 
     def _create_colorbar_image(self, cmap_name: str) -> ImageTk.PhotoImage:
         """カラーバー画像を生成する
-
         Args:
             cmap_name: カラーマップ名
-
         Returns:
             カラーバー画像のPhotoImageオブジェクト
         """
-        self.logger.log(LogLevel.SUCCESS, "カラーバー生成開始")
         try:
             cmap = plt.get_cmap(cmap_name)
             gradient = np.linspace(0, 1, self.COLORBAR_WIDTH)
@@ -214,6 +211,7 @@ class ParameterPanel:
             rgba_image = np.uint8(np.tile(colors, (self.COLORBAR_HEIGHT, 1, 1)) * 255)
             pil_image = Image.fromarray(rgba_image, 'RGBA')
             photo_image = ImageTk.PhotoImage(pil_image)
+            self.logger.log(LogLevel.SUCCESS, "カラーバー生成完了")
             return photo_image
         except ValueError:
             self.logger.log(LogLevel.WARNING, f"無効なカラーマップ名: {cmap_name}")
@@ -228,7 +226,7 @@ class ParameterPanel:
             photo_image = ImageTk.PhotoImage(pil_image)
             return photo_image
 
-    def _update_colorbars(self, *args):
+    def _update_colorbars(self, *args) -> None:
         """カラーバーを更新する"""
         diverge_cmap_name = self.diverge_colormap_var.get()
         self.logger.log(LogLevel.CALL, "カラーバー更新：発散部")
@@ -241,7 +239,7 @@ class ParameterPanel:
         self.non_diverge_colorbar_label.config(image=non_diverge_photo)
         self.non_diverge_colorbar_label.image = non_diverge_photo
 
-    def _show_formula_display(self):
+    def _show_formula_display(self) -> None:
         """式を表示する"""
         fractal_type = self.fractal_type_var.get()
         if fractal_type == "Julia":
@@ -251,7 +249,6 @@ class ParameterPanel:
 
     def _get_parameters(self) -> dict:
         """パラメータを取得する
-
         Returns:
             dict: パラメータの辞書
         """

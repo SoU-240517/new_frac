@@ -7,18 +7,16 @@ from .zoom_function.debug_logger import DebugLogger
 from .zoom_function.enums import LogLevel
 
 class StatusBarManager:
-    """
-    ステータスバーの表示とアニメーションを管理するクラス
+    """ステータスバーの表示とアニメーションを管理するクラス
     - 役割:
         - ステータスバーの表示とアニメーションを管理
     """
-    _TIME_FORMAT = "[{:>3}分 {:>2}秒] "  # 時間表示のフォーマット
-    _ANIMATION_INTERVAL = 0.1  # アニメーションの間隔（秒）
-    _TIME_UPDATE_INTERVAL = 1000  # 時間更新の間隔（ミリ秒）
+    _TIME_FORMAT = "[{:>3}分 {:>2}秒] " # 時間表示のフォーマット
+    _ANIMATION_INTERVAL = 0.1 # アニメーションの間隔（秒）
+    _TIME_UPDATE_INTERVAL = 1000 # 時間更新の間隔（ミリ秒）
 
     def __init__(self, root: tk.Tk, status_frame: ttk.Frame, logger: DebugLogger):
-        """StatusBarManager のコンストラクタ
-
+        """StatusBarManager クラスのコンストラクタ
         Args:
             root (tkinter.Tk): Tkinter ルートウィンドウ
             status_frame (ttk.Frame): ステータスバーを配置するフレーム
@@ -38,6 +36,7 @@ class StatusBarManager:
         )
         self.status_label.pack(side=tk.LEFT, padx=5, pady=2)
 
+        self.logger.log(LogLevel.INIT, "AnimationState クラスのインスタンスを作成")
         self._animation_state = AnimationState()
 
     def start_animation(self) -> None:
@@ -54,7 +53,7 @@ class StatusBarManager:
     def _start_animation_thread(self) -> None:
         """アニメーション用スレッドを開始"""
         try:
-            self.logger.log(LogLevel.DEBUG, "ステータスアニメーションスレッドを開始")
+            self.logger.log(LogLevel.CALL, "ステータスアニメーションスレッドを開始")
             self._animation_state.thread = threading.Thread(
                 target=self._run_animation,
                 daemon=True
@@ -81,14 +80,23 @@ class StatusBarManager:
             self.status_label.config(text=self._format_time(0, 0) + animation_text)
 
     def _calculate_elapsed_time(self) -> tuple[int, int]:
-        """経過時間を分と秒に変換"""
+        """経過時間を分と秒に変換
+        Returns:
+            tuple[int, int]: 分と秒
+        """
         elapsed_time = time.perf_counter() - self._draw_start_time
         minutes = int(elapsed_time // 60)
         seconds = int(elapsed_time % 60)
         return minutes, seconds
 
     def _format_time(self, minutes: int, seconds: int) -> str:
-        """時間表示をフォーマット"""
+        """時間表示をフォーマット
+        Args:
+            minutes (int): 分
+            seconds (int): 秒
+        Returns:
+            str: フォーマットされた時間表示
+        """
         return self._TIME_FORMAT.format(minutes, seconds)
 
     def _schedule_time_update(self) -> None:
@@ -115,15 +123,17 @@ class StatusBarManager:
             self._status_timer_id = None
 
     def stop_animation(self, final_message: str = "完了") -> None:
-        """アニメーションを停止し、最終メッセージを表示"""
+        """アニメーションを停止し、最終メッセージを表示
+        Args:
+            final_message (str, optional): 最終メッセージ. Defaults to "完了"
+        """
         if self._animation_state.is_running:
-            self.logger.log(LogLevel.DEBUG, "ステータスアニメーション停止開始")
+            self.logger.log(LogLevel.CALL, "ステータスアニメーション停止開始")
             self._animation_state.stop()
             self._wait_for_thread()
             self._cancel_time_update()
             self._show_final_message(final_message)
             self._reset_state()
-            self.logger.log(LogLevel.SUCCESS, "ステータスアニメーション停止処理完了")
 
     def _wait_for_thread(self) -> None:
         """アニメーションスレッドの終了を待機"""
@@ -131,12 +141,15 @@ class StatusBarManager:
             self.logger.log(LogLevel.DEBUG, "アニメーションスレッドの終了を待機...")
             self._animation_state.thread.join(timeout=0.2)
             if self._animation_state.thread.is_alive():
-                self.logger.log(LogLevel.DEBUG, "アニメーションスレッドが終了不可 (タイムアウト)")
+                self.logger.log(LogLevel.WARNING, "アニメーションスレッドが終了不可 (タイムアウト)")
             else:
                 self.logger.log(LogLevel.SUCCESS, "アニメーションスレッド停止完了")
 
     def _show_final_message(self, message: str) -> None:
-        """最終メッセージを表示"""
+        """最終メッセージを表示
+        Args:
+            message (str): 表示するメッセージ
+        """
         if self._draw_start_time is not None:
             minutes, seconds = self._calculate_elapsed_time()
             time_str = self._format_time(minutes, seconds)
@@ -148,7 +161,10 @@ class StatusBarManager:
         self._draw_start_time = None
 
     def set_text(self, text: str) -> None:
-        """ステータスバーに任意のテキストを設定"""
+        """ステータスバーに任意のテキストを設定
+        Args:
+            text (str): 表示するテキスト
+        """
         if self._animation_state.is_running:
             self.stop_animation(final_message="")
         self.root.after(0, lambda: self.status_label.config(text=text))
@@ -156,6 +172,7 @@ class StatusBarManager:
 class AnimationState:
     """アニメーションの状態を管理するクラス"""
     def __init__(self):
+        """AnimationState クラスのコンストラクタ（親: MainWindow）"""
         self.thread: Optional[threading.Thread] = None
         self.is_running: bool = False
         self.dots: int = 0
