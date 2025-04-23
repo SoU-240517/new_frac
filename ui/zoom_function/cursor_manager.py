@@ -27,7 +27,7 @@ class CursorManager:
     """
 
     def __init__(self, canvas_widget: tk.Widget, logger: Optional[DebugLogger]) -> None:
-        """CursorManager クラスのコンストラクタ
+        """CursorManager クラスのコンストラクタ（親: ZoomSelector）
         Args:
             canvas_widget: Tkinter Canvas ウィジェット
             logger: DebugLogger インスタンス

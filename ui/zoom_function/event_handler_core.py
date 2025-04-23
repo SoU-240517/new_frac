@@ -54,14 +54,16 @@ class EventHandler:
         self.rect_manager = rect_manager
         self.cursor_manager = cursor_manager
         self.validator = validator
-        self.canvas = canvas # matplotlibの描画を更新するために使用
+        self.canvas = canvas
 
-        # 分割した他のクラスのインスタンス
+        # 分割した他のクラスのインスタンスを作成
+        self.logger.log(LogLevel.INIT, "EventHandlersPrivate クラスのインスタンスを作成")
         self.private_handlers = EventHandlersPrivate(self)
+        self.logger.log(LogLevel.INIT, "EventHandlersUtils クラスのインスタンスを作成")
         self.utils = EventHandlersUtils(self)
 
         # --- 内部状態 ---
-        # ログ出力フラグ（プライベートハンドラやutilsに移動しても良いが、ここではコアに残しておく）
+        # ログ出力フラグ（プライベートハンドラや utils に移動しても良いが、ここではコアに残しておく）
         self._create_logged = False
         self._move_logged = False
         self._resize_logged = False
@@ -107,9 +109,8 @@ class EventHandler:
             self._cid_key_release = self.canvas.mpl_connect('key_release_event', self.on_key_release)
 
     # --- イベント処理メソッド (ディスパッチャ) ---
-    def on_press(self, event: MouseEvent):
+    def on_press(self, event: MouseEvent) -> None:
         """マウスボタン押下イベントのディスパッチャ
-
         Args:
             event: MouseEvent オブジェクト
         """
@@ -130,15 +131,14 @@ class EventHandler:
             elif event.button == MouseButton.RIGHT:
                 self.private_handlers.handle_press_edit_right_confirm(event)
 
-    def on_motion(self, event: MouseEvent):
+    def on_motion(self, event: MouseEvent) -> None:
         """マウス移動イベントのディスパッチャ
-
         Args:
             event: MouseEvent オブジェクト
         """
         validation_result = self.validator.validate_event(event, self.zoom_selector.ax, self.logger)
         if not (validation_result.is_in_axes and validation_result.has_coords):
-            self.logger.log(LogLevel.DEBUG, "Axes外または座標無効のため処理中断")
+            self.logger.log(LogLevel.WARNING, "Axes外または座標無効のため処理中断")
             return
 
         state = self.state_handler.state
@@ -159,9 +159,8 @@ class EventHandler:
             if event.button == MouseButton.LEFT:
                 self.private_handlers.handle_motion_rotating(event)
 
-    def on_release(self, event: MouseEvent):
+    def on_release(self, event: MouseEvent) -> None:
         """マウスボタン解放イベントのディスパッチャ
-
         Args:
             event: MouseEvent オブジェクト
         """
@@ -199,9 +198,8 @@ class EventHandler:
             self.cursor_manager.cursor_update(event, state=final_state_to_set, is_rotating=self._alt_pressed)
             self.canvas.draw_idle()
 
-    def on_key_press(self, event: KeyEvent):
+    def on_key_press(self, event: KeyEvent) -> None:
         """キーボード押下イベントのディスパッチャ
-
         Args:
             event: KeyEvent オブジェクト
         """
@@ -215,9 +213,8 @@ class EventHandler:
             self.canvas.draw_idle()
         # 他のキー処理が必要なら追加
 
-    def on_key_release(self, event: KeyEvent):
+    def on_key_release(self, event: KeyEvent) -> None:
         """キーボード解放イベントのディスパッチャ
-
         Args:
             event: KeyEvent オブジェクト
         """
@@ -231,17 +228,17 @@ class EventHandler:
     # --- イベント処理メソッド (ディスパッチャ) ここまで ---
 
     # --- 状態リセットメソッド ---
-    # reset_internal_state は EventHandler の公開メソッドとして残しておく
-    # ただし、内部での具体的なリセット処理は utils に依頼する
     def reset_internal_state(self):
         """全ての内部状態と編集履歴をリセット"""
+        # EventHandler の公開メソッドとして残しておく
+        # ただし、内部での具体的なリセット処理は utils に依頼する
         self.utils.reset_internal_state()
     # --- 状態リセットメソッド ここまで ---
 
     # --- Undo 関連メソッド ---
-    # clear_edit_history も EventHandler の公開メソッドとして残しておく
-    # ただし、内部での具体的なクリア処理は utils に依頼する
     def clear_edit_history(self):
         """編集履歴をクリア"""
+        # EventHandler の公開メソッドとして残しておく
+        # ただし、内部での具体的なクリア処理は utils に依頼する
         self.utils.clear_edit_history()
     # --- Undo 関連メソッド ここまで ---

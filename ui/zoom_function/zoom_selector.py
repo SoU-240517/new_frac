@@ -81,11 +81,11 @@ class ZoomSelector:
 
     def _initialize_cursor_manager(self) -> None:
         """CursorManagerの初期化"""
-        self.logger.log(LogLevel.INIT, "CursorManager クラスのインスタンスを作成")
         tk_widget = getattr(self.canvas, 'get_tk_widget', lambda: None)()
         if tk_widget is None:
             raise ValueError("Tkinter ウィジェット取得不可：FigureCanvasTkAgg の使用を要確認")
 
+        self.logger.log(LogLevel.INIT, "CursorManager クラスのインスタンスを作成")
         self.cursor_manager = CursorManager(tk_widget, self.logger)
         self.cursor_manager.set_zoom_selector(self)
 
