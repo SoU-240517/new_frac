@@ -4,10 +4,6 @@ from .enums import LogLevel, ZoomState
 
 if TYPE_CHECKING:
     from .event_handler_core import EventHandler
-#    from .cursor_manager import CursorManager
-#    from .debug_logger import DebugLogger
-#    from .rect_manager import RectManager
-#    from .zoom_selector import ZoomSelector
 
 class EventHandlersUtils:
     """EventHandler から呼び出され、補助的な機能（計算、Undo、状態リセットなど）を提供するクラス
@@ -19,16 +15,13 @@ class EventHandlersUtils:
     """
 
     def __init__(self, core: 'EventHandler'):
-        """ユーティリティハンドラのコンストラクタ
-
+        """EventHandlersUtils クラスのコンストラクタ（親: EventHandler）
         Args:
             core: 親である EventHandler インスタンス
         """
-        # 親である EventHandler のインスタンスを保持
         self.core = core # 親インスタンスへの参照
 
     # --- ヘルパーメソッド ---
-    # event_handler.py にあった計算関連のメソッドをここに移動した
     def _calculate_angle(self, cx: float, cy: float, px: float, py: float) -> float:
         """中心点から点へのベクトル角度を計算 (度, -180から180)
         Args:
@@ -58,58 +51,52 @@ class EventHandlersUtils:
     # --- ヘルパーメソッド ここまで ---
 
     # --- Undo 関連メソッド ---
-    # event_handler.py にあった Undo 関連のメソッドをここに移動した
-    def _add_history(self, state: Optional[Dict[str, Any]]):
+    def _add_history(self, state: Optional[Dict[str, Any]]) -> None:
         """編集履歴に状態を追加
-
         Args:
             state (Optional[Dict[str, Any]]): 状態情報
         """
-        self.core.edit_history.append(state) # 親の edit_history リストに状態を追加（core を通じてアクセス）
-        # 親の logger にログ出力依頼（core を通じてアクセス）
+        self.core.edit_history.append(state) # edit_history に状態を追加
         self.core.logger.log(LogLevel.DEBUG, f"履歴追加: 現在の履歴数={len(self.core.edit_history)}")
-        # メモリリークを防ぐため、履歴数に上限を設けることも検討（コメントアウトはそのまま）
+        # メモリリークを防ぐため、履歴数に上限を設けることも検討
         # MAX_HISTORY = 100
-        # if len(self.core.edit_history) > MAX_HISTORY: # core を通じてアクセス
-        #     self.core.edit_history.pop(0) # core を通じてアクセス（古い履歴を削除）
+        # if len(self.core.edit_history) > MAX_HISTORY:
+        #     self.core.edit_history.pop(0) # 古い履歴を削除
 
-    def _remove_last_history(self):
+    def _remove_last_history(self) -> Optional[Dict[str, Any]]:
         """最後の履歴を削除
-
         Returns:
             Optional[Dict[str, Any]]: 削除された状態情報
         """
         if self.core.edit_history:
-             # 親の edit_history リストから最後の要素を削除（core を通じてアクセス）
-            removed = self.core.edit_history.pop()
+            removed = self.core.edit_history.pop() # edit_history から最後の要素を削除
             self.core.logger.log(LogLevel.DEBUG, f"最後の履歴削除: 削除後の履歴数={len(self.core.edit_history)}")
             return removed
         return None
 
-    # clear_edit_history は EventHandlerCore に残し、そこからこのメソッドを呼び出す形にする
-    # 元の clear_edit_history メソッドの本体をここに移動した
     def clear_edit_history(self):
         """編集履歴をクリア"""
-        self.core.edit_history.clear() # 親の edit_history リストをクリア（core を通じてアクセス）
+        # EventHandlerCore からの呼出しに応じる
+        self.core.edit_history.clear() # edit_history をクリア
         self.core.logger.log(LogLevel.SUCCESS, "編集履歴クリア完了")
 
     def _undo_last_edit(self):
         """ 最後に行った編集操作を元に戻す """
-        # 親の edit_history リストの数をチェック（core を通じてアクセス）
+        # edit_history の数をチェック
         if len(self.core.edit_history) > 0: # 履歴が1つ以上あれば Undo 可能
             prev_state = self.core.edit_history.pop() # 現在の状態は破棄し、一つ前の状態を取り出す
             self.core.logger.log(LogLevel.DEBUG, "Undo実行", {"復元前の履歴数": len(self.core.edit_history) + 1})
-            self.core.rect_manager.set_state(prev_state) # 親の rect_manager に状態復元を依頼
-            self.core.zoom_selector.invalidate_rect_cache() # 親の zoom_selector にキャッシュ無効化を依頼
-            # Undo 後も EDIT 状態なのでカーソル更新（親の cursor_manager にカーソル更新を依頼）
+            self.core.rect_manager.set_state(prev_state) # rect_manager に状態復元を依頼
+            self.core.zoom_selector.invalidate_rect_cache() # zoom_selector にキャッシュ無効化を依頼
+            # Undo 後も EDIT 状態なのでカーソル更新
             self.core.cursor_manager.cursor_update(None, state=ZoomState.EDIT, is_rotating=self.core._alt_pressed)
-            self.core.canvas.draw_idle() # 親の canvas に再描画を依頼
+            self.core.canvas.draw_idle() # canvas に再描画を依頼
         else:
             self.core.logger.log(LogLevel.WARNING, "Undo不可: 編集履歴なし")
 
     def _undo_or_cancel_edit(self):
         """ ESCキーによるUndoまたは編集キャンセル """
-        # 親の edit_history リストの数をチェック
+        # edit_history の数をチェック
         if len(self.core.edit_history) > 1: # 初期状態 + 1回以上の編集履歴があれば Undo
             self._undo_last_edit()
         elif len(self.core.edit_history) == 1: # 矩形作成直後などの場合
@@ -130,10 +117,9 @@ class EventHandlersUtils:
     # --- Undo 関連メソッド ここまで ---
 
     # --- 状態リセットメソッド群 ---
-    # reset_internal_state は EventHandlerCore に残し、そこからこのメソッドを呼び出す形にする
-    # 元の reset_internal_state メソッドの本体がここに移動した
     def reset_internal_state(self):
         """全ての内部状態と編集履歴をリセット"""
+        # EventHandlerCore からの呼出しに応じる
         self._reset_create_state()
         self._reset_move_state()
         self._reset_resize_state()
@@ -143,22 +129,26 @@ class EventHandlersUtils:
         self.core.logger.log(LogLevel.SUCCESS, "EventHandler の内部状態と編集履歴をリセット完了")
 
     def _reset_create_state(self):
+        """矩形作成関連の内部状態をリセット"""
         self.core.start_x = None
         self.core.start_y = None
         self.core._create_logged = False
 
     def _reset_move_state(self):
+        """矩形移動関連の内部状態をリセット"""
         self.core.move_start_x = None
         self.core.move_start_y = None
         self.core.rect_start_pos = None
         self.core._move_logged = False
 
     def _reset_resize_state(self):
+        """矩形リサイズ関連の内部状態をリセット"""
         self.core.resize_corner_index = None
         self.core.fixed_corner_pos = None
         self.core._resize_logged = False
 
     def _reset_rotate_state(self):
+        """矩形回転関連の内部状態をリセット"""
         self.core.rotate_start_mouse_pos = None
         self.core.rotate_center = None
         self.core.previous_vector_angle = None

@@ -14,8 +14,7 @@ class EventHandlersPrivate:
 
     # --- コンストラクタ ---
     def __init__(self, core: 'EventHandler'):
-        """具体的なイベントハンドラのコンストラクタ
-
+        """EventHandlersPrivate クラスのコンストラクタ（親: EventHandler）
         Args:
             core: 親である EventHandler インスタンス
         """
@@ -23,9 +22,8 @@ class EventHandlersPrivate:
 
     # --- プライベートハンドラメソッド ---
     # --- Press イベントハンドラ ---
-    def handle_press_no_rect_left(self, event: MouseEvent):
+    def handle_press_no_rect_left(self, event: MouseEvent) -> None:
         """NO_RECT 状態で左クリック: 矩形作成開始
-
         Args:
             event: MouseEvent オブジェクト
         """
@@ -36,14 +34,14 @@ class EventHandlersPrivate:
         self.core.zoom_selector.invalidate_rect_cache()
         self.core.cursor_manager.cursor_update(
             event,
-            state=self.core.state_handler.state)
+            state=self.core.state_handler.state
+        )
         self.core._create_logged = False # 親のログフラグを更新
         self.core.canvas.draw_idle() # 親の canvas に再描画を依頼
         self.core.utils._add_history(None) # utils に履歴追加を依頼
 
-    def dispatch_press_edit_left(self, event: MouseEvent):
+    def dispatch_press_edit_left(self, event: MouseEvent) -> None:
         """EDIT 状態で左クリック: 回転/リサイズ/移動の開始
-
         Args:
             event: MouseEvent オブジェクト
         """
@@ -58,9 +56,8 @@ class EventHandlersPrivate:
             self._handle_press_edit_start_moving(event)
         # else: 角でも内側でもない場合は何もしない
 
-    def _handle_press_edit_start_rotating(self, event: MouseEvent, corner_index: int):
+    def _handle_press_edit_start_rotating(self, event: MouseEvent, corner_index: int) -> None:
         """EDIT 状態 + Alt + 角で左クリック: 回転開始
-
         Args:
             event: MouseEvent オブジェクト
             corner_index: 回転開始する角
@@ -79,14 +76,14 @@ class EventHandlersPrivate:
                 event,
                 state=self.core.state_handler.state,
                 near_corner_index=corner_index,
-                is_rotating=True)
+                is_rotating=True
+            )
             self.core._rotate_logged = False # 親のログフラグを更新
         else:
             self.core.logger.log(LogLevel.ERROR, "回転不可：中心座標またはイベント座標なし")
 
-    def _handle_press_edit_start_resizing(self, event: MouseEvent, corner_index: int):
+    def _handle_press_edit_start_resizing(self, event: MouseEvent, corner_index: int) -> None:
         """EDIT 状態 + 角で左クリック：リサイズ開始
-
         Args:
             event: MouseEvent オブジェクト
             corner_index: リサイズ開始する角
@@ -105,15 +102,15 @@ class EventHandlersPrivate:
                 event,
                 state=self.core.state_handler.state,
                 near_corner_index=self.core.resize_corner_index,
-                is_rotating=False)
+                is_rotating=False
+            )
             self.core._resize_logged = False # 親のログフラグを更新
             self.core.canvas.draw_idle()
         else:
             self.core.logger.log(LogLevel.ERROR, "リサイズ不可：回転後の角座標を取得できず")
 
-    def _handle_press_edit_start_moving(self, event: MouseEvent):
+    def _handle_press_edit_start_moving(self, event: MouseEvent) -> None:
         """EDIT 状態 + 内部で左クリック: 移動開始
-
         Args:
             event: MouseEvent オブジェクト
         """
@@ -131,15 +128,15 @@ class EventHandlersPrivate:
             self.core.cursor_manager.cursor_update(
                 event,
                 state=self.core.state_handler.state,
-                is_rotating=False)
+                is_rotating=False
+            )
             self.core._move_logged = False # 親のログフラグを更新
             self.core.canvas.draw_idle()
         else:
             self.core.logger.log(LogLevel.ERROR, "移動不可：矩形プロパティまたはイベント座標なし")
 
-    def handle_press_edit_right_confirm(self, event: MouseEvent):
+    def handle_press_edit_right_confirm(self, event: MouseEvent) -> None:
         """EDIT 状態で右クリック: ズーム確定
-
         Args:
             event: MouseEvent オブジェクト
         """
@@ -148,9 +145,8 @@ class EventHandlersPrivate:
     # --- Press イベントハンドラ ここまで ---
 
     # --- Motion イベントハンドラ ---
-    def handle_motion_create(self, event: MouseEvent):
+    def handle_motion_create(self, event: MouseEvent) -> None:
         """CREATE 状態でのマウス移動: 矩形サイズ更新
-
         Args:
             event: MouseEvent オブジェクト
         """
@@ -162,9 +158,8 @@ class EventHandlersPrivate:
                 self.core.start_x, self.core.start_y, event.xdata, event.ydata)
             self.core.canvas.draw_idle()
 
-    def handle_motion_edit(self, event: MouseEvent):
+    def handle_motion_edit(self, event: MouseEvent) -> None:
         """EDIT 状態でのマウス移動
-
         Args:
             event: MouseEvent オブジェクト
         """
@@ -175,15 +170,13 @@ class EventHandlersPrivate:
             near_corner_index=corner_index,
             is_rotating=self.core._alt_pressed)
 
-    def handle_motion_move(self, event: MouseEvent):
+    def handle_motion_move(self, event: MouseEvent) -> None:
         """ON_MOVE 状態でのマウス移動: 矩形移動
-
         Args:
             event: MouseEvent オブジェクト
         """
         # 親のログフラグを確認・更新
         if not self.core._move_logged:
-            # self.core.logger.log(LogLevel.DEBUG, "移動中...")
             self.core._move_logged = True
 
         # 親のインスタンス変数から開始座標と矩形開始位置を取得
@@ -199,16 +192,15 @@ class EventHandlersPrivate:
             self.core.zoom_selector.invalidate_rect_cache()
             self.core.canvas.draw_idle()
 
-    def handle_motion_resizing(self, event: MouseEvent):
+    def handle_motion_resizing(self, event: MouseEvent) -> None:
         """RESIZING 状態でのマウス移動: リサイズ
-
         Args:
             event: MouseEvent オブジェクト
         """
         # 親のログフラグを確認・更新
         if not self.core._resize_logged:
-            # self.core.logger.log(LogLevel.DEBUG, f"リサイズ中...：角={self.core.resize_corner_index}")
             self.core._resize_logged = True
+
         # 親のインスタンス変数から固定角座標を取得
         if self.core.fixed_corner_pos is not None and event.xdata is not None and \
             event.ydata is not None:
@@ -220,15 +212,13 @@ class EventHandlersPrivate:
             self.core.zoom_selector.invalidate_rect_cache()
             self.core.canvas.draw_idle()
 
-    def handle_motion_rotating(self, event: MouseEvent):
+    def handle_motion_rotating(self, event: MouseEvent) -> None:
         """ROTATING 状態でのマウス移動: 矩形回転
-
         Args:
             event: MouseEvent オブジェクト
         """
         # 親のログフラグを確認・更新
         if not self.core._rotate_logged:
-            # self.core.logger.log(LogLevel.DEBUG, "回転中...")
             self.core._rotate_logged = True
 
         # 親のインスタンス変数から回転中心、前回の角度を取得
@@ -256,11 +246,9 @@ class EventHandlersPrivate:
     # --- Release イベントハンドラ ---
     def handle_release_create(self, event: MouseEvent, is_outside: bool) -> ZoomState:
         """CREATE 状態でのマウス解放: 作成完了またはキャンセル
-
         Args:
             event: MouseEvent オブジェクト
             is_outside: 軸外でのリリースか
-
         Returns:
             ZoomState: 次の状態
         """
@@ -276,7 +264,7 @@ class EventHandlersPrivate:
                 if self.core.rect_manager._temporary_creation(
                     self.core.start_x, self.core.start_y, event.xdata, event.ydata):
 
-                    self.core.logger.log(LogLevel.INFO, "作成成功")
+                    self.core.logger.log(LogLevel.SUCCESS, "作成成功")
                     final_state = ZoomState.EDIT
                 else:
                     self.core.logger.log(LogLevel.WARNING, "作成失敗: 最終サイズが無効")
@@ -284,37 +272,30 @@ class EventHandlersPrivate:
                     self.core.utils._remove_last_history()
             else:
                 self.core.logger.log(LogLevel.ERROR, "作成失敗: 座標情報不備")
-        # どちらの場合でも、一時矩形を削除し、作成前の履歴を削除
-#        self.core.rect_manager.delete_rect()
-#        self.core.utils._remove_last_history()
 
         self.core.utils._reset_create_state() # 作成関連の内部状態をリセット
         return final_state
 
     def handle_release_move(self, event: MouseEvent) -> ZoomState:
         """ON_MOVE 状態でのマウス解放: 移動完了
-
         Args:
             event: MouseEvent オブジェクト
-
         Returns:
             ZoomState: 次の状態
         """
-        self.core.logger.log(LogLevel.DEBUG, "移動完了")
+        self.core.logger.log(LogLevel.SUCCESS, "移動完了：後処理開始")
         self.core.rect_manager.edge_change_finishing()
         self.core.utils._reset_move_state()
         return ZoomState.EDIT
 
     def handle_release_resizing(self, event: MouseEvent) -> ZoomState:
         """RESIZING 状態でのマウス解放: リサイズ完了またはキャンセル/Undo
-
         Args:
             event: MouseEvent オブジェクト
-
         Returns:
             ZoomState: 次の状態
         """
-        self.core.logger.log(LogLevel.DEBUG, "リサイズ完了")
+        self.core.logger.log(LogLevel.SUCCESS, "リサイズ完了：後処理開始")
         self.core.rect_manager.edge_change_finishing()
         final_state = ZoomState.EDIT
         rect_props = self.core.rect_manager.get_properties()
@@ -329,60 +310,53 @@ class EventHandlersPrivate:
 
     def handle_release_rotating(self, event: MouseEvent) -> ZoomState:
         """ROTATING 状態でのマウス解放: 回転完了
-
         Args:
             event: MouseEvent オブジェクト
-
         Returns:
             ZoomState: 次の状態
         """
-        self.core.logger.log(LogLevel.DEBUG, "回転完了")
+        self.core.logger.log(LogLevel.SUCCESS, "回転完了：後処理開始")
         self.core.utils._reset_rotate_state()
         return ZoomState.EDIT
     # --- Release イベントハンドラ ここまで ---
 
     # --- Key イベントハンドラ ---
-    def _handle_key_escape(self, event: KeyEvent):
+    def _handle_key_escape(self, event: KeyEvent) -> None:
         """Escapeキー押下処理
-
         Args:
             event: KeyEvent オブジェクト
         """
         # 親の state_handler から現在の状態を取得
         state = self.core.state_handler.state
         if state is ZoomState.NO_RECT:
-            self.core.logger.log(LogLevel.DEBUG, "ESC: NO_RECT -> ズーム確定キャンセル呼出し")
+            self.core.logger.log(LogLevel.CALL, "ESC: NO_RECT -> ズーム確定キャンセル呼出し")
             self.core.zoom_selector.cancel_zoom() # MainWindow側の処理を呼び出す
         elif state is ZoomState.EDIT:
-            self.core.logger.log(LogLevel.DEBUG, "ESC: EDIT -> Undo/編集キャンセル呼出し")
+            self.core.logger.log(LogLevel.CALL, "ESC: EDIT -> Undo/編集キャンセル呼出し")
             self.core.utils._undo_or_cancel_edit() # Undoまたは編集キャンセル
         elif state in [ZoomState.CREATE, ZoomState.ON_MOVE, ZoomState.RESIZING, ZoomState.ROTATING]:
-             self.core.logger.log(LogLevel.DEBUG, f"ESC: {state.name} -> 操作キャンセル呼出し")
+             self.core.logger.log(LogLevel.CALL, f"ESC: {state.name} -> 操作キャンセル呼出し")
              # ドラッグ操作中にESCが押された場合もキャンセル
              self.core.utils._undo_or_cancel_edit()
 
-    def handle_key_alt_press(self, event: KeyEvent):
+    def handle_key_alt_press(self, event: KeyEvent) -> None:
         """Altキー押下処理
-
         Args:
             event: KeyEvent オブジェクト
         """
         # 親の _alt_pressed 状態を確認・更新
         if not self.core._alt_pressed: # Altキーが押されていなかったら
-            # self.core.logger.log(LogLevel.INFO, "回転モード有効化")
             self.core._alt_pressed = True
             if self.core.state_handler.state == ZoomState.EDIT:
                 self.core.logger.log(LogLevel.DEBUG, "Alt押下: EDIT状態")
 
-    def handle_key_alt_release(self, event: KeyEvent):
+    def handle_key_alt_release(self, event: KeyEvent) -> None:
         """Altキー解放処理
-
         Args:
             event: KeyEvent オブジェクト
         """
         # 親の _alt_pressed 状態を確認・更新
         if self.core._alt_pressed: # Altキーが押されていたら
-            # self.core.logger.log(LogLevel.INFO, "回転モード無効化")
             self.core._alt_pressed = False
             if self.core.state_handler.state == ZoomState.EDIT:
                 self.core.logger.log(LogLevel.DEBUG, "Alt解放: EDIT状態")
