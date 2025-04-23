@@ -9,158 +9,14 @@ from ui.zoom_function.enums import LogLevel
 - 役割:
     - 設定されたパラメータでフラクタルを描画
 """
-# FractalCache クラスは省略（修正なし）
-
-def render_fractal(params, logger: DebugLogger, cache=None) -> np.ndarray:
-    """設定されたパラメータでフラクタルを描画（動的解像度版）
-
-    Args:
-        params (dict): パラメータ辞書。center_x, center_y, width, rotationなどが含まれる。
-        logger (DebugLogger): ログ出力クラス
-        cache (FractalCache): キャッシュクラス（現在は使用されていませんが引数として残します）
-
-    Returns:
-        np.ndarray: フラクタル画像 (uint8 [0, 255] RGBA 配列)
-    """
-    # 動的解像度計算 - 描画する画像のピクセル解像度を決定する
-    # params["width"] はデータ座標系の幅
-    resolution = _calculate_dynamic_resolution(params.get("width", 4.0))
-    logger.log(LogLevel.SUCCESS, f"動的解像度計算完了: {resolution}x{resolution} (width={params.get('width', 4.0):.2f})")
-
-    # アンチエイリアシング設定
-    # ズームレベルに応じてサンプル数を調整（widthが小さいほどズームイン）
-    zoom_level = 4.0 / params.get("width", 4.0) # 基準となる幅4.0からの相対的なズームレベル
-    samples_per_pixel = 2 if zoom_level < 1.0 else 4 # ズームアウト時はサンプル数減らす
-    # 必要に応じてサンプル数を増やすことも検討 (例: zoom_levelに応じて動的に計算)
-    # samples_per_pixel = max(1, min(4, int(zoom_level**0.5))) # 一例
-    logger.log(LogLevel.SUCCESS, f"アンチエイリアシング設定完了：samples_per_pixel={samples_per_pixel}")
-
-    # 実際にフラクタル計算を行うための高解像度グリッドサイズ
-    super_resolution_x = resolution * samples_per_pixel
-    super_resolution_y = resolution * samples_per_pixel # アンチエイリアシングのため、縦横同じ倍率をかけます
-
-    # 表示領域の中心座標とデータ座標系での幅を取得
-    center_x = params.get("center_x", 0.0)
-    center_y = params.get("center_y", 0.0)
-    width = params.get("width", 4.0)
-
-    # フラクタルを計算する複素平面上の高さ（height）を、
-    # 表示領域の縦横比（16:9）に合わせて計算します。
-    # 表示幅(width) / 表示高さ(height) = 16 / 9
-    height = width * (9 / 16)
-
-    # 修正されたログ出力: self.logger を logger に変更
-    logger.log(LogLevel.DEBUG, f"フラクタル計算範囲の高さ設定: {height:.4f} (幅 {width:.4f}, 縦横比 16:9)")
-
-    # 回転角度を取得 (度単位)
-    rotation_deg = params.get("rotation", 0.0)
-
-    # 回転前のグリッド座標を、計算する範囲 (width, height) と高解像度 (super_resolution) で生成
-    # データ型の最適化: ズームアウト時はfloat16、ズームイン時はfloat32を使用
-    dtype = np.float16 if width > 1.0 else np.float32 # 幅が大きい（ズームアウト）ほど精度を落とす
-    x = np.linspace(center_x - width/2, center_x + width/2, super_resolution_x, dtype=dtype)
-    y = np.linspace(center_y - height/2, center_y + height/2, super_resolution_y, dtype=dtype)
-
-    # 複素数グリッドを作成
-    X, Y = np.meshgrid(x, y)
-
-    Z = X + 1j * Y # 各ピクセルに対応する複素数 (初期Z0またはC)
-    Z = Z.astype(np.complex64) # 複素数型に変換
-
-    # 回転を適用
-    if rotation_deg != 0:
-        logger.log(LogLevel.DEBUG, f"回転適用: {rotation_deg} 度")
-        # 回転中心を(center_x, center_y)として回転
-        rotation_rad = np.radians(rotation_deg)
-        # グリッドを回転中心からの相対座標に変換 -> 回転 -> 元の座標系に戻す
-        Z -= complex(center_x, center_y)
-        rotation_operator = np.exp(1j * rotation_rad)
-        Z *= rotation_operator
-        Z += complex(center_x, center_y)
-        logger.log(LogLevel.SUCCESS, "グリッド回転適用完了")
-
-    logger.log(LogLevel.SUCCESS, "グリッドの作成と変換完了",
-               context={"中心_x": center_x, "中心_y": center_y, "w": width, "h": height, "角度": rotation_deg})
-
-    # フラクタルの種類に応じた計算
-    # Z0やCはparamsから取得し、必要に応じて complex 型に変換
-    if params["fractal_type"] == "Julia":
-        # Julia集合の計算には Z と 定数C が必要
-        c_val = complex(params.get("c_real", -0.7), params.get("c_imag", 0.27015))
-        start_time = time.perf_counter()
-        # compute_julia は iterations, mask, z_vals を含む辞書を返すことを期待
-        results = julia.compute_julia(Z, c_val, params.get("max_iterations", 100), logger)
-        # イテレーション数は通常整数だが、uint16 で十分な範囲をカバーできる
-        results['iterations'] = results['iterations'].astype(np.uint16)
-        elapsed = time.perf_counter() - start_time
-        logger.log(LogLevel.INFO, f"ジュリア集合計算時間：{elapsed:.3f}秒")
-
-    else: # Mandelbrot
-        # Mandelbrot集合の計算では、グリッドZがCとなり、初期値Z0が必要
-        z0_val = complex(params.get("z_real", 0.0), params.get("z_imag", 0.0))
-        start_time = time.perf_counter()
-        # compute_mandelbrot は iterations, mask, z_vals を含む辞書を返すことを期待
-        results = mandelbrot.compute_mandelbrot(Z, z0_val, params.get("max_iterations", 100), logger)
-        # イテレーション数は通常整数だが、uint16 で十分な範囲をカバーできる
-        results['iterations'] = results['iterations'].astype(np.uint16)
-        elapsed = time.perf_counter() - start_time
-        logger.log(LogLevel.INFO, f"マンデルブロ集合計算時間：{elapsed:.3f}秒")
-
-    # 着色処理
-    # apply_coloring_algorithm は計算結果とパラメータを受け取り、float32 [0, 255] RGBA 配列を返すことを期待
-    colored_high_res = color_algorithms.apply_coloring_algorithm(results, params, logger)
-
-    # ダウンサンプリング（アンチエイリアシング効果）
-    # 高解像度で計算した画像を、目的の解像度(resolution)に縮小する
-    if samples_per_pixel > 1:
-        logger.log(LogLevel.DEBUG, "ダウンサンプリング実行")
-        # 高解像度画像 colored_high_res を resolution x resolution に平均化して縮小
-        # colored_high_res の形状は (super_resolution_y, super_resolution_x, 4)
-        # reshape を使ってサンプルピクセルをまとめ、axis=(1, 3) で平均を取る
-        # 元形状: (res*spp, res*spp, 4)
-        # reshape 後: (res, spp, res, spp, 4)
-        # mean(axis=(1, 3))で spp x spp のブロックごとに平均
-        try:
-            # colored_high_res の形状が期待通りであることを確認してから reshape
-            expected_shape = (super_resolution_y, super_resolution_x, 4)
-            if colored_high_res.shape == expected_shape:
-                colored = colored_high_res.reshape((resolution, samples_per_pixel, resolution, samples_per_pixel, 4)).mean(axis=(1, 3))
-            else:
-                 # 形状が異なる場合はエラーログを出力し、ダウンサンプリングをスキップするか、エラー処理を行う
-                 logger.log(LogLevel.ERROR, f"ダウンサンプリングエラー: colored_high_resの形状が不正です。期待値: {expected_shape}, 実際: {colored_high_res.shape}")
-                 # エラーを示す画像で置き換えるか、ダウンサンプリングしない処理に進む
-                 # ここではエラーを示す単色画像を例として返す
-                 colored = np.full((resolution, resolution, 4), [255, 0, 0, 255], dtype=np.float32) # 赤色のエラー画像
-
-        except ValueError as e:
-            logger.log(LogLevel.ERROR, f"ダウンサンプリング中のValueError: {e}. 解像度={resolution}, samples_per_pixel={samples_per_pixel}, colored_high_res.shape={colored_high_res.shape}")
-            # ValueError発生時もエラーを示す画像で置き換えるなど
-            colored = np.full((resolution, resolution, 4), [255, 0, 0, 255], dtype=np.float32) # 赤色のエラー画像
-
-    else:
-        # ダウンサンプリングしない場合
-        # この場合、計算された colored_high_res はすでに resolution x resolution になっているはずだが
-        # 念のため最終的なサイズに調整する必要があるかもしれない
-        # 現在のロジックでは samples_per_pixel=1 のとき super_resolution == resolution なので問題なし
-        colored = colored_high_res
-
-    # 最終的な結果を uint8 [0, 255] に変換
-    # np.clip で範囲外の値が発生しないように念のためクリップ
-    colored = np.clip(colored, 0, 255).astype(np.uint8)
-    logger.log(LogLevel.DEBUG, f"最終的な render_fractal 出力 dtype: {colored.dtype}, shape: {colored.shape}")
-
-    return colored
-
 def _calculate_dynamic_resolution(width, base_res=600, min_res=300, max_res=1200):
     """ズームレベルに応じて描画解像度を動的に計算
-
     Args:
         width (float): ウィンドウの幅（データ座標系）。ズームレベルの指標として使用。
                        widthが小さいほどズームインしており、高解像度が必要。
         base_res (int, optional): 基準となる解像度. Defaults to 600.
         min_res (int, optional): 最小解像度. Defaults to 300.
         max_res (int, optional): 最大解像度. Defaults to 1200.
-
     Returns:
         int: 計算された描画解像度（一辺のピクセル数）。実際にはこれにsamples_per_pixelをかけた高解像度で計算し、後で縮小します。
     """
@@ -175,3 +31,137 @@ def _calculate_dynamic_resolution(width, base_res=600, min_res=300, max_res=1200
 
     # 最小解像度と最大解像度でクリップ
     return np.clip(resolution, min_res, max_res)
+
+def _create_fractal_grid(params: dict, super_resolution_x: int, super_resolution_y: int, logger: DebugLogger) -> np.ndarray:
+    """フラクタルの計算用グリッドを作成
+    Args:
+        params (dict): パラメータ辞書
+        super_resolution_x (int): 水平方向の解像度
+        super_resolution_y (int): 垂直方向の解像度
+        logger (DebugLogger): ログ出力クラス
+    Returns:
+        np.ndarray: 複素数グリッド
+    """
+    center_x = params.get("center_x", 0.0)
+    center_y = params.get("center_y", 0.0)
+    width = params.get("width", 4.0)
+    height = width * (9 / 16)
+
+    dtype = np.float16 if width > 1.0 else np.float32
+    x = np.linspace(center_x - width/2, center_x + width/2, super_resolution_x, dtype=dtype)
+    y = np.linspace(center_y - height/2, center_y + height/2, super_resolution_y, dtype=dtype)
+
+    X, Y = np.meshgrid(x, y)
+    Z = X + 1j * Y
+    Z = Z.astype(np.complex64)
+
+    rotation_deg = params.get("rotation", 0.0)
+    if rotation_deg != 0:
+        logger.log(LogLevel.DEBUG, f"回転適用: {rotation_deg} 度")
+        rotation_rad = np.radians(rotation_deg)
+        Z -= complex(center_x, center_y)
+        rotation_operator = np.exp(1j * rotation_rad)
+        Z *= rotation_operator
+        Z += complex(center_x, center_y)
+        logger.log(LogLevel.SUCCESS, "グリッド回転適用完了")
+
+    return Z
+
+def _compute_fractal(
+    Z: np.ndarray,
+    params: dict,
+    logger: DebugLogger
+) -> dict:
+    """フラクタルを計算
+    Args:
+        Z (np.ndarray): 複素数グリッド
+        params (dict): パラメータ辞書
+        logger (DebugLogger): ログ出力クラス
+    Returns:
+        dict: 計算結果（iterations, mask, z_vals）
+    """
+    start_time = time.perf_counter()
+
+    if params["fractal_type"] == "Julia":
+        c_val = complex(params.get("c_real", -0.7), params.get("c_imag", 0.27015))
+        results = julia.compute_julia(Z, c_val, params.get("max_iterations", 100), logger)
+        logger.log(LogLevel.INFO, f"ジュリア集合計算時間：{time.perf_counter() - start_time:.3f}秒")
+    else:  # Mandelbrot
+        z0_val = complex(params.get("z_real", 0.0), params.get("z_imag", 0.0))
+        results = mandelbrot.compute_mandelbrot(Z, z0_val, params.get("max_iterations", 100), logger)
+        logger.log(LogLevel.INFO, f"マンデルブロ集合計算時間：{time.perf_counter() - start_time:.3f}秒")
+
+    results['iterations'] = results['iterations'].astype(np.uint16)
+    return results
+
+def _downsample_image(
+    high_res_image: np.ndarray,
+    resolution: int,
+    samples_per_pixel: int,
+    logger: DebugLogger
+) -> np.ndarray:
+    """高解像度画像をダウンサンプリング
+    Args:
+        high_res_image (np.ndarray): 高解像度画像
+        resolution (int): 目標解像度
+        samples_per_pixel (int): 1ピクセルあたりのサンプル数
+        logger (DebugLogger): ログ出力クラス
+    Returns:
+        np.ndarray: ダウンサンプリングされた画像
+    """
+    try:
+        expected_shape = (resolution * samples_per_pixel, resolution * samples_per_pixel, 4)
+        if high_res_image.shape == expected_shape:
+            downsampled = high_res_image.reshape(
+                (resolution, samples_per_pixel, resolution, samples_per_pixel, 4)
+            ).mean(axis=(1, 3))
+        else:
+            logger.log(LogLevel.ERROR, f"ダウンサンプリングエラー: 形状が不正です。期待値: {expected_shape}, 実際: {high_res_image.shape}")
+            downsampled = np.full((resolution, resolution, 4), [255, 0, 0, 255], dtype=np.float32)
+    except ValueError as e:
+        logger.log(LogLevel.ERROR, f"ダウンサンプリング中のValueError: {e}")
+        downsampled = np.full((resolution, resolution, 4), [255, 0, 0, 255], dtype=np.float32)
+
+    return downsampled
+
+def render_fractal(params: dict, logger: DebugLogger, cache=None) -> np.ndarray:
+    """フラクタルを描画
+    Args:
+        params (dict): パラメータ辞書
+        logger (DebugLogger): ログ出力クラス
+        cache (FractalCache): キャッシュクラス
+    Returns:
+        np.ndarray: フラクタル画像 (uint8 [0, 255] RGBA 配列)
+    """
+    # 動的解像度計算
+    resolution = _calculate_dynamic_resolution(params.get("width", 4.0))
+    logger.log(LogLevel.SUCCESS, f"動的解像度計算完了: {resolution}x{resolution}")
+
+    # アンチエイリアシング設定
+    zoom_level = 4.0 / params.get("width", 4.0)
+    samples_per_pixel = 2 if zoom_level < 1.0 else 4
+    logger.log(LogLevel.SUCCESS, f"アンチエイリアシング設定完了：samples_per_pixel={samples_per_pixel}")
+
+    # 高解像度グリッドサイズ
+    super_resolution_x = resolution * samples_per_pixel
+    super_resolution_y = resolution * samples_per_pixel
+
+    # グリッド作成
+    Z = _create_fractal_grid(params, super_resolution_x, super_resolution_y, logger)
+    logger.log(LogLevel.SUCCESS, "グリッドの作成と変換完了")
+
+    # フラクタル計算
+    results = _compute_fractal(Z, params, logger)
+
+    # 着色処理
+    colored_high_res = color_algorithms.apply_coloring_algorithm(results, params, logger)
+
+    # ダウンサンプリング
+    colored = colored_high_res if samples_per_pixel == 1 else \
+        _downsample_image(colored_high_res, resolution, samples_per_pixel, logger)
+
+    # 最終的な結果を uint8 に変換
+    colored = np.clip(colored, 0, 255).astype(np.uint8)
+    logger.log(LogLevel.DEBUG, f"最終的な render_fractal 出力 dtype: {colored.dtype}, shape: {colored.shape}")
+
+    return colored

@@ -137,6 +137,7 @@ def apply_coloring_algorithm(
     divergent = iterations > 0
     colored = np.zeros((*iterations.shape, 4), dtype=np.float32)
     cmap_func = plt.cm.get_cmap(params["diverge_colormap"])
+    non_cmap_func = plt.cm.get_cmap(params["non_diverge_colormap"])
 
     def process_divergent():
         """発散部の着色アルゴリズム"""
@@ -226,18 +227,18 @@ def apply_coloring_algorithm(
 
         elif non_algo == "グラデーション":
             grad = gradient.compute_gradient(iterations.shape, logger)
-            colored[non_divergent] = cmap_func(grad[non_divergent]) * 255.0
+            colored[non_divergent] = non_cmap_func(grad[non_divergent]) * 255.0
 
         elif non_algo in ["パラメータ(C)", "パラメータ(Z)"]:
             if params["fractal_type"] == "Julia" and non_algo == "パラメータ(C)":
                 c_val = complex(params["c_real"], params["c_imag"])
                 angle = (np.angle(c_val) / (2 * np.pi)) + 0.5
-                color = np.array(cmap_func(angle)) * 255.0  # cmapの戻り値をnumpy配列に変換
+                color = np.array(non_cmap_func(angle)) * 255.0  # cmapの戻り値をnumpy配列に変換
                 colored[non_divergent] = np.broadcast_to(color, colored[non_divergent].shape)
             else:
                 z_real, z_imag = np.real(z_vals[non_divergent]), np.imag(z_vals[non_divergent])
                 angle = (np.arctan2(z_imag, z_real) / (2 * np.pi)) + 0.5
-                colored[non_divergent] = cmap_func(angle) * 255.0
+                colored[non_divergent] = non_cmap_func(angle) * 255.0
 
     try:
         if np.any(divergent):
