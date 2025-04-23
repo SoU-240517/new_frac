@@ -83,6 +83,9 @@ class ZoomSelector:
         """CursorManagerの初期化"""
         self.logger.log(LogLevel.INIT, "CursorManager クラスのインスタンスを作成")
         tk_widget = getattr(self.canvas, 'get_tk_widget', lambda: None)()
+        if tk_widget is None:
+            raise ValueError("Tkinter ウィジェット取得不可：FigureCanvasTkAgg の使用を要確認")
+
         self.cursor_manager = CursorManager(tk_widget, self.logger)
         self.cursor_manager.set_zoom_selector(self)
 
@@ -109,6 +112,7 @@ class ZoomSelector:
 
     def cursor_inside_rect(self, event) -> bool:
         """マウスカーソル位置がズーム領域内か判定する
+
         Args:
             event: MouseEvent オブジェクト
         Returns:
@@ -117,11 +121,11 @@ class ZoomSelector:
         if not self._has_valid_rect_cache():
             return False
 
-        if not self._cached_rect_patch.get_visible():
-            self.logger.log(LogLevel.DEBUG, "カーソル：ズーム領域 外 (非表示)")
+        rect_patch = self._cached_rect_patch
+        if rect_patch is None or not rect_patch.get_visible():
             return False
 
-        contains, _ = self._cached_rect_patch.contains(event)
+        contains, _ = rect_patch.contains(event)
         if contains != self._last_cursor_inside_state:
             self.logger.log(LogLevel.DEBUG, f"カーソル：ズーム領域 {'内' if contains else '外'}")
             self._last_cursor_inside_state = contains
@@ -191,12 +195,14 @@ class ZoomSelector:
         self.invalidate_rect_cache()
         self.cursor_manager.set_default_cursor()
         self.event_handler.reset_internal_state()
+        self.logger.log(LogLevel.DEBUG, "ズーム後のクリーンアップ完了")
 
     def cancel_zoom(self) -> None:
         """ズーム確定操作をキャンセル"""
         self._cleanup_zoom()
         self.logger.log(LogLevel.CALL, "ズーム確定キャンセル：コールバック呼出し")
         self.on_zoom_cancel()
+        self.cursor_manager.set_default_cursor()
 
     def reset(self) -> None:
         """ZoomSelectorの状態をリセット"""

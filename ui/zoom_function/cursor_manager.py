@@ -9,120 +9,121 @@ if TYPE_CHECKING:
     from .zoom_state_handler import ZoomStateHandler
     from .zoom_selector import ZoomSelector
 
-# Tkinterの標準カーソル名 (必要に応じて調整)
-# 参考: https://anzeljg.github.io/rin2/book2/2405/docs/tkinter/cursors.html
-CURSOR_DEFAULT = "" # 標準カーソル (通常は矢印)
-CURSOR_CROSSHAIR = "crosshair" # 十字カーソル (矩形作成時)
-CURSOR_RESIZE_NW_SE = "size_nw_se" # 左上/右下リサイズ
-CURSOR_RESIZE_NE_SW = "size_ne_sw" # 右上/左下リサイズ
-CURSOR_MOVE = "fleur" # 移動カーソル (全方向矢印)
-CURSOR_ROTATE = "exchange" # 回転カーソル (例: exchange, または circle, dotbox など試す)
+# カーソル定義
+CURSORS = {
+    'default': '',
+    'crosshair': 'crosshair',
+    'resize_nw_se': 'size_nw_se',
+    'resize_ne_sw': 'size_ne_sw',
+    'move': 'fleur',
+    'rotate': 'exchange'
+}
 
 class CursorManager:
     """マウスカーソルの形状を操作状態に応じて変更するクラス
     - 役割:
         - イベントと状態に基づいてカーソル形状を更新する
-        - イベントと状態に基づいて矩形を更新する
+        - カーソルの状態を管理する
     """
 
-    def __init__(self, canvas_widget, logger: Optional[DebugLogger]):
-        """CursorManager クラスのコンストラクタ（親: ZoomSelector）
+    def __init__(self, canvas_widget: tk.Widget, logger: Optional[DebugLogger]) -> None:
+        """CursorManager クラスのコンストラクタ
         Args:
-            canvas_widget: Tkinter Canvas ウィジェット (FigureCanvasTkAgg.get_tk_widget())
-            logger: DebugLogger インスタンス、または None
+            canvas_widget: Tkinter Canvas ウィジェット
+            logger: DebugLogger インスタンス
         """
         self.widget = canvas_widget
         self.logger = logger
-        # logger が None でないことを確認してからログを記録
-        self._current_cursor = CURSOR_DEFAULT
+        self._current_cursor = CURSORS['default']
         self.zoom_selector: Optional['ZoomSelector'] = None
-        # Validatorインスタンスが必要な場合 (通常は EventHandler が持っているものを共有)
-        # self.validator = EventValidator() # 必要に応じてインスタンス化
 
-    def cursor_update(self,
-                      event: Optional[MouseEvent],
-                      state: ZoomState, # 現在の状態を引数で受け取る
-                      near_corner_index: Optional[int] = None,
-                      is_rotating: bool = False):
-        """イベントと状態に基づいてカーソル形状を更新する
-
-        Args:
-            event: MouseEvent オブジェクト (Noneの場合、デフォルトカーソルに戻す)
-            state: 現在の ZoomState
-            near_corner_index: 近接している角のインデックス (0-3)。Noneの場合は角に近くない
-            is_rotating: 回転モードが有効かどうか
-        """
-        new_cursor = CURSOR_DEFAULT # デフォルトはいったん標準カーソルにする
-
-        # --- イベント検証開始 ---
-        validation_result = None
-        if event and self.zoom_selector: # イベントと zoom_selector が存在する場合のみ検証
-             # EventHandlerが持っているvalidatorインスタンスを使うのが通常
-             # ここでは EventValidator.validate_event を直接呼び出す例
-            validation_result = EventValidator.validate_event(
-                event, self.zoom_selector.ax, self.logger
-            )
-            # カーソル更新に必要なのは Axes 内であることと座標があること
-            should_update_cursor = validation_result.is_in_axes and validation_result.has_coords
-        else:
-            should_update_cursor = False # イベントがない、または検証できない場合は更新しない
-        # --- 検証終了 ---
-
-        if should_update_cursor:
-            # 回転モードが有効な場合を最優先で処理
-            if is_rotating:
-                if near_corner_index is not None: # 回転モードで角に近い場合
-                    new_cursor = CURSOR_ROTATE
-                # elif self.zoom_selector and self.zoom_selector.cursor_inside_rect(event):
-                    # 回転モードで領域内だが角に近くない場合、回転カーソルを維持するか、
-                    # デフォルトに戻すか選択できます。ここではデフォルトに戻します。
-                    # new_cursor = CURSOR_ROTATE # 回転カーソルを維持する場合
-                    # new_cursor = CURSOR_DEFAULT # デフォルトに戻す場合
-                else: # 回転モードで領域外、または領域内だが角に近くない場合
-                    new_cursor = CURSOR_DEFAULT # デフォルトカーソルにする
-            # --- 以下は回転モードでない場合の処理 ---
-            elif near_corner_index is not None: # 角に近い場合 (回転モードではない)
-                if near_corner_index in [0, 3]:
-                    new_cursor = CURSOR_RESIZE_NW_SE
-                else:
-                    new_cursor = CURSOR_RESIZE_NE_SW
-            elif state == ZoomState.CREATE:
-                new_cursor = CURSOR_CROSSHAIR
-            elif state == ZoomState.ON_MOVE:
-                new_cursor = CURSOR_MOVE
-            elif state == ZoomState.EDIT:
-                # 回転モードでなく、角にも近くない場合
-                if self.zoom_selector.cursor_inside_rect(event): # 領域内か？
-                    new_cursor = CURSOR_MOVE # 通常の移動カーソル
-                else: # 領域外
-                    new_cursor = CURSOR_DEFAULT
-            else: # 上記のいずれにも当てはまらない場合
-                 new_cursor = CURSOR_DEFAULT
-        else: # 検証失敗またはイベントがない場合はデフォルトカーソル
-            new_cursor = CURSOR_DEFAULT
-
-        if new_cursor != self._current_cursor:
-            try:
-                self.widget.config(cursor=new_cursor)
-                self._current_cursor = new_cursor
-                self.logger.log(LogLevel.SUCCESS, f"カーソル変更 to '{new_cursor}'", {"state": state.name})
-            except tk.TclError as e:
-                self.logger.log(LogLevel.ERROR, f"カーソルの設定に失敗 '{new_cursor}': {e}")
-
-    def set_default_cursor(self):
-        """カーソルをデフォルトに戻す"""
-        if self._current_cursor != CURSOR_DEFAULT:
-            try:
-                self.widget.config(cursor=CURSOR_DEFAULT)
-                self._current_cursor = CURSOR_DEFAULT
-            except tk.TclError as e:
-                self.logger.log(LogLevel.ERROR, f"カーソルをデフォルトにできない: {e}")
-
-    def set_zoom_selector(self, zoom_selector: 'ZoomSelector'):
+    def set_zoom_selector(self, zoom_selector: 'ZoomSelector') -> None:
         """ZoomSelector のインスタンスへの参照を設定
-
         Args:
             zoom_selector: ZoomSelector インスタンス
         """
-        self.logger.log(LogLevel.INIT, "CursorManager に ZoomSelector インスタンスへの参照を設定")
         self.zoom_selector = zoom_selector
+        self.logger.log(LogLevel.INIT, "CursorManager に ZoomSelector インスタンスへの参照を設定")
+
+    def cursor_update(self,
+                      event: Optional[MouseEvent],
+                      state: ZoomState,
+                      near_corner_index: Optional[int] = None,
+                      is_rotating: bool = False) -> None:
+        """イベントと状態に基づいてカーソル形状を更新する
+        Args:
+            event: MouseEvent オブジェクト
+            state: 現在の ZoomState
+            near_corner_index: 近接している角のインデックス
+            is_rotating: 回転モードが有効かどうか
+        """
+        if not self._should_update_cursor(event):
+            return
+
+        new_cursor = self._determine_cursor(event, state, near_corner_index, is_rotating)
+
+        if new_cursor != self._current_cursor:
+            self._update_cursor(new_cursor, state)
+
+    def _should_update_cursor(self, event: Optional[MouseEvent]) -> bool:
+        """カーソル更新の必要性を判断する
+        Args:
+            event: MouseEvent オブジェクト
+        Returns:
+            bool: カーソルを更新するかどうか
+        """
+        if not event or not self.zoom_selector:
+            return False
+
+        validation_result = EventValidator.validate_event(
+            event, self.zoom_selector.ax, self.logger
+        )
+        return validation_result.is_in_axes and validation_result.has_coords
+
+    def _determine_cursor(self,
+                         event: MouseEvent,
+                         state: ZoomState,
+                         near_corner_index: Optional[int],
+                         is_rotating: bool) -> str:
+        """カーソルの種類を決定する
+        Args:
+            event: MouseEvent オブジェクト
+            state: 現在の状態
+            near_corner_index: 近接している角のインデックス
+            is_rotating: 回転モードが有効かどうか
+        Returns:
+            str: カーソルの種類
+        """
+        if is_rotating:
+            return CURSORS['rotate'] if near_corner_index is not None else CURSORS['default']
+
+        if near_corner_index is not None:
+            return CURSORS['resize_nw_se'] if near_corner_index in [0, 3] else CURSORS['resize_ne_sw']
+
+        if state == ZoomState.CREATE:
+            return CURSORS['crosshair']
+        elif state == ZoomState.ON_MOVE:
+            return CURSORS['move']
+        elif state == ZoomState.EDIT:
+            return CURSORS['move'] if self.zoom_selector.cursor_inside_rect(event) else CURSORS['default']
+
+        return CURSORS['default']
+
+    def _update_cursor(self, new_cursor: str, state: ZoomState) -> None:
+        """カーソルを更新する
+        Args:
+            new_cursor: 新しいカーソルの種類
+            state: 現在の状態
+        """
+        try:
+            self.widget.config(cursor=new_cursor)
+            self._current_cursor = new_cursor
+            self.logger.log(LogLevel.SUCCESS, f"カーソル変更 to '{new_cursor}'", {"state": state.name})
+        except tk.TclError as e:
+            self.logger.log(LogLevel.ERROR, f"カーソルの設定に失敗 '{new_cursor}': {e}")
+            self._current_cursor = CURSORS['default']
+
+    def set_default_cursor(self) -> None:
+        """カーソルをデフォルトに戻す"""
+        if self._current_cursor != CURSORS['default']:
+            self._update_cursor(CURSORS['default'], ZoomState.DEFAULT)
