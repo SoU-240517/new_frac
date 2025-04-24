@@ -11,53 +11,7 @@ from ui.zoom_function.enums import LogLevel
 このモジュールはフラクタル画像の着色処理を担当する
 主な機能：
 1. 複数の着色アルゴリズムの実装
-    発散部---------------------------------------------------
-    - 反復回数ベースの手法
-        線形マッピング（離散型エスケープタイム法）
-            反復回数を連続化して直接利用する方法（エスケープタイム法とほぼ同様）
-            原理：反復回数をそのまま正規化
-            視覚効果：明確な色の縞（バンディング）が発生
-            用途：古典的なマンデルブロ集合の描画
-        対数マッピング
-            反復回数を対数変換後に利用する方法（エスケープタイム法の拡張版）
-            原理：反復回数の対数値を利用
-            視覚効果：低反復領域の詳細を強調
-            数学的意義：発散速度の対数的性質を反映
-    - スムージング系手法（反復回数の離散性を滑らかにするために調整値を追加される連続的な値に変換する方法。エスケープタイム法の発展形）
-        標準スムージング
-            理論的に導出された厳密な補正。発散時の複素数の大きさ|z|を対数スケールで評価。
-            補正項の物理的意味：
-            |z_n| > 2 となった時の「過剰発散量」を測定
-            → 反復回数の「小数部分」を推定
-        高速スムージング
-            発散済みの点のみ計算することで最適化。物理的意味は標準版と同じ。
-            最適化：発散点のみ計算（境界付近の精度は標準版と同等）
-        指数スムージング
-            わずかに異なる定数項（視覚効果を調整）。
-    - ヒストグラム平坦化
-        反復回数を確率分布変換後に利用する方法（エスケープタイム法の派生版）
-        統計的処理：反復回数の分布を一様分布に変換
-        効果：頻度の低い反復回数領域の色分解能を向上
-    - 幾何学的属性に基づく手法
-        距離カラーリング
-            描画対象：原点からの距離 |z|
-            特徴：フラクタル境界での「等高線」的表現
-        角度カラーリング
-            数学的基礎：複素数の偏角 arg(z) を色相にマッピング
-            視覚効果：渦巻き構造の強調（ジュリア集合で有用）
-    - 高度な数学的手法
-        ポテンシャル関数法
-            物理的解釈：複素力学系の「電位」に相当
-            特性：フラクタル境界で急激な変化 → 微細構造の可視化に適す
-        軌道トラップ法
-            アルゴリズム：軌道が特定の点（例：1+0i）に近づいた際の最小距離を記録
-            芸術的効果：幻想的な模様の生成（例：「渦巻き」や「花弁」状のパターン）
-    非発散部-----------------------------------------------
-    - 単色塗りつぶし
-        利点：発散部のパターンが際立つ
-    - パラメータZ/Cに基づく着色
-        ジュリア集合：定数 c の偏角を利用
-        マンデルブロ集合：初期値 z_0 の偏角を利用
+   詳細は color_algorithms.md を参照
 2. パフォーマンス最適化
    - 高速スムージングアルゴリズム
    - キャッシュ機能
@@ -338,10 +292,10 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger) -
 
         elif non_algo == "軌道トラップ(円)（Orbit Trap Coloring）":
             # 円形トラップ (中心0、半径Rの円に近いほど明るく)
-            R = 1.0  # この値を0.5～2.0の範囲で変化させてみてください
+            R = 1.4  # この値を0.5～2.0の範囲で変化させてみてください
             trap_dist = np.abs(np.abs(z_vals[non_divergent]) - R)
             normalized = 1 - (trap_dist / np.max(trap_dist))
-            gamma = 1.5  # 1.0～2.0で調整
+            gamma = 1.0  # 1.0～2.0で調整
             normalized = normalized ** (1/gamma)
             colored[non_divergent] = non_cmap_func(normalized) * 255.0
 
@@ -380,6 +334,93 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger) -
             cdf_normalized = cdf_normalized ** (1/gamma)
             equalized = np.interp(iterations[non_divergent], bins[:-1], cdf_normalized)
             colored[non_divergent] = non_cmap_func(equalized) * 255.0
+
+        elif non_algo == "複素ポテンシャル（Complex Potential Mapping）":
+            with np.errstate(divide='ignore', invalid='ignore'):
+                potential = np.log(np.abs(z_vals[non_divergent]) + 1e-10)
+                potential = np.nan_to_num(potential, nan=0.0, posinf=0.0, neginf=0.0)
+                normalized = (potential - np.min(potential)) / (np.max(potential) - np.min(potential))
+                # 波模様を強調するために角度を加算
+                angle_effect = np.angle(z_vals[non_divergent]) / (2*np.pi)
+                combined = (normalized + 0.3 * angle_effect) % 1.0 # 0.3 * angle_effectの係数を変更して角度の影響度を調整
+                colored[non_divergent] = non_cmap_func(combined) * 255.0
+
+        elif non_algo == "カオス軌道混合（Chaotic Orbit Mixing）":
+            # 簡易的な軌道情報のシミュレーション
+            r = np.abs(z_vals[non_divergent])
+            theta = np.angle(z_vals[non_divergent])
+            # 各チャンネルに異なる数学関数を適用(red, green, blueの各チャンネルの数式を変更)
+            red = np.sin(r * 5.0)**2
+            green = (np.cos(theta * 3.0) + 1) / 2
+            blue = (np.sin(r * 3.0 + theta * 2.0) + 1) / 2
+            # RGB結合
+            colored[non_divergent] = np.stack([red, green, blue, np.ones_like(red)], axis=-1) * 255.0
+
+        elif non_algo == "フーリエ干渉（Fourier Pattern）":
+            x = np.real(z_vals[non_divergent])
+            y = np.imag(z_vals[non_divergent])
+
+            # 複数の周波数成分を合成(10.0, 8.0などの周波数パラメータを変更)
+            pattern = (np.sin(x * 10.0) * np.cos(y * 8.0) +
+                    np.sin(x * 5.0 + y * 3.0)) / 2.0
+
+            normalized = (pattern - np.min(pattern)) / (np.max(pattern) - np.min(pattern))
+            colored[non_divergent] = non_cmap_func(normalized) * 255.0
+
+        elif non_algo == "フラクタルテクスチャ（Fractal Texture）":
+            def noise(x, y, scale=1.0): # noise関数内のscaleパラメータを調整
+                return np.sin(scale * x) * np.cos(scale * y)
+
+            x = np.real(z_vals[non_divergent])
+            y = np.imag(z_vals[non_divergent])
+
+            # マルチオクターブノイズ
+            n1 = noise(x, y, 5.0)
+            n2 = noise(x, y, 10.0) * 0.5
+            n3 = noise(x, y, 20.0) * 0.25
+            combined = n1 + n2 + n3
+
+            normalized = (combined - np.min(combined)) / (np.max(combined) - np.min(combined))
+            colored[non_divergent] = non_cmap_func(normalized) * 255.0
+
+        elif non_algo == "量子もつれ（Quantum Entanglement）":
+            real_part = np.real(z_vals[non_divergent])
+            imag_part = np.imag(z_vals[non_divergent])
+
+            # 値の標準化（ゼロ除算防止）
+            with np.errstate(divide='ignore', invalid='ignore'):
+                scale = 2.0  # この値を調整してみてください（0.1～50.0）
+                real_part = (real_part - np.mean(real_part)) / (np.std(real_part) + 1e-10) * scale
+                imag_part = (imag_part - np.mean(imag_part)) / (np.std(imag_part) + 1e-10) * scale
+
+            # 負の値を避けるための処理
+            real_pos = np.abs(real_part)  # 絶対値を取る
+            imag_pos = np.abs(imag_part)
+
+            # パターン計算の改善
+            # より広い値の範囲を確保
+            pattern = (
+                np.sin(real_pos**1.5 + imag_pos**1.5) * 0.4 +
+                np.cos(real_pos * imag_pos * 0.5) * 0.4 +
+                np.arctan2(imag_part, real_part) / (2 * np.pi) * 0.2
+            )
+            
+            # デバッグ用のログ
+#            print(f"Pattern range: min={np.min(pattern)}, max={np.max(pattern)}")
+            
+            # NaN値の処理
+            pattern = np.nan_to_num(pattern, nan=0.0)  # NaNを0に置き換え
+            
+            # 値の範囲を0-1にスケーリング
+            pattern = (pattern - np.min(pattern)) / (np.max(pattern) - np.min(pattern) + 1e-10)
+            pattern = np.clip(pattern, 0, 1)
+
+            # ガンマ補正でコントラスト調整
+            gamma = 1.8
+            normalized = pattern ** (1/gamma)
+
+            # カラーマップ適用
+            colored[non_divergent] = non_cmap_func(normalized) * 255.0
 
         elif non_algo in ["パラメータ(C)", "パラメータ(Z)"]:
             if non_algo == "パラメータ(C)":

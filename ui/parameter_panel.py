@@ -126,6 +126,11 @@ class ParameterPanel:
             "反復収束速度（Convergence Speed）",
             "微分係数（Derivative Coloring）",
             "統計分布（Histogram Equalization）",
+            "複素ポテンシャル（Complex Potential Mapping）",
+            "カオス軌道混合（Chaotic Orbit Mixing）",
+            "フーリエ干渉（Fourier Pattern）",
+            "フラクタルテクスチャ（Fractal Texture）",
+            "量子もつれ（Quantum Entanglement）",
             "パラメータ(C)",
             "パラメータ(Z)"
         ]
