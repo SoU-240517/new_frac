@@ -39,8 +39,7 @@ class ColorAlgorithmError(Exception):
 
 class ColorCache:
     """フラクタル画像のキャッシュ管理クラス
-    このクラスはフラクタル画像のキャッシュを管理し、
-    既に計算された画像の再利用を可能にする
+    このクラスはフラクタル画像のキャッシュを管理し、既に計算された画像の再利用を可能にする
     Attributes:
         cache (dict): キャッシュデータを保持する辞書
         max_size (int): キャッシュの最大サイズ
@@ -56,7 +55,6 @@ class ColorCache:
         self.cache = {}
         self.max_size = max_size
         self.logger = logger or DebugLogger()
-        self.logger.log(LogLevel.INIT, "ColorCache 初期化完了")
 
     def _create_cache_key(self, params: Dict) -> str:
         """キャッシュキーを生成
@@ -172,6 +170,7 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger) -
         - キャッシュ機能により、同じパラメータでの再計算を避ける
         - 複数の着色アルゴリズムをサポート
     """
+    logger.log(LogLevel.INIT, "ColorCache クラスのインスタンスを作成")
     cache = ColorCache()
     cached = cache.get_cache(params)
     if cached:
@@ -191,9 +190,17 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger) -
         algo = params["diverge_algorithm"]
         logger.log(LogLevel.DEBUG, f"着色アルゴリズム選択: {algo}")
 
-        if algo in ['反復回数線形マッピング', '反復回数対数マッピング']:
+        if algo == '反復回数線形マッピング':
+            # 線形マッピング処理
             norm = Normalize(1, params["max_iterations"])
             colored[divergent] = cmap_func(norm(iterations[divergent])) * 255.0
+
+        elif algo == '反復回数対数マッピング':
+            # 対数マッピング処理
+            log_iters = np.log(iterations[divergent]) # 対数スケールに変換
+            # 対数スケールの正規化
+            norm = Normalize(np.log(1), np.log(params["max_iterations"]))
+            colored[divergent] = cmap_func(norm(log_iters)) * 255.0
 
         elif algo in ['スムージングカラーリング', '高速スムージング', '指数スムージング']:
             smooth_method = 'fast' if algo == '高速スムージング' else 'standard'

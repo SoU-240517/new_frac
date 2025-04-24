@@ -86,9 +86,16 @@ class ParameterPanel:
         self._add_label("着色アルゴリズム:", row, 0, pady=(5,0))
         self.diverge_algo_var = tk.StringVar(value="スムージングカラーリング")
         self.diverge_algorithms = [
-            "スムージングカラーリング", "高速スムージング", "指数スムージング",
-            "反復回数線形マッピング", "ヒストグラム平坦化法","反復回数対数マッピング",
-            "距離カラーリング", "角度カラーリング", "ポテンシャル関数法", "軌道トラップ法"
+            "スムージングカラーリング",
+            "高速スムージング",
+            "指数スムージング",
+            "反復回数線形マッピング",
+            "反復回数対数マッピング",
+            "ヒストグラム平坦化法",
+            "距離カラーリング",
+            "角度カラーリング",
+            "ポテンシャル関数法",
+            "軌道トラップ法"
         ]
         combo = self._add_combobox(row, 1, self.diverge_algo_var, self.diverge_algorithms)
         combo.bind("<<ComboboxSelected>>", self._common_callback)

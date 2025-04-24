@@ -94,7 +94,7 @@ def _compute_fractal(
     params: dict,
     logger: DebugLogger
 ) -> dict:
-    """フラクタルを計算する
+    """フラクタルを計算
     Args:
         Z (np.ndarray): 複素数グリッド
         params (dict): フラクタルのパラメータ辞書
