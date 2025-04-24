@@ -117,7 +117,13 @@ class ParameterPanel:
         row += 1
         self._add_label("着色アルゴリズム:", row, 0, pady=(5,0))
         self.non_diverge_algo_var = tk.StringVar(value="単色")
-        self.non_diverge_algorithms = ["単色", "グラデーション", "パラメータ(C)", "パラメータ(Z)"]
+        self.non_diverge_algorithms = [
+            "単色",
+            "グラデーション",
+            "内部距離（Escape Time Distance）",
+            "パラメータ(C)",
+            "パラメータ(Z)"
+        ]
         combo = self._add_combobox(row, 1, self.non_diverge_algo_var, self.non_diverge_algorithms)
         combo.bind("<<ComboboxSelected>>", self._common_callback)
         row += 1

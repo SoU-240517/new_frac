@@ -11,12 +11,53 @@ from ui.zoom_function.enums import LogLevel
 このモジュールはフラクタル画像の着色処理を担当する
 主な機能：
 1. 複数の着色アルゴリズムの実装
-   - 反復回数ベースの着色
-   - スムージングカラーリング
-   - ヒストグラム平坦化
-   - 距離カラーリング
-   - 角度カラーリング
-   - ポテンシャル関数法
+    発散部---------------------------------------------------
+    - 反復回数ベースの手法
+        線形マッピング（離散型エスケープタイム法）
+            反復回数を連続化して直接利用する方法（エスケープタイム法とほぼ同様）
+            原理：反復回数をそのまま正規化
+            視覚効果：明確な色の縞（バンディング）が発生
+            用途：古典的なマンデルブロ集合の描画
+        対数マッピング
+            反復回数を対数変換後に利用する方法（エスケープタイム法の拡張版）
+            原理：反復回数の対数値を利用
+            視覚効果：低反復領域の詳細を強調
+            数学的意義：発散速度の対数的性質を反映
+    - スムージング系手法（反復回数の離散性を滑らかにするために調整値を追加される連続的な値に変換する方法。エスケープタイム法の発展形）
+        標準スムージング
+            理論的に導出された厳密な補正。発散時の複素数の大きさ|z|を対数スケールで評価。
+            補正項の物理的意味：
+            |z_n| > 2 となった時の「過剰発散量」を測定
+            → 反復回数の「小数部分」を推定
+        高速スムージング
+            発散済みの点のみ計算することで最適化。物理的意味は標準版と同じ。
+            最適化：発散点のみ計算（境界付近の精度は標準版と同等）
+        指数スムージング
+            わずかに異なる定数項（視覚効果を調整）。
+    - ヒストグラム平坦化
+        反復回数を確率分布変換後に利用する方法（エスケープタイム法の派生版）
+        統計的処理：反復回数の分布を一様分布に変換
+        効果：頻度の低い反復回数領域の色分解能を向上
+    - 幾何学的属性に基づく手法
+        距離カラーリング
+            描画対象：原点からの距離 |z|
+            特徴：フラクタル境界での「等高線」的表現
+        角度カラーリング
+            数学的基礎：複素数の偏角 arg(z) を色相にマッピング
+            視覚効果：渦巻き構造の強調（ジュリア集合で有用）
+    - 高度な数学的手法
+        ポテンシャル関数法
+            物理的解釈：複素力学系の「電位」に相当
+            特性：フラクタル境界で急激な変化 → 微細構造の可視化に適す
+        軌道トラップ法
+            アルゴリズム：軌道が特定の点（例：1+0i）に近づいた際の最小距離を記録
+            芸術的効果：幻想的な模様の生成（例：「渦巻き」や「花弁」状のパターン）
+    非発散部-----------------------------------------------
+    - 単色塗りつぶし
+        利点：発散部のパターンが際立つ
+    - パラメータZ/Cに基づく着色
+        ジュリア集合：定数 c の偏角を利用
+        マンデルブロ集合：初期値 z_0 の偏角を利用
 2. パフォーマンス最適化
    - 高速スムージングアルゴリズム
    - キャッシュ機能
@@ -283,13 +324,33 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger) -
             grad = gradient.compute_gradient(iterations.shape, logger)
             colored[non_divergent] = non_cmap_func(grad[non_divergent]) * 255.0
 
+        elif non_algo == "内部距離（Escape Time Distance）":
+            # 内部距離の計算
+            with np.errstate(invalid='ignore', divide='ignore'):
+                # z_valsの絶対値を計算 (0にならないように微小値を加算)
+                abs_z = np.abs(z_vals[non_divergent]) + 1e-10
+                # 対数を取って正規化 (値が大きいほど境界に近い)
+                distance = np.log(abs_z) / np.log(2.0)
+                # 0-1の範囲に正規化
+                distance = (distance - np.min(distance)) / (np.max(distance) - np.min(distance))
+
+            # カラーマップを適用
+            colored[non_divergent] = non_cmap_func(distance) * 255.0
+
         elif non_algo in ["パラメータ(C)", "パラメータ(Z)"]:
-            if params["fractal_type"] == "Julia" and non_algo == "パラメータ(C)":
-                c_val = complex(params["c_real"], params["c_imag"])
-                angle = (np.angle(c_val) / (2 * np.pi)) + 0.5
-                color = np.array(non_cmap_func(angle)) * 255.0  # cmapの戻り値をnumpy配列に変換
-                colored[non_divergent] = np.broadcast_to(color, colored[non_divergent].shape)
-            else:
+            if non_algo == "パラメータ(C)":
+                # パラメータCを使う場合（Julia集合の定数C）
+                if params["fractal_type"] == "Julia":
+                    c_val = complex(params["c_real"], params["c_imag"])
+                    angle = (np.angle(c_val) / (2 * np.pi)) + 0.5
+                    color = non_cmap_func(angle)  # 色を取得
+                    colored[non_divergent] = np.tile(color, (np.sum(non_divergent), 1)) * 255.0
+                else:
+                    # Mandelbrot集合の場合、Cは初期値z0（通常は0）なので意味がない
+                    # 代わりに黒で塗るか、別のデフォルト色を使う
+                    colored[non_divergent] = [0.0, 0.0, 0.0, 255.0]
+            else:  # パラメータ(Z)の場合
+                # zの値を使う（JuliaとMandelbrotの両方で有効）
                 z_real, z_imag = np.real(z_vals[non_divergent]), np.imag(z_vals[non_divergent])
                 angle = (np.arctan2(z_imag, z_real) / (2 * np.pi)) + 0.5
                 colored[non_divergent] = non_cmap_func(angle) * 255.0
