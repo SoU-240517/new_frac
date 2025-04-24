@@ -121,6 +121,11 @@ class ParameterPanel:
             "単色",
             "グラデーション",
             "内部距離（Escape Time Distance）",
+            "軌道トラップ(円)（Orbit Trap Coloring）",
+            "位相对称（Phase Angle Symmetry）",
+            "反復収束速度（Convergence Speed）",
+            "微分係数（Derivative Coloring）",
+            "統計分布（Histogram Equalization）",
             "パラメータ(C)",
             "パラメータ(Z)"
         ]

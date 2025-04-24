@@ -333,9 +333,53 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger) -
                 distance = np.log(abs_z) / np.log(2.0)
                 # 0-1の範囲に正規化
                 distance = (distance - np.min(distance)) / (np.max(distance) - np.min(distance))
-
             # カラーマップを適用
             colored[non_divergent] = non_cmap_func(distance) * 255.0
+
+        elif non_algo == "軌道トラップ(円)（Orbit Trap Coloring）":
+            # 円形トラップ (中心0、半径Rの円に近いほど明るく)
+            R = 1.0  # この値を0.5～2.0の範囲で変化させてみてください
+            trap_dist = np.abs(np.abs(z_vals[non_divergent]) - R)
+            normalized = 1 - (trap_dist / np.max(trap_dist))
+            gamma = 1.5  # 1.0～2.0で調整
+            normalized = normalized ** (1/gamma)
+            colored[non_divergent] = non_cmap_func(normalized) * 255.0
+
+        elif non_algo == "位相对称（Phase Angle Symmetry）":
+            angles = np.angle(z_vals[non_divergent])
+            # 対称性の次数 (4なら90度ごとに同じ色)
+            symmetry_order = 5 # 3～8の整数で様々な対称性が試せます
+            normalized = (angles * symmetry_order / (2*np.pi)) % 1.0
+            gamma = 1.5  # 1.0～2.0で調整
+            normalized = normalized ** (1/gamma)
+            colored[non_divergent] = non_cmap_func(normalized) * 255.0
+
+        elif non_algo == "反復収束速度（Convergence Speed）":
+            # zの最終値が小さいほど速く収束したとみなす
+            speed = 1 / (np.abs(z_vals[non_divergent]) + 1e-10)
+            normalized = (speed - np.min(speed)) / (np.max(speed) - np.min(speed))
+            gamma = 1.5  # 1.0～2.0で調整
+            normalized = normalized ** (1/gamma)
+            colored[non_divergent] = non_cmap_func(normalized) * 255.0
+
+        elif non_algo == "微分係数（Derivative Coloring）":
+            derivative = 2 * np.abs(z_vals[non_divergent]) * 0.5 # f(z)=z²+cならf'(z)=2z。最後の0.5が調整可能
+            log_deriv = np.log(derivative + 1e-10)
+            normalized = (log_deriv - np.min(log_deriv)) / (np.max(log_deriv) - np.min(log_deriv))
+            gamma = 1.5  # 1.0～2.0で調整
+            normalized = normalized ** (1/gamma)
+            colored[non_divergent] = non_cmap_func(normalized) * 255.0
+
+        elif non_algo == "統計分布（Histogram Equalization）":
+            # 反復回数のヒストグラムを計算
+            hist, bins = np.histogram(iterations[non_divergent], bins=256)
+            cdf = hist.cumsum()
+            cdf_normalized = cdf / cdf[-1]
+            # ヒストグラム平坦化を適用
+            gamma = 1.5  # 1.0～2.0で調整
+            cdf_normalized = cdf_normalized ** (1/gamma)
+            equalized = np.interp(iterations[non_divergent], bins[:-1], cdf_normalized)
+            colored[non_divergent] = non_cmap_func(equalized) * 255.0
 
         elif non_algo in ["パラメータ(C)", "パラメータ(Z)"]:
             if non_algo == "パラメータ(C)":
