@@ -75,22 +75,43 @@ def _smooth_iterations(z: np.ndarray, iters: np.ndarray, method: str = 'standard
     elif method == 'standard':
         # 標準スムージング
         abs_z = np.abs(z)
-        mask_smooth = abs_z > 2
+        # 発散した点 (abs(z) > 2) のマスク
+        diverged_mask = abs_z > 2
         log2 = np.log(2)
+        # 結果を格納する配列を NaN で初期化
         smooth_values = np.full(iters.shape, np.nan, dtype=np.float32)
-        
-        if np.any(mask_smooth):
+
+        # 発散した点が存在する場合のみ計算
+        if np.any(diverged_mask):
+            # 発散した点の z と iterations を取得
+            z_diverged = z[diverged_mask]
+            iters_diverged = iters[diverged_mask]
+            abs_z_diverged = np.abs(z_diverged) # abs_z[diverged_mask] と同じ
+
+            # log(log(|z|)) の計算 (ゼロ除算、無効な値を無視)
             with np.errstate(divide='ignore', invalid='ignore'):
-                log_abs_z = np.log(abs_z[mask_smooth])
-                valid_mask = np.isfinite(log_abs_z) & (log_abs_z > 0)
-                if np.any(valid_mask):
-                    log_log_abs_z = np.log(log_abs_z[valid_mask])
-                    valid_log_mask = np.isfinite(log_log_abs_z)
-                    if np.any(valid_log_mask):
-                        smooth_values[mask_smooth][valid_mask][valid_log_mask] = (
-                            iters[mask_smooth][valid_mask][valid_log_mask] - 
-                            log_log_abs_z[valid_log_mask] / log2
-                        )
+                # log(|z|) > 0 (つまり |z| > 1) が必要
+                log_abs_z = np.log(abs_z_diverged)
+                # log(log(|z|))
+                log_log_abs_z = np.log(log_abs_z)
+
+            # 計算結果が有限な点のみを対象とするマスク
+            valid_calculation_mask = np.isfinite(log_log_abs_z)
+
+            # 有効な計算ができた点に対してスムージング値を計算
+            if np.any(valid_calculation_mask):
+                calculated_smooth = (
+                    iters_diverged[valid_calculation_mask] -
+                    log_log_abs_z[valid_calculation_mask] / log2
+                )
+                # 元の配列の対応する位置に計算結果を代入
+                # smooth_values の diverged_mask が True の部分を取得し、
+                # さらにその中の valid_calculation_mask が True の部分に代入する
+                # 一時変数を使わずに直接代入する方が、マスクの形状が一致しやすい
+                temp_smooth = np.full(diverged_mask.sum(), np.nan, dtype=np.float32)
+                temp_smooth[valid_calculation_mask] = calculated_smooth.astype(np.float32)
+                smooth_values[diverged_mask] = temp_smooth
+
         return smooth_values
     elif method == 'exponential':
         # 指数スムージング
@@ -120,7 +141,7 @@ def fast_smoothing(z: np.ndarray, iters: np.ndarray, out: np.ndarray) -> None:
             valid_log_log_mask = np.isfinite(log_log_abs_z)
             if np.any(valid_log_log_mask):
                 smooth_values[valid_log_mask][valid_log_log_mask] = (
-                    iters[mask_smooth][valid_log_mask][valid_log_log_mask] - 
+                    iters[mask_smooth][valid_log_mask][valid_log_log_mask] -
                     log_log_abs_z[valid_log_log_mask] / log2
                 )
 

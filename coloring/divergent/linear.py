@@ -1,12 +1,9 @@
 import numpy as np
 from typing import Dict
 from matplotlib.colors import Normalize, Colormap
-# 相対インポートが正しいか確認 (manager.py から見て utils.py は一つ上の階層)
-from ..utils import _normalize_and_color
 from ui.zoom_function.debug_logger import DebugLogger
-from ui.zoom_function.enums import LogLevel # LogLevelもインポート
-
-"""発散部分の着色: 反復回数線形マッピング"""
+from ui.zoom_function.enums import LogLevel
+from ..utils import _normalize_and_color
 
 def apply_linear_mapping(
     colored: np.ndarray,
@@ -16,7 +13,7 @@ def apply_linear_mapping(
     params: Dict,
     logger: DebugLogger
 ) -> None:
-    """発散部分を反復回数の線形マッピングで着色する (インプレース処理)
+    """発散部：反復回数線形マッピングで着色する (インプレース処理)
     Args:
         colored (np.ndarray): 出力用のRGBA配列 (形状: (h, w, 4), dtype=float32)
         divergent_mask (np.ndarray): 発散した点のマスク (形状: (h, w), dtype=bool)

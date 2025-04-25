@@ -180,27 +180,15 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger) -
         # --- 3.1 発散部分の着色 ---
         if np.any(divergent_mask):
             algo_name = params.get("diverge_algorithm", "スムージング")
-            logger.log(LogLevel.DEBUG, "Processing divergent points using: " + algo_name)
+            logger.log(LogLevel.DEBUG, f"Processing divergent points using: {algo_name}")
 
             if algo_name == '反復回数線形マッピング':
                 div_linear.apply_linear_mapping(
-                    colored,
-                    divergent_mask,
-                    iterations,
-                    cmap_func,
-                    params,
-                    logger
-                )
+                    colored, divergent_mask, iterations, cmap_func, params, logger)
 
             elif algo_name == '反復回数対数マッピング':
                 div_logarithmic.apply_logarithmic_mapping(
-                    colored,
-                    divergent_mask,
-                    iterations,
-                    cmap_func,
-                    params,
-                    logger
-                )
+                    colored, divergent_mask, iterations, cmap_func, params, logger)
 
             elif algo_name in ['スムージング', '高速スムージング', '指数スムージング']:
                 smooth_method_map = {
@@ -210,35 +198,15 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger) -
                 }
                 smooth_method = smooth_method_map.get(algo_name, 'standard')
                 div_smoothing.apply_smoothing(
-                    colored,
-                    divergent_mask,
-                    iterations,
-                    z_vals,
-                    cmap_func,
-                    params,
-                    smooth_method,
-                    logger
-                )
+                    colored, divergent_mask, iterations, z_vals, cmap_func, params, smooth_method, logger)
 
             elif algo_name == 'ヒストグラム平坦化法':
                 div_histogram.apply_histogram_flattening(
-                    colored,
-                    divergent_mask,
-                    iterations,
-                    cmap_func,
-                    params,
-                    logger
-                )
+                    colored, divergent_mask, iterations, cmap_func, params, logger)
 
             elif algo_name == '距離カラーリング':
                 div_distance.apply_distance_coloring(
-                    colored,
-                    divergent_mask,
-                    z_vals,
-                    cmap_func,
-                    params,
-                    logger
-                )
+                    colored, divergent_mask, z_vals, cmap_func, params, logger)
 
             elif algo_name == '角度カラーリング':
                 div_angle.apply_angle_coloring(
