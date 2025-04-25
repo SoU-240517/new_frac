@@ -1,12 +1,14 @@
 import numpy as np
-from typing import Dict, Tuple
+from typing import Dict
 from matplotlib.colors import Normalize, Colormap
+# 相対インポートが正しいか確認 (manager.py から見て utils.py は一つ上の階層)
 from ..utils import _normalize_and_color
 from ui.zoom_function.debug_logger import DebugLogger
+from ui.zoom_function.enums import LogLevel # LogLevelもインポート
 
 """発散部分の着色: 反復回数線形マッピング"""
 
-def linear_mapping(
+def apply_linear_mapping(
     colored: np.ndarray,
     divergent_mask: np.ndarray,
     iterations: np.ndarray,
@@ -36,20 +38,3 @@ def linear_mapping(
 
     # 元の colored 配列の対応する位置に着色結果を代入
     colored[divergent_mask] = colored_divergent_part
-
-def linear(z: np.ndarray, iterations: np.ndarray, params: Dict, cmap: Colormap, logger: DebugLogger) -> np.ndarray:
-    """反復回数線形マッピング
-    Args:
-        z (np.ndarray): 複素数配列
-        iterations (np.ndarray): 反復回数配列
-        params (Dict): 着色パラメータ
-        cmap (Colormap): 色マップ
-        logger (DebugLogger): ロガーインスタンス
-    Returns:
-        np.ndarray: 着色されたRGBA配列
-    """
-    divergent = iterations > 0
-    norm = Normalize(1, params["max_iterations"])
-    colored = np.zeros((*iterations.shape, 4), dtype=np.float32)
-    colored[divergent] = cmap(norm(iterations[divergent])) * 255.0
-    return colored

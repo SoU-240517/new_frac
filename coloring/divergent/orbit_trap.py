@@ -7,7 +7,7 @@ def _normalize_and_color(dist: np.ndarray, cmap: Colormap, min_dist: float, max_
     normalized = (dist - min_dist) / (max_dist - min_dist)
     return cmap(normalized)
 
-def orbit_trap(z: np.ndarray, iterations: np.ndarray, params: Dict, cmap: Colormap) -> np.ndarray:
+def apply_orbit_trap(z: np.ndarray, iterations: np.ndarray, params: Dict, cmap: Colormap) -> np.ndarray:
     """軌道トラップ法
     Args:
         z (np.ndarray): 複素数配列
@@ -24,14 +24,14 @@ def orbit_trap(z: np.ndarray, iterations: np.ndarray, params: Dict, cmap: Colorm
     trap_type = params.get('trap_type', 'circle')
     trap_size = params.get('trap_size', 0.5)
     trap_position = params.get('trap_position', (0.0, 0.0))
-    
+
     # 発散した点のマスク（反復回数が最大反復回数未満の点）
     max_iterations = np.max(iterations)
     divergent = iterations < max_iterations
-    
+
     # トラップ位置の複素数
     trap_target = complex(trap_position[0], trap_position[1])
-    
+
     # 距離の計算
     if trap_type == 'circle':
         # 円形トラップ
@@ -53,10 +53,10 @@ def orbit_trap(z: np.ndarray, iterations: np.ndarray, params: Dict, cmap: Colorm
     else:
         # デフォルトは円形
         trap_dist = np.abs(z - trap_target) / trap_size
-    
+
     # マスク処理
     trap_dist[~divergent] = float('inf')
-    
+
     # 距離の正規化
     divergent_points = divergent & np.isfinite(trap_dist)
     if np.any(divergent_points):
@@ -65,7 +65,7 @@ def orbit_trap(z: np.ndarray, iterations: np.ndarray, params: Dict, cmap: Colorm
     else:
         min_dist = 0
         max_dist = 1
-    
+
     # 着色
     colored = np.zeros((*iterations.shape, 4), dtype=np.float32)
     if np.any(divergent_points):
@@ -75,5 +75,5 @@ def orbit_trap(z: np.ndarray, iterations: np.ndarray, params: Dict, cmap: Colorm
             min_dist,
             max_dist
         )
-    
+
     return colored

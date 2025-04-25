@@ -3,7 +3,7 @@ from typing import Dict, Tuple
 from matplotlib import cm
 from matplotlib.colors import Colormap
 
-def chaotic_orbit(z: np.ndarray, iterations: np.ndarray, params: Dict, cmap: Colormap) -> np.ndarray:
+def apply_chaotic_orbit(z: np.ndarray, iterations: np.ndarray, params: Dict, cmap: Colormap) -> np.ndarray:
     """カオス軌道着色
     Args:
         z (np.ndarray): 複素数配列
@@ -18,12 +18,12 @@ def chaotic_orbit(z: np.ndarray, iterations: np.ndarray, params: Dict, cmap: Col
     # この実装は、フラクタルの内部構造を強調するために、
     # 複素数の軌道を分析し、そのカオス性を可視化する
     # パラメータに基づいて、異なる着色効果を適用可能
-    
+
     # 軌道のカオス性を評価（例：リコール率、最大Lyapunov指数など）
     # この部分は具体的な実装に応じて調整が必要
     chaos_measure = np.abs(z[non_divergent])
     normalized = (chaos_measure - np.min(chaos_measure)) / (np.max(chaos_measure) - np.min(chaos_measure))
-    
+
     colored = np.zeros((*iterations.shape, 4), dtype=np.float32)
     colored[non_divergent] = cmap(normalized) * 255.0
     return colored

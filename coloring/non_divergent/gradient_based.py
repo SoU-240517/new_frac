@@ -3,7 +3,7 @@ from typing import Dict, Tuple
 from ..gradient import compute_gradient
 from matplotlib.colors import Colormap
 
-def gradient_based(z: np.ndarray, iterations: np.ndarray, params: Dict, cmap: Colormap) -> np.ndarray:
+def apply_gradient_based(z: np.ndarray, iterations: np.ndarray, params: Dict, cmap: Colormap) -> np.ndarray:
     """グラデーション着色
     Args:
         z (np.ndarray): 複素数配列

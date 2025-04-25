@@ -2,7 +2,7 @@ import numpy as np
 from typing import Dict, Tuple
 from matplotlib.colors import Colormap
 
-def palam_c_z(z: np.ndarray, iterations: np.ndarray, params: Dict, cmap: Colormap) -> np.ndarray:
+def apply_parameter_coloring(z: np.ndarray, iterations: np.ndarray, params: Dict, cmap: Colormap) -> np.ndarray:
     """パラメータ(C)とパラメータ(Z)着色
     Args:
         z (np.ndarray): 複素数配列
@@ -24,7 +24,7 @@ def palam_c_z(z: np.ndarray, iterations: np.ndarray, params: Dict, cmap: Colorma
         # ガンマ補正
         gamma = 1.3
         normalized = normalized ** (1/gamma)
-    
+
     colored = np.zeros((*iterations.shape, 4), dtype=np.float32)
     colored[non_divergent] = cmap(normalized) * 255.0
     return colored

@@ -175,6 +175,7 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger) -
     # --- 3. 着色処理の実行 ---
     try:
         start_time = time.time()
+        non_divergent_mask = mask
 
         # --- 3.1 発散部分の着色 ---
         if np.any(divergent_mask):
@@ -182,7 +183,7 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger) -
             logger.log(LogLevel.DEBUG, "Processing divergent points using: " + algo_name)
 
             if algo_name == '反復回数線形マッピング':
-                div_linear.linear_mapping(
+                div_linear.apply_linear_mapping(
                     colored,
                     divergent_mask,
                     iterations,
@@ -192,7 +193,7 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger) -
                 )
 
             elif algo_name == '反復回数対数マッピング':
-                div_logarithmic.logarithmic(
+                div_logarithmic.apply_logarithmic_mapping(
                     colored,
                     divergent_mask,
                     iterations,
@@ -208,7 +209,7 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger) -
                     '指数スムージング': 'exponential'
                 }
                 smooth_method = smooth_method_map.get(algo_name, 'standard')
-                div_smoothing.smoothing(
+                div_smoothing.apply_smoothing(
                     colored,
                     divergent_mask,
                     iterations,
@@ -220,7 +221,7 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger) -
                 )
 
             elif algo_name == 'ヒストグラム平坦化法':
-                div_histogram.histogram(
+                div_histogram.apply_histogram_flattening(
                     colored,
                     divergent_mask,
                     iterations,
@@ -230,10 +231,9 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger) -
                 )
 
             elif algo_name == '距離カラーリング':
-                div_distance.distance(
+                div_distance.apply_distance_coloring(
                     colored,
                     divergent_mask,
-                    iterations,
                     z_vals,
                     cmap_func,
                     params,
@@ -241,7 +241,7 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger) -
                 )
 
             elif algo_name == '角度カラーリング':
-                div_angle.angle(
+                div_angle.apply_angle_coloring(
                     colored,
                     divergent_mask,
                     z_vals,
@@ -252,10 +252,9 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger) -
 
             elif algo_name == 'ポテンシャル関数法':
                 logger.log(LogLevel.DEBUG, "Processing divergent points using: " + algo_name)
-                div_potential.potential(
+                div_potential.apply_potential(
                     colored,
                     divergent_mask,
-                    iterations,
                     z_vals,
                     cmap_func,
                     params,
@@ -263,17 +262,20 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger) -
                 )
 
             elif algo_name == '軌道トラップ法':
-                colored = div_orbit_trap.orbit_trap(
-                    z_vals,
-                    iterations,
-                    params,
-                    cmap_func
-                )
+               div_orbit_trap.apply_orbit_trap(
+                   colored,
+                   divergent_mask,
+                   iterations, # 軌道トラップの種類によっては反復回数も使う場合がある
+                   z_vals,
+                   cmap_func,
+                   params,
+                   logger
+               )
 
             else:
-                logger.log(LogLevel.WARNING, "Unknown divergent coloring algorithm: " + algo_name + ". Using default.")
+                logger.log(LogLevel.WARNING, f"Unknown divergent coloring algorithm: {algo_name}. Using default.")
                 # デフォルトの線形マッピングを使用
-                div_linear.linear_mapping(
+                div_linear.apply_linear_mapping(
                     colored,
                     divergent_mask,
                     iterations,
@@ -283,158 +285,160 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger) -
                 )
 
         # --- 3.2 非発散部分の着色 ---
-        if np.any(~divergent_mask):
+        if np.any(non_divergent_mask):
             algo_name = params.get("non_diverge_algorithm", "単色")
-            logger.log(LogLevel.DEBUG, "Processing non-divergent points using: " + algo_name)
+            logger.log(LogLevel.DEBUG, f"Processing non-divergent points using: {algo_name}")
 
             if algo_name == '単色':
-                ndiv_solid.solid_color(
+                ndiv_solid.apply_solid_color(
                     colored,
-                    ~divergent_mask,
+                    non_divergent_mask, # non_divergent_mask を使用
                     params,
                     logger
                 )
 
             elif algo_name == 'グラデーション':
-                ndiv_gradient.gradient_based(
+               # gradient.compute_gradient をここで呼び出し logger を渡す
+               gradient_values = gradient.compute_gradient(image_shape, logger)
+               ndiv_gradient.apply_gradient_based( # 関数名を apply_... に統一する場合
                     colored,
-                    ~divergent_mask,
-                    iterations,
-                    cmap_func,
+                    non_divergent_mask,
+                    gradient_values, # 計算済みのグラデーション値を渡す
+                    non_cmap_func, # 非発散部用カラーマップ
                     params,
                     logger
                 )
 
             elif algo_name == '内部距離（Escape Time Distance）':
-                ndiv_internal_distance.internal_distance(
+                ndiv_internal_distance.apply_internal_distance(
                     colored,
-                    ~divergent_mask,
-                    iterations,
-                    cmap_func,
+                    non_divergent_mask,
+                    z_vals, # z_vals を渡す
+                    non_cmap_func, # 非発散部用カラーマップ
                     params,
                     logger
                 )
 
             elif algo_name == '軌道トラップ(円)（Orbit Trap Coloring）':
-                ndiv_orbit_trap_circle.orbit_trap_circle(
+                ndiv_orbit_trap_circle.apply_orbit_trap_circle(
                     colored,
-                    ~divergent_mask,
+                    non_divergent_mask,
                     z_vals,
-                    cmap_func,
+                    non_cmap_func, # 非発散部用カラーマップ
                     params,
                     logger
                 )
 
             elif algo_name == '位相对称（Phase Angle Symmetry）':
-                ndiv_phase_symmetry.phase_symmetry(
+                ndiv_phase_symmetry.apply_phase_symmetry(
                     colored,
-                    ~divergent_mask,
+                    non_divergent_mask,
                     z_vals,
-                    cmap_func,
+                    non_cmap_func, # 非発散部用カラーマップ
                     params,
                     logger
                 )
 
             elif algo_name == '反復収束速度（Convergence Speed）':
-                ndiv_convergence_speed.convergence_speed(
+                ndiv_convergence_speed.apply_convergence_speed(
                     colored,
-                    ~divergent_mask,
-                    iterations,
-                    cmap_func,
+                    non_divergent_mask,
+                    z_vals, # z_vals を渡す
+                    non_cmap_func, # 非発散部用カラーマップ
                     params,
                     logger
                 )
 
             elif algo_name == '微分係数（Derivative Coloring）':
-                ndiv_derivative.derivative(
+                ndiv_derivative.apply_derivative_coloring(
                     colored,
-                    ~divergent_mask,
+                    non_divergent_mask,
                     z_vals,
-                    cmap_func,
+                    non_cmap_func, # 非発散部用カラーマップ
                     params,
                     logger
                 )
 
             elif algo_name == '統計分布（Histogram Equalization）':
-                ndiv_histogram_equalization.histogram_equalization(
+                ndiv_histogram_equalization.apply_histogram_equalization(
                     colored,
-                    ~divergent_mask,
+                    non_divergent_mask,
                     iterations,
-                    cmap_func,
+                    non_cmap_func, # 非発散部用カラーマップ
                     params,
                     logger
                 )
 
             elif algo_name == '複素ポテンシャル（Complex Potential Mapping）':
-                ndiv_complex_potential.complex_potential(
+                ndiv_complex_potential.apply_complex_potential(
                     colored,
-                    ~divergent_mask,
+                    non_divergent_mask,
                     z_vals,
-                    cmap_func,
+                    non_cmap_func, # 非発散部用カラーマップ
                     params,
                     logger
                 )
 
             elif algo_name == 'カオス軌道混合（Chaotic Orbit Mixing）':
-                ndiv_chaotic_orbit.chaotic_orbit(
+                ndiv_chaotic_orbit.apply_chaotic_orbit(
                     colored,
-                    ~divergent_mask,
+                    non_divergent_mask,
                     z_vals,
-                    cmap_func,
+                    non_cmap_func, # 非発散部用カラーマップ
                     params,
                     logger
                 )
 
             elif algo_name == 'フーリエ干渉（Fourier Pattern）':
-                ndiv_fourier_pattern.fourier_pattern(
+                ndiv_fourier_pattern.apply_fourier_pattern(
                     colored,
-                    ~divergent_mask,
+                    non_divergent_mask,
                     z_vals,
-                    cmap_func,
+                    non_cmap_func, # 非発散部用カラーマップ
                     params,
                     logger
                 )
 
             elif algo_name == 'フラクタルテクスチャ（Fractal Texture）':
-                ndiv_fractal_texture.fractal_texture(
+                ndiv_fractal_texture.apply_fractal_texture(
                     colored,
-                    ~divergent_mask,
+                    non_divergent_mask,
                     z_vals,
-                    cmap_func,
+                    non_cmap_func, # 非発散部用カラーマップ
                     params,
                     logger
                 )
 
             elif algo_name == '量子もつれ（Quantum Entanglement）':
-                ndiv_quantum_entanglement.quantum_entanglement(
+                ndiv_quantum_entanglement.apply_quantum_entanglement(
                     colored,
-                    ~divergent_mask,
+                    non_divergent_mask,
                     z_vals,
-                    cmap_func,
+                    non_cmap_func, # 非発散部用カラーマップ
                     params,
                     logger
                 )
             elif algo_name in ['パラメータ(C)', 'パラメータ(Z)']:
-                ndiv_palam_c_z.palam_c_z(
+                ndiv_palam_c_z.apply_parameter_coloring(
                     colored,
-                    ~divergent_mask,
+                    non_divergent_mask,
                     z_vals,
-                    cmap_func,
-                    params,
+                    non_cmap_func, # 非発散部用カラーマップ
+                    params, # paramsの中にアルゴリズム名('パラメータ(C)' or 'パラメータ(Z)')が含まれる
                     logger
                 )
 
             else:
-                logger.log(LogLevel.WARNING, "Unknown non-divergent coloring algorithm: " + algo_name + ". Using default.")
-                ndiv_solid.solid_color(
+                logger.log(LogLevel.WARNING, f"Unknown non-divergent coloring algorithm: {algo_name}. Using default.")
+                ndiv_solid.apply_solid_color(
                     colored,
-                    ~divergent_mask,
+                    non_divergent_mask,
                     params,
                     logger
                 )
 
         end_time = time.time()
-        logger.log(LogLevel.INFO, "Coloring process finished in " + str(end_time - start_time) + " seconds.")
+        logger.log(LogLevel.INFO, f"Coloring process finished in {end_time - start_time:.4f} seconds.")
 
         # --- 4. 結果のキャッシュと返却 ---
         # colored 配列は float32 の 0-255 の範囲になっているはず
@@ -442,10 +446,14 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger) -
         # ここでは float32 のままキャッシュ・返却
         cache.put_cache(params, colored)
 
-        logger.log(LogLevel.DEBUG, "Final colored array stats: dtype=" + str(colored.dtype) + ", shape=" + str(colored.shape) + ", min=" + str(np.min(colored)) + ", max=" + str(np.max(colored)))
+        logger.log(LogLevel.DEBUG,
+            f"Final colored array stats: dtype={colored.dtype}, "
+            f"shape={colored.shape}, min={np.min(colored)}, max={np.max(colored)}"
+        )
+
         return colored
 
     except Exception as e:
-        logger.log(LogLevel.CRITICAL, "An unexpected error occurred during coloring: " + str(e))
+        logger.log(LogLevel.CRITICAL, f"An unexpected error occurred during coloring: {e}", exc_info=True) # exc_info=Trueで詳細ログ
         # より詳細なエラー情報と共に再raiseするか、デフォルト画像(例: 真っ黒)を返すか
         raise ColorAlgorithmError("Coloring failed due to an internal error: " + str(e)) from e

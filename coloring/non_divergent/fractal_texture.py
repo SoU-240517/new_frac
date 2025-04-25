@@ -2,7 +2,7 @@ import numpy as np
 from typing import Dict, Tuple
 from matplotlib.colors import Colormap
 
-def fractal_texture(z: np.ndarray, iterations: np.ndarray, params: Dict, cmap: Colormap) -> np.ndarray:
+def apply_fractal_texture(z: np.ndarray, iterations: np.ndarray, params: Dict, cmap: Colormap) -> np.ndarray:
     """フラクタルテクスチャ着色
     Args:
         z (np.ndarray): 複素数配列
@@ -30,7 +30,7 @@ def fractal_texture(z: np.ndarray, iterations: np.ndarray, params: Dict, cmap: C
         # ガンマ補正
         gamma = 1.4
         normalized = normalized ** (1/gamma)
-    
+
     colored = np.zeros((*iterations.shape, 4), dtype=np.float32)
     colored[non_divergent] = cmap(normalized) * 255.0
     return colored

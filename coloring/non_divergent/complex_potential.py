@@ -3,7 +3,7 @@ from typing import Dict, Tuple
 from matplotlib import cm
 from matplotlib.colors import Colormap
 
-def complex_potential(z: np.ndarray, iterations: np.ndarray, params: Dict, cmap: Colormap) -> np.ndarray:
+def apply_complex_potential(z: np.ndarray, iterations: np.ndarray, params: Dict, cmap: Colormap) -> np.ndarray:
     """複素ポテンシャル着色
     Args:
         z (np.ndarray): 複素数配列

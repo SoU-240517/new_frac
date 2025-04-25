@@ -2,7 +2,7 @@ import numpy as np
 from typing import Dict, Tuple
 from matplotlib.colors import Colormap
 
-def phase_symmetry(z: np.ndarray, iterations: np.ndarray, params: Dict, cmap: Colormap) -> np.ndarray:
+def apply_phase_symmetry(z: np.ndarray, iterations: np.ndarray, params: Dict, cmap: Colormap) -> np.ndarray:
     """位相対称着色
     Args:
         z (np.ndarray): 複素数配列

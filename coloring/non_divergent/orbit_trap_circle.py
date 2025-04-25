@@ -2,7 +2,7 @@ import numpy as np
 from typing import Dict, Tuple
 from matplotlib.colors import Colormap
 
-def orbit_trap_circle(z: np.ndarray, iterations: np.ndarray, params: Dict, cmap: Colormap) -> np.ndarray:
+def apply_orbit_trap_circle(z: np.ndarray, iterations: np.ndarray, params: Dict, cmap: Colormap) -> np.ndarray:
     """軌道トラップ(円)着色
     Args:
         z (np.ndarray): 複素数配列

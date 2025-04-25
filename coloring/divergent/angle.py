@@ -3,7 +3,7 @@ from typing import Dict, Tuple
 from matplotlib.colors import Colormap
 from ui.zoom_function.debug_logger import DebugLogger
 
-def angle(
+def apply_angle_coloring(
     colored: np.ndarray,
     divergent_mask: np.ndarray,
     z_vals: np.ndarray,

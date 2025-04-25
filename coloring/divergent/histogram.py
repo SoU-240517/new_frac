@@ -3,7 +3,7 @@ from typing import Dict, Tuple
 from matplotlib.colors import Colormap
 from ui.zoom_function.debug_logger import DebugLogger
 
-def histogram(
+def apply_histogram_flattening(
     colored: np.ndarray,
     divergent_mask: np.ndarray,
     iterations: np.ndarray,

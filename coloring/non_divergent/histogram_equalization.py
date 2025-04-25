@@ -2,7 +2,7 @@ import numpy as np
 from typing import Dict, Tuple
 from matplotlib.colors import Colormap
 
-def histogram_equalization(z: np.ndarray, iterations: np.ndarray, params: Dict, cmap: Colormap) -> np.ndarray:
+def apply_histogram_equalization(z: np.ndarray, iterations: np.ndarray, params: Dict, cmap: Colormap) -> np.ndarray:
     """ヒストグラム平坦化着色
     Args:
         z (np.ndarray): 複素数配列

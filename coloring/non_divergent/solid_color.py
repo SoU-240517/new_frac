@@ -9,7 +9,7 @@ from ui.zoom_function.enums import LogLevel # 必要に応じてコメント解�
 
 """非発散部分の着色: 単色"""
 
-def solid_color(
+def apply_solid_color(
     colored: np.ndarray,
     non_divergent_mask: np.ndarray,
     params: Dict,

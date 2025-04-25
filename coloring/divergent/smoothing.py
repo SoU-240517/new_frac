@@ -13,7 +13,7 @@ from ui.zoom_function.enums import LogLevel
 
 """発散部分の着色: 各種スムージング"""
 
-def smoothing(
+def apply_smoothing(
     colored: np.ndarray,
     divergent_mask: np.ndarray,
     iterations: np.ndarray,
@@ -93,32 +93,3 @@ def smoothing(
     colored[valid_mask] = colored_divergent_part
 
     logger.log(LogLevel.DEBUG, f"Applied smoothed coloring to {valid_smooth_values.size} points.")
-
-def _smooth_iterations(z: np.ndarray, iters: np.ndarray, method: str = 'standard') -> np.ndarray:
-    """反復回数のスムージング処理を実行
-    Args:
-        z (np.ndarray): 複素数配列
-        iters (np.ndarray): 反復回数配列
-        method (str): スムージング方法
-            - 'standard': 標準的なスムージング
-            - 'fast': 高速なスムージング
-            - 'exponential': 指数的なスムージング
-    Returns:
-        np.ndarray: スムージングされた反復回数
-    """
-    with np.errstate(invalid='ignore', divide='ignore'):
-        if method == 'standard':
-            log_zn = np.log(np.abs(z) + 1e-10)  # 微小値を加えて0除算を防ぐ
-            nu = np.log(log_zn / np.log(2)) / np.log(2)
-            return iters - nu
-        elif method == 'fast':
-            smooth_iter = np.zeros_like(iters, dtype=np.float32)
-            fast_smoothing(z, iters, smooth_iter)
-            return smooth_iter
-        elif method == 'exponential':
-            # 0や負の値を防ぐための処理
-            abs_z = np.abs(z) + 1e-10
-            log_z = np.log(abs_z)
-            return iters + 1 - np.log(log_z) / np.log(2)
-        else:
-            raise ValueError(f"Unknown smoothing method: {method}")

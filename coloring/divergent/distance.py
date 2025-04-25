@@ -4,10 +4,9 @@ from matplotlib.colors import Colormap
 from ui.zoom_function.debug_logger import DebugLogger
 from ..utils import _normalize_and_color
 
-def distance(
+def apply_distance_coloring(
     colored: np.ndarray,
     divergent_mask: np.ndarray,
-    iterations: np.ndarray,
     z_vals: np.ndarray,
     cmap: Colormap,
     params: Dict,
@@ -26,7 +25,7 @@ def distance(
     # 発散した点の距離を計算
     divergent = divergent_mask
     dist = np.abs(z_vals[divergent])
-    
+
     # 距離の範囲を正規化
     if len(dist) > 0:
         min_dist = np.min(dist)

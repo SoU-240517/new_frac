@@ -4,10 +4,9 @@ from matplotlib.colors import Colormap
 from ui.zoom_function.debug_logger import DebugLogger
 from ..utils import _normalize_and_color
 
-def potential(
+def apply_potential(
     colored: np.ndarray,
     divergent_mask: np.ndarray,
-    iterations: np.ndarray,
     z_vals: np.ndarray,
     cmap: Colormap,
     params: Dict,
@@ -26,10 +25,10 @@ def potential(
     divergent = divergent_mask
     mask = ~divergent
     z = z_vals[divergent]
-    
+
     # ポテンシャルの計算
     potential = np.log(np.abs(z)) - np.log(2.0)
-    
+
     # 正規化と着色
     normalized = (potential - np.min(potential)) / (np.max(potential) - np.min(potential))
     colored[divergent] = cmap(normalized) * 255.0
