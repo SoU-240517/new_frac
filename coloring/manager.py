@@ -3,28 +3,38 @@ import numpy as np
 import time
 from matplotlib.colors import Colormap
 from typing import Dict, Optional
-
-# ユーティリティ関数とエラークラスをインポート
-from .utils import _normalize_and_color, _smooth_iterations, ColorAlgorithmError
-
-# 各アルゴリズムモジュールから着色関数をインポート
-# 発散部
-from .divergent import linear as div_linear # 線形マッピング
-# from .divergent import logarithmic as div_logarithmic # 例: 追加する場合
-from .divergent import smoothing as div_smoothing     # 例: 追加する場合
-# ... 他の発散アルゴリズムも同様にインポート
-
-# 非発散部
-from .non_divergent import solid_color as ndiv_solid # 単色
-# from .non_divergent import gradient_based as ndiv_gradient # 例: 追加する場合
-# ... 他の非発散アルゴリズムも同様にインポート
-
-# gradient モジュール (グラデーション計算用)
-from . import gradient
-
 # UI関連のインポート (ロガーなど)
 from ui.zoom_function.debug_logger import DebugLogger
 from ui.zoom_function.enums import LogLevel
+# ユーティリティ関数とエラークラスをインポート
+from .utils import _normalize_and_color, _smooth_iterations, ColorAlgorithmError
+# gradient モジュール (グラデーション計算用)
+from . import gradient
+# 各アルゴリズムモジュールから着色関数をインポート
+# 発散部
+from .divergent import linear as div_linear # 反復回数線形マッピング
+#from .divergent import logarithmic as div_logarithmic # 反復回数対数マッピング
+from .divergent import smoothing as div_smoothing # スムージング、高速スムージング、指数スムージング
+#from .divergent import histogram as div_histogram # ヒストグラム平坦化法
+#from .divergent import distance as div_distance # 距離カラーリング
+#from .divergent import angle as div_angle # 角度カラーリング
+#from .divergent import potential as div_potential # ポテンシャル関数法
+#from .divergent import orbit_trap as div_orbit_trap # 軌道トラップ法
+# 非発散部
+from .non_divergent import solid_color as ndiv_solid # 単色
+#from .non_divergent import gradient_based as ndiv_gradient # グラデーション
+#from .non_divergent import internal_distance as ndiv_internal_distance # 内部距離（Escape Time Distance）
+#from .non_divergent import orbit_trap_circle as ndiv_orbit_trap_circle # 軌道トラップ(円)（Orbit Trap Coloring）
+#from .non_divergent import phase_symmetry as ndiv_phase_symmetry # 位相对称（Phase Angle Symmetry）
+#from .non_divergent import convergence_speed as ndiv_convergence_speed # 反復収束速度（Convergence Speed）
+#from .non_divergent import derivative as ndiv_derivative # 微分係数（Derivative Coloring）
+#from .non_divergent import histogram_equalization as ndiv_histogram_equalization # 統計分布（Histogram Equalization）
+#from .non_divergent import complex_potential as ndiv_complex_potential # 複素ポテンシャル（Complex Potential Mapping）
+#from .non_divergent import chaotic_orbit as ndiv_chaotic_orbit # カオス軌道混合（Chaotic Orbit Mixing）
+#from .non_divergent import fourier_pattern as ndiv_fourier_pattern # フーリエ干渉（Fourier Pattern）
+#from .non_divergent import fractal_texture as ndiv_fractal_texture # フラクタルテクスチャ（Fractal Texture）
+#from .non_divergent import quantum_entanglement as ndiv_quantum_entanglement # 量子もつれ（Quantum Entanglement）
+#from .non_divergent import palam_c_z as ndiv_palam_c_z # パラメータ(C)、パラメータ(Z)
 
 """フラクタル画像の着色処理エンジン (管理・ディスパッチ担当)
 このモジュールは、どの着色アルゴリズムを使用するかを決定し、
@@ -79,7 +89,8 @@ class ColorCache:
         key = self._create_cache_key(params)
         cached_item = self.cache.get(key)
         if cached_item:
-            self.logger.log(LogLevel.INFO, f"Cache hit for key: {key[:50]}...") # キーが長い場合があるので一部表示
+            # キーが長い場合があるのでログでは一部だけ表示する
+            self.logger.log(LogLevel.INFO, f"Cache hit for key: {key[:50]}...")
             return cached_item['image']
         else:
             self.logger.log(LogLevel.INFO, f"Cache miss for key: {key[:50]}...")
@@ -154,7 +165,7 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger) -
     # カラーマップを取得 (文字列名からmatplotlibのColormapオブジェクトへ)
     try:
         diverge_cmap_name = params.get("diverge_colormap", "viridis") # デフォルトを設定
-        non_diverge_cmap_name = params.get("non_diverge_colormap", "gray") # デフォルトを設定
+        non_diverge_cmap_name = params.get("non_diverge_colormap", "plasma") # デフォルトを設定
         cmap_func = plt.cm.get_cmap(diverge_cmap_name)
         non_cmap_func = plt.cm.get_cmap(non_diverge_cmap_name)
     except ValueError as e:
@@ -192,7 +203,6 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger) -
                     smooth_method,
                     logger
                 )
-            # --- 他の発散アルゴリズムの呼び出しをここに追加 ---
             # elif algo_name == "ヒストグラム平坦化法":
             #     div_histogram.apply_histogram(...)
             # ...
