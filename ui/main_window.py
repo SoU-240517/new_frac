@@ -70,7 +70,7 @@ class MainWindow:
         """ステータスバーの初期化を行う"""
         status_frame = ttk.Frame(self.root)
         status_frame.pack(fill=tk.X, side=tk.BOTTOM, pady=(0, 5))
-        self.logger.log(LogLevel.INIT, "StatusBarManager クラスのインスタンスを作成")
+        self.logger.log(LogLevel.INIT, message="StatusBarManager クラスのインスタンスを作成")
         self.status_bar_manager = StatusBarManager(
             self.root, status_frame, self.logger
         )
@@ -86,7 +86,7 @@ class MainWindow:
             expand=False)
         self.parameter_frame.pack_propagate(False)
 
-        self.logger.log(LogLevel.INIT, "ParameterPanel クラスのインスタンスを作成")
+        self.logger.log(LogLevel.INIT, message="ParameterPanel クラスのインスタンスを作成")
         self.parameter_panel = ParameterPanel(
             self.parameter_frame,
             self.update_fractal,
@@ -107,7 +107,7 @@ class MainWindow:
 
         self.canvas_frame.bind("<Configure>", self._on_canvas_frame_configure)
 
-        self.logger.log(LogLevel.INIT, "FractalCanvas クラスのインスタンスを作成")
+        self.logger.log(LogLevel.INIT, message="FractalCanvas クラスのインスタンスを作成")
         self.fractal_canvas = FractalCanvas(
             self.canvas_frame,
             width=1067,
@@ -119,10 +119,10 @@ class MainWindow:
 
     def _start_initial_drawing(self) -> None:
         """アプリケーション起動時の初期描画を開始する"""
-        self.logger.log(LogLevel.CALL, "ステータスバーテキスト設定要求")
+        self.logger.log(LogLevel.CALL, message="ステータスバーテキスト設定要求")
         self.status_bar_manager.set_text("準備中...")
 
-        self.logger.log(LogLevel.CALL, "非同期でフラクタル描画開始")
+        self.logger.log(LogLevel.CALL, message="非同期でフラクタル描画開始")
         self.status_bar_manager.start_animation()
         self.draw_thread = threading.Thread(
             target=self._update_fractal_thread,
@@ -133,13 +133,13 @@ class MainWindow:
     def update_fractal(self) -> None:
         """フラクタルを再描画する（非同期処理）"""
         if self.is_drawing:
-            self.logger.log(LogLevel.WARNING, "描画中でスキップ：前回の描画が未完了")
+            self.logger.log(LogLevel.WARNING, message="描画中でスキップ：前回の描画が未完了")
             return
 
         self.is_drawing = True
         self.status_bar_manager.start_animation()
 
-        self.logger.log(LogLevel.CALL, "新しい描画スレッドを開始")
+        self.logger.log(LogLevel.CALL, message="新しい描画スレッドを開始")
         self.draw_thread = threading.Thread(
             target=self._update_fractal_thread,
             daemon=True
@@ -149,14 +149,14 @@ class MainWindow:
     def _update_fractal_thread(self) -> None:
         """フラクタル更新の実際の処理（別スレッドで実行）"""
         try:
-            self.logger.log(LogLevel.CALL, "描画パラメータ：取得開始（スレッド内）")
+            self.logger.log(LogLevel.CALL, message="描画パラメータ：取得開始（スレッド内）")
             panel_params = self.parameter_panel._get_parameters()
             current_params = self._merge_zoom_and_panel_params(panel_params)
 
-            self.logger.log(LogLevel.CALL, "フラクタル計算と着色処理を開始（スレッド内）")
+            self.logger.log(LogLevel.CALL, message="フラクタル計算と着色処理を開始（スレッド内）")
             fractal_image = render_fractal(current_params, self.logger)
 
-            self.logger.log(LogLevel.CALL, "メインスレッドでキャンバス更新要求（スレッド内）")
+            self.logger.log(LogLevel.CALL, message="メインスレッドでキャンバス更新要求（スレッド内）")
             self.root.after(0, lambda: self.fractal_canvas.update_canvas(
                 fractal_image, current_params
             ))
@@ -168,9 +168,9 @@ class MainWindow:
 #            stack_trace = traceback.format_exc()
 
 #            # ログ出力時にスタックトレースをコンテキストとして渡す
-#            self.logger.log(LogLevel.ERROR, f"フラクタル更新スレッドエラー: {str(e)}",
+#            self.logger.log(LogLevel.ERROR, message=f"フラクタル更新スレッドエラー: {str(e)}",
 #                            context={"stack_trace": stack_trace})
-            self.logger.log(LogLevel.ERROR, f"フラクタル更新スレッドエラー: {str(e)}")
+            self.logger.log(LogLevel.ERROR, message=f"フラクタル更新スレッドエラー: {str(e)}")
             self.status_bar_manager.stop_animation(f"エラー: {str(e)}")
         finally:
             self.is_drawing = False
@@ -208,16 +208,20 @@ class MainWindow:
 
         new_max_iterations = self._calculate_max_iterations(current_max_iter, zoom_factor)
 
-        self.logger.log(LogLevel.SUCCESS, "新しいズームパラメータ", {
-            "zoom_factor": zoom_factor,
-            "new_width": new_width,
-            "new_height": new_height,
-            "current_max_iter": current_max_iter,
-            "new_max_iterations": new_max_iterations,
-            "new_center_x": center_x,
-            "new_center_y": center_y,
-            "new_rotation": angle
-        })
+        self.logger.log(
+            LogLevel.SUCCESS,
+            context={
+                "zoom_factor": zoom_factor,
+                "new_width": new_width,
+                "new_height": new_height,
+                "current_max_iter": current_max_iter,
+                "new_max_iterations": new_max_iterations,
+                "new_center_x": center_x,
+                "new_center_y": center_y,
+                "new_rotation": angle
+            },
+            message="新しいズームパラメータ"
+        )
 
         self.zoom_params = {
             "center_x": center_x,
@@ -246,12 +250,12 @@ class MainWindow:
     def on_zoom_cancel(self):
         """ズームキャンセル時のコールバック"""
         if self.prev_zoom_params is not None:
-            self.logger.log(LogLevel.CALL, "直前のズームパラメータに戻す")
+            self.logger.log(LogLevel.CALL, message="直前のズームパラメータに戻す")
             self.zoom_params = self.prev_zoom_params.copy()
             self.update_fractal()
             self.prev_zoom_params = None
         else:
-            self.logger.log(LogLevel.WARNING, "キャンセル処理をスキップ：直前のパラメータなし")
+            self.logger.log(LogLevel.WARNING, message="キャンセル処理をスキップ：直前のパラメータなし")
 
     def reset_zoom(self):
         """操作パネルの「描画リセット」ボタン押下時の処理"""
@@ -265,7 +269,7 @@ class MainWindow:
 
         self.prev_zoom_params = None
         self.parameter_panel.max_iter_var.set("500")
-        self.logger.log(LogLevel.CALL, "ZoomSelector の状態リセット開始")
+        self.logger.log(LogLevel.CALL, message="ZoomSelector の状態リセット開始")
         self.fractal_canvas.reset_zoom_selector()
         self.update_fractal()
 
@@ -275,7 +279,7 @@ class MainWindow:
         frame_height_pixels = event.height
 
         if frame_width_pixels <= 0 or frame_height_pixels <= 0:
-            self.logger.log(LogLevel.INFO, "Figure サイズ更新をスキップ：フレームサイズが無効なため")
+            self.logger.log(LogLevel.INFO, message="Figure サイズ更新をスキップ：フレームサイズが無効なため")
             return
 
         target_aspect = 16 / 9
@@ -285,11 +289,11 @@ class MainWindow:
         if frame_aspect > target_aspect:
             new_height_pixels = frame_height_pixels
             new_width_pixels = int(new_height_pixels * target_aspect)
-            self.logger.log(LogLevel.DEBUG, f"横長フレーム：高さを基準に Figure サイズ計算 ({new_width_pixels}x{new_height_pixels})")
+            self.logger.log(LogLevel.DEBUG, message=f"横長フレーム：高さを基準に Figure サイズ計算 ({new_width_pixels}x{new_height_pixels})")
         else:
             new_width_pixels = frame_width_pixels
             new_height_pixels = int(new_width_pixels / target_aspect) if target_aspect > 0 else frame_height_pixels
-            self.logger.log(LogLevel.DEBUG, f"縦長/同等フレーム：幅を基準に Figure サイズ計算 ({new_width_pixels}x{new_height_pixels})")
+            self.logger.log(LogLevel.DEBUG, message=f"縦長/同等フレーム：幅を基準に Figure サイズ計算 ({new_width_pixels}x{new_height_pixels})")
 
         dpi = self.fractal_canvas.fig.get_dpi() if self.fractal_canvas and hasattr(self.fractal_canvas, 'fig') and self.fractal_canvas.fig else 100
 
@@ -299,8 +303,8 @@ class MainWindow:
         try:
             if self.fractal_canvas and hasattr(self.fractal_canvas, 'fig') and self.fractal_canvas.fig:
                 self.fractal_canvas.fig.set_size_inches(new_width_inches, new_height_inches, forward=True)
-                self.logger.log(LogLevel.SUCCESS, f"Matplotlib Figure サイズ更新完了: {new_width_inches:.2f}x{new_height_inches:.2f}インチ ({new_width_pixels}x{new_height_pixels}ピクセル)")
+                self.logger.log(LogLevel.SUCCESS, message=f"Matplotlib Figure サイズ更新完了: {new_width_inches:.2f}x{new_height_inches:.2f}インチ ({new_width_pixels}x{new_height_pixels}ピクセル)")
             else:
-                self.logger.log(LogLevel.WARNING, "FractalCanvas または Figure が利用不可（Figure サイズ更新スキップ）")
+                self.logger.log(LogLevel.WARNING, message="FractalCanvas または Figure が利用不可（Figure サイズ更新スキップ）")
         except Exception as e:
-            self.logger.log(LogLevel.ERROR, f"Matplotlib Figure サイズ更新中にエラー: {e}")
+            self.logger.log(LogLevel.ERROR, message=f"Matplotlib Figure サイズ更新中にエラー: {e}")

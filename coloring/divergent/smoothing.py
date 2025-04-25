@@ -4,9 +4,8 @@ import numpy as np
 from matplotlib.colors import Colormap
 from typing import Dict
 
-# ユーティリティ関数とエラークラスをインポート
-# manager.pyから呼び出されることを想定し、相対インポートを使用
-from ..utils import _smooth_iterations, _normalize_and_color, ColorAlgorithmError
+# utils.pyからスムージング関数をインポート
+from ..utils import _smooth_iterations, _normalize_and_color, fast_smoothing, ColorAlgorithmError
 
 # UI関連のインポート (ロガーなど)
 from ui.zoom_function.debug_logger import DebugLogger
@@ -14,7 +13,7 @@ from ui.zoom_function.enums import LogLevel
 
 """発散部分の着色: 各種スムージング"""
 
-def apply_smoothing(
+def smoothing(
     colored: np.ndarray,
     divergent_mask: np.ndarray,
     iterations: np.ndarray,
@@ -28,9 +27,9 @@ def apply_smoothing(
 
     Args:
         colored (np.ndarray): 着色結果を格納するRGBA配列 (形状: (height, width, 4), dtype=float32)
-                               この配列の該当箇所が直接変更されます。
+                                この配列の該当箇所が直接変更されます。
         divergent_mask (np.ndarray): 発散した点のマスク (形状: (height, width), dtype=bool)
-                                    True のピクセルが発散部分です。
+                                     True のピクセルが発散部分です。
         iterations (np.ndarray): 元の反復回数配列 (形状: (height, width), dtype=int)
         z_vals (np.ndarray): 計算終了時の複素数値配列 (形状: (height, width), dtype=complex)
         cmap_func (Colormap): 発散部分用のカラーマップ関数
@@ -51,13 +50,6 @@ def apply_smoothing(
         # (または、エラーを示す色で塗るなどの代替処理も可能)
         return
     except Exception as e:
-#        # スタックトレースを取得
-#        import traceback
-#        stack_trace = traceback.format_exc()
-
-#        # ログ出力時にスタックトレースをコンテキストとして渡す
-#        logger.log(LogLevel.ERROR, f"Unexpected error during _smooth_iterations: {e}",
-#                context={"stack_trace": stack_trace})
         logger.log(LogLevel.ERROR, f"Unexpected error during _smooth_iterations: {e}")
         return # 予期せぬエラーの場合もスキップ
 
@@ -101,3 +93,32 @@ def apply_smoothing(
     colored[valid_mask] = colored_divergent_part
 
     logger.log(LogLevel.DEBUG, f"Applied smoothed coloring to {valid_smooth_values.size} points.")
+
+def _smooth_iterations(z: np.ndarray, iters: np.ndarray, method: str = 'standard') -> np.ndarray:
+    """反復回数のスムージング処理を実行
+    Args:
+        z (np.ndarray): 複素数配列
+        iters (np.ndarray): 反復回数配列
+        method (str): スムージング方法
+            - 'standard': 標準的なスムージング
+            - 'fast': 高速なスムージング
+            - 'exponential': 指数的なスムージング
+    Returns:
+        np.ndarray: スムージングされた反復回数
+    """
+    with np.errstate(invalid='ignore', divide='ignore'):
+        if method == 'standard':
+            log_zn = np.log(np.abs(z) + 1e-10)  # 微小値を加えて0除算を防ぐ
+            nu = np.log(log_zn / np.log(2)) / np.log(2)
+            return iters - nu
+        elif method == 'fast':
+            smooth_iter = np.zeros_like(iters, dtype=np.float32)
+            fast_smoothing(z, iters, smooth_iter)
+            return smooth_iter
+        elif method == 'exponential':
+            # 0や負の値を防ぐための処理
+            abs_z = np.abs(z) + 1e-10
+            log_z = np.log(abs_z)
+            return iters + 1 - np.log(log_z) / np.log(2)
+        else:
+            raise ValueError(f"Unknown smoothing method: {method}")

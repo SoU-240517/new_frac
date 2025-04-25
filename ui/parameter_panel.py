@@ -84,9 +84,9 @@ class ParameterPanel:
         self._add_label("--- 発散部 ---", row, 0, columnspan=2, pady=(10, 0))
         row += 1
         self._add_label("着色アルゴリズム:", row, 0, pady=(5,0))
-        self.diverge_algo_var = tk.StringVar(value="スムージングカラーリング")
+        self.diverge_algo_var = tk.StringVar(value="スムージング")
         self.diverge_algorithms = [
-            "スムージングカラーリング",
+            "スムージング",
             "高速スムージング",
             "指数スムージング",
             "反復回数線形マッピング",
