@@ -163,6 +163,13 @@ class MainWindow:
 
             self.status_bar_manager.stop_animation("完了")
         except Exception as e:
+#            # スタックトレースを取得
+#            import traceback
+#            stack_trace = traceback.format_exc()
+
+#            # ログ出力時にスタックトレースをコンテキストとして渡す
+#            self.logger.log(LogLevel.ERROR, f"フラクタル更新スレッドエラー: {str(e)}",
+#                            context={"stack_trace": stack_trace})
             self.logger.log(LogLevel.ERROR, f"フラクタル更新スレッドエラー: {str(e)}")
             self.status_bar_manager.stop_animation(f"エラー: {str(e)}")
         finally:
