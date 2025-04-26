@@ -6,6 +6,7 @@ Directory structure:
     ├── main.py
     ├── coloring/
     │   ├── __init__.py
+    │   ├── cache.py
     │   ├── color_algorithms.md
     │   ├── gradient.py
     │   ├── manager.py
