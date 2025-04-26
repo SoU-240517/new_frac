@@ -11,7 +11,7 @@ class StatusBarManager:
     - 役割:
         - ステータスバーの表示とアニメーションを管理
     """
-    _TIME_FORMAT = "[{:>3}分 {:>2}秒] " # 時間表示のフォーマット
+    _TIME_FORMAT = "[{:>3}分 {:>2}秒 {:>3}ms] " # 時間表示のフォーマット（分:秒:ミリ秒）
     _ANIMATION_INTERVAL = 0.1 # アニメーションの間隔（秒）
     _TIME_UPDATE_INTERVAL = 1000 # 時間更新の間隔（ミリ秒）
 
@@ -31,7 +31,7 @@ class StatusBarManager:
 
         self.status_label = ttk.Label(
             self.status_frame,
-            text=self._format_time(0, 0) + "準備中...",
+            text=self._format_time(0, 0, 0) + "準備中...",
             width=25
         )
         self.status_label.pack(side=tk.LEFT, padx=5, pady=2)
@@ -73,31 +73,33 @@ class StatusBarManager:
     def _update_label_text(self, animation_text: str) -> None:
         """ステータスラベルのテキストを更新"""
         if self._draw_start_time is not None:
-            minutes, seconds = self._calculate_elapsed_time()
-            time_str = self._format_time(minutes, seconds)
+            minutes, seconds, milliseconds = self._calculate_elapsed_time()
+            time_str = self._format_time(minutes, seconds, milliseconds)
             self.status_label.config(text=time_str + animation_text)
         else:
             self.status_label.config(text=self._format_time(0, 0) + animation_text)
 
-    def _calculate_elapsed_time(self) -> tuple[int, int]:
-        """経過時間を分と秒に変換
+    def _calculate_elapsed_time(self) -> tuple[int, int, int]:
+        """経過時間を分、秒、ミリ秒に変換
         Returns:
-            tuple[int, int]: 分と秒
+            tuple[int, int, int]: 分、秒、ミリ秒
         """
         elapsed_time = time.perf_counter() - self._draw_start_time
         minutes = int(elapsed_time // 60)
         seconds = int(elapsed_time % 60)
-        return minutes, seconds
+        milliseconds = int((elapsed_time - int(elapsed_time)) * 1000)
+        return minutes, seconds, milliseconds
 
-    def _format_time(self, minutes: int, seconds: int) -> str:
+    def _format_time(self, minutes: int, seconds: int, milliseconds: int) -> str:
         """時間表示をフォーマット
         Args:
             minutes (int): 分
             seconds (int): 秒
+            milliseconds (int): ミリ秒
         Returns:
             str: フォーマットされた時間表示
         """
-        return self._TIME_FORMAT.format(minutes, seconds)
+        return self._TIME_FORMAT.format(minutes, seconds, milliseconds)
 
     def _schedule_time_update(self) -> None:
         """時間更新をスケジュール"""
@@ -151,8 +153,8 @@ class StatusBarManager:
             message (str): 表示するメッセージ
         """
         if self._draw_start_time is not None:
-            minutes, seconds = self._calculate_elapsed_time()
-            time_str = self._format_time(minutes, seconds)
+            minutes, seconds, milliseconds = self._calculate_elapsed_time()
+            time_str = self._format_time(minutes, seconds, milliseconds)
             self.root.after(0, lambda: self.status_label.config(text=time_str + message))
 
     def _reset_state(self) -> None:

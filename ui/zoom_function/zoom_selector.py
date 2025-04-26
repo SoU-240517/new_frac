@@ -219,35 +219,63 @@ class ZoomSelector:
             self._cached_rect_patch = None
 
     def pointer_near_corner(self, event) -> Optional[int]:
-        """マウスカーソルに近い角の判定
+        """マウスカーソルに近い角の判定 (ピクセル座標系で判定)
         Args:
             event: MouseEvent オブジェクト
         Returns:
             Optional[int]: 近い角のインデックス (0-3) または None
         """
+        # --- イベントと矩形の基本情報を検証 ---
+        # Axes 内で、x, y 座標があるか基本的なチェック
         if not self._validate_event(event):
             return None
 
-        rotated_corners = self.rect_manager.get_rotated_corners()
-        if rotated_corners is None:
-            self.logger.log(LogLevel.DEBUG, "角判定不可: 回転後の角座標なし")
+        # 回転後の角の座標 (データ座標系) を取得
+        rotated_corners_data = self.rect_manager.get_rotated_corners()
+        if rotated_corners_data is None:
+            self.logger.log(LogLevel.DEBUG, "角判定不可: 回転後の角座標(データ)なし")
             return None
 
+        # 矩形のプロパティ (幅、高さなど) を取得 (データ座標系)
         rect_props = self.rect_manager.get_properties()
-        if not self._validate_rect_properties(rect_props):
+        # 矩形が存在し、幅と高さが正であるかチェック
+        if not self._validate_rect_properties(rect_props): # 内部でログ出力あり
+            return None
+        # --- 検証ここまで ---
+
+        # --- ピクセル座標系での計算 ---
+        try:
+            # マウスのピクセル座標を取得
+            # event.x, event.y は Figure 左下からのピクセル座標
+            mouse_x_px, mouse_y_px = event.x, event.y
+            if mouse_x_px is None or mouse_y_px is None:
+                 self.logger.log(LogLevel.WARNING, "角判定不可: マウスのピクセル座標なし")
+                 return None
+
+            # 角のデータ座標をピクセル座標に変換
+            # self.ax.transData.transform は (N, 2) の numpy 配列を返す
+            rotated_corners_px = self.ax.transData.transform(rotated_corners_data)
+
+            # 固定の許容範囲 (ピクセル単位) を設定
+            # この値 (例: 10ピクセル) は必要に応じて調整してください
+            tol_pixels = 10.0
+
+            # 各角とマウスカーソルの距離をピクセル座標系で計算
+            for i, (corner_x_px, corner_y_px) in enumerate(rotated_corners_px):
+                distance_px = np.hypot(mouse_x_px - corner_x_px, mouse_y_px - corner_y_px)
+
+                # 許容範囲内であれば、その角のインデックスを返す
+                if distance_px < tol_pixels:
+                    self.logger.log(LogLevel.DEBUG, f"角 {i} が近いと判定 (距離: {distance_px:.2f} px)", {"tolerance_px": tol_pixels})
+                    return i # 近い角のインデックスを返す
+
+            # どの角にも近くない場合は None を返す
             return None
 
-        width, height = rect_props[2], rect_props[3]
-        min_dim = min(width, height)
-
-        tol = max(0.1 * min_dim, 0.02) # 短辺の10% or 最小許容範囲 (データ座標系)
-
-        for i, (corner_x, corner_y) in enumerate(rotated_corners):
-            if event.xdata is None or event.ydata is None: continue # 型ガード
-            distance = np.hypot(event.xdata - corner_x, event.ydata - corner_y)
-            if distance < tol:
-                return i # 近い角のインデックスを返す
-        return None # どの角にも近くない
+        except Exception as e:
+            # 座標変換などでエラーが発生した場合
+            self.logger.log(LogLevel.ERROR, f"角判定中にエラー発生: {e}")
+            return None
 
     def _validate_event(self, event) -> bool:
         """イベントのバリデーション
