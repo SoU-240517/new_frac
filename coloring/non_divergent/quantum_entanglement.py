@@ -1,32 +1,67 @@
 import numpy as np
 from typing import Dict, Tuple
 from matplotlib.colors import Colormap
+from ui.zoom_function.debug_logger import DebugLogger
+from ui.zoom_function.enums import LogLevel
 
-def apply_quantum_entanglement(z: np.ndarray, iterations: np.ndarray, params: Dict, cmap: Colormap) -> np.ndarray:
-    """量子もつれ着色
+def apply_quantum_entanglement(
+    colored: np.ndarray,
+    non_divergent_mask: np.ndarray,
+    z_vals: np.ndarray, # iterations の代わりに z_vals を受け取る
+    non_cmap_func: Colormap, # 正しいカラーマップ関数を受け取る
+    params: Dict,
+    logger: DebugLogger
+) -> None:
+    """非発散部：量子もつれで着色する
+        量子もつれの複雑な性質を視覚化するために、複素数の実部と虚部を用いて
+        量子的なパターンを生成します。このパターンは、複素数の位相と振幅の
+        相互作用を表現することで、量子もつれの性質を模倣します。
     Args:
-        z (np.ndarray): 複素数配列
-        iterations (np.ndarray): 反復回数配列
+        colored (np.ndarray): 出力用のRGBA配列 (形状: (h, w, 4), dtype=float32)
+        non_divergent_mask (np.ndarray): 非発散した点のマスク (形状: (h, w), dtype=bool)
+        z_vals (np.ndarray): 複素数配列
+        non_cmap_func (Colormap): 非発散部分用のカラーマップ関数
         params (Dict): 着色パラメータ
-        cmap (Colormap): 色マップ
-    Returns:
-        np.ndarray: 着色されたRGBA配列
+        logger (DebugLogger): ロガーインスタンス
     """
-    non_divergent = iterations <= 0
-    # 量子もつれの計算
-    with np.errstate(divide='ignore', invalid='ignore'):
-        # 複素数の絶対値の対数を計算
-        abs_log = np.log(np.abs(z[non_divergent]) + 1e-10)
-        # 角度の計算
-        angles = np.angle(z[non_divergent])
-        # もつれ度の計算
-        entanglement = np.sin(abs_log * angles)
-        # 正規化
-        normalized = (entanglement - np.min(entanglement)) / (np.max(entanglement) - np.min(entanglement))
-        # ガンマ補正
-        gamma = 1.2
-        normalized = normalized ** (1/gamma)
+    # 複素数の実部と虚部を抽出
+    real_part = np.real(z_vals[non_divergent_mask])
+    imag_part = np.imag(z_vals[non_divergent_mask])
 
-    colored = np.zeros((*iterations.shape, 4), dtype=np.float32)
-    colored[non_divergent] = cmap(normalized) * 255.0
-    return colored
+    # 値の標準化（ゼロ除算防止）
+    # 量子的な性質を表現するために、実部と虚部の分布を標準化
+    with np.errstate(divide='ignore', invalid='ignore'):
+        scale = 2.0  # 量子パターンの強度を調整（0.1～50.0）
+        real_part = (real_part - np.mean(real_part)) / (np.std(real_part) + 1e-10) * scale
+        imag_part = (imag_part - np.mean(imag_part)) / (np.std(imag_part) + 1e-10) * scale
+
+    # 負の値を避けるための処理
+    # 量子的な振る舞いを表現するために、絶対値を取る
+    real_pos = np.abs(real_part)
+    imag_pos = np.abs(imag_part)
+
+    # 量子パターンの生成
+    # 以下の各項は量子的な性質を表現するために組み合わせています：
+    # - sin: 量子的な振動を表現
+    # - cos: 量子的な干渉を表現
+    # - arctan2: 量子的な位相関係を表現
+    pattern = (
+        np.sin(real_pos**1.5 + imag_pos**1.5) * 0.4 +
+        np.cos(real_pos * imag_pos * 0.5) * 0.4 +
+        np.arctan2(imag_part, real_part) / (2 * np.pi) * 0.2
+    )
+
+    # NaN値の処理とスケーリング
+    # 量子パターンを0-1の範囲に正規化
+    pattern = np.nan_to_num(pattern, nan=0.0)  # NaNを0に置き換え
+
+    # 値の範囲を0-1にスケーリング
+    pattern = (pattern - np.min(pattern)) / (np.max(pattern) - np.min(pattern) + 1e-10)
+    pattern = np.clip(pattern, 0, 1)
+
+    # ガンマ補正でコントラスト調整
+    gamma = 1.8
+    normalized = pattern ** (1/gamma)
+
+    # カラーマップ適用
+    colored[non_divergent_mask] = non_cmap_func(normalized) * 255.0

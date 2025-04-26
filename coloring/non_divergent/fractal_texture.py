@@ -1,36 +1,50 @@
 import numpy as np
 from typing import Dict, Tuple
 from matplotlib.colors import Colormap
+from ui.zoom_function.debug_logger import DebugLogger
+from ui.zoom_function.enums import LogLevel
 
-def apply_fractal_texture(z: np.ndarray, iterations: np.ndarray, params: Dict, cmap: Colormap) -> np.ndarray:
-    """フラクタルテクスチャ着色
+def apply_fractal_texture(
+    colored: np.ndarray,
+    non_divergent_mask: np.ndarray,
+    z_vals: np.ndarray, # iterations の代わりに z_vals を受け取る
+    non_cmap_func: Colormap, # 正しいカラーマップ関数を受け取る
+    params: Dict,
+    logger: DebugLogger
+) -> None:
+    """非発散部：フラクタルテクスチャで着色する
+        非発散部をマルチオクターブノイズを使用したフラクタルテクスチャで着色する
     Args:
-        z (np.ndarray): 複素数配列
-        iterations (np.ndarray): 反復回数配列
+        colored (np.ndarray): 出力用のRGBA配列 (形状: (h, w, 4), dtype=float32)
+        non_divergent_mask (np.ndarray): 非発散した点のマスク (形状: (h, w), dtype=bool)
+        z_vals (np.ndarray): 複素数配列
+        non_cmap_func (Colormap): 非発散部分用のカラーマップ関数
         params (Dict): 着色パラメータ
-        cmap (Colormap): 色マップ
-    Returns:
-        np.ndarray: 着色されたRGBA配列
+        logger (DebugLogger): ロガーインスタンス
+    Notes:
+        - マルチオクターブノイズを使用してフラクタルテクスチャを生成
+        - 各ノイズのスケールは 5.0, 10.0, 20.0 を使用
+        - 正規化された値をカラーマップ関数に渡すことで、一貫性のある色付けを実現
     """
-    non_divergent = iterations <= 0
-    # フラクタルテクスチャの計算
-    with np.errstate(divide='ignore', invalid='ignore'):
-        # 複素数の絶対値の対数を計算
-        abs_log = np.log(np.abs(z[non_divergent]) + 1e-10)
-        # 角度の計算
-        angles = np.angle(z[non_divergent])
-        # テクスチャの計算（複数の周波数成分を組み合わせる）
-        texture = (
-            np.sin(abs_log * 2) +
-            0.5 * np.sin(abs_log * 4) +
-            0.25 * np.sin(abs_log * 8)
-        )
-        # 正規化
-        normalized = (texture - np.min(texture)) / (np.max(texture) - np.min(texture))
-        # ガンマ補正
-        gamma = 1.4
-        normalized = normalized ** (1/gamma)
+    # ノイズ生成関数を定義
+    def noise(x, y, scale=1.0): # noise関数内のscaleパラメータを調整
+        return np.sin(scale * x) * np.cos(scale * y)
 
-    colored = np.zeros((*iterations.shape, 4), dtype=np.float32)
-    colored[non_divergent] = cmap(normalized) * 255.0
-    return colored
+    # 非発散点の複素数座標を取得
+    x = np.real(z_vals[non_divergent_mask])
+    y = np.imag(z_vals[non_divergent_mask])
+
+    # マルチオクターブノイズ
+    # 異なるスケールと重みでノイズを生成し、組み合わせる
+    n1 = noise(x, y, 5.0) # 基本周波数
+    n2 = noise(x, y, 10.0) * 0.5 # 第2周波数、振幅を半分に
+    n3 = noise(x, y, 20.0) * 0.25 # 第3周波数、振幅を1/4に
+    combined = n1 + n2 + n3 # 各オクターブのノイズを合成
+
+    # ノイズ値を0から1の範囲に正規化
+    # np.min と np.max を使用して、現在のデータ範囲に基づいて正規化
+    normalized = (combined - np.min(combined)) / (np.max(combined) - np.min(combined))
+
+    # 正規化された位相値をカラーマップに適用
+    # 結果を255倍して0-255の範囲に変換
+    colored[non_divergent_mask] = non_cmap_func(normalized) * 255.0
