@@ -210,39 +210,18 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger) -
 
             elif algo_name == '角度カラーリング':
                 div_angle.apply_angle_coloring(
-                    colored,
-                    divergent_mask,
-                    z_vals,
-                    cmap_func,
-                    params,
-                    logger
-                )
+                    colored, divergent_mask, z_vals, cmap_func, params, logger)
 
             elif algo_name == 'ポテンシャル関数法':
-                logger.log(LogLevel.DEBUG, "Processing divergent points using: " + algo_name)
                 div_potential.apply_potential(
-                    colored,
-                    divergent_mask,
-                    z_vals,
-                    cmap_func,
-                    params,
-                    logger
-                )
+                    colored, divergent_mask, z_vals, cmap_func, params, logger)
 
             elif algo_name == '軌道トラップ法':
                div_orbit_trap.apply_orbit_trap(
-                   colored,
-                   divergent_mask,
-                   iterations, # 軌道トラップの種類によっては反復回数も使う場合がある
-                   z_vals,
-                   cmap_func,
-                   params,
-                   logger
-               )
+                   colored, divergent_mask, iterations, z_vals, cmap_func, params, logger)
 
-            else:
+            else: # デフォルトの線形マッピングを使用
                 logger.log(LogLevel.WARNING, f"Unknown divergent coloring algorithm: {algo_name}. Using default.")
-                # デフォルトの線形マッピングを使用
                 div_linear.apply_linear_mapping(
                     colored,
                     divergent_mask,

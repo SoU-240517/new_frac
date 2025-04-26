@@ -2,24 +2,30 @@ import numpy as np
 from typing import Dict, Tuple
 from matplotlib.colors import Colormap
 from ui.zoom_function.debug_logger import DebugLogger
+from ui.zoom_function.enums import LogLevel
+from ..utils import _normalize_and_color
 
 def apply_angle_coloring(
     colored: np.ndarray,
     divergent_mask: np.ndarray,
     z_vals: np.ndarray,
-    cmap: Colormap,
+    cmap_func: Colormap,
     params: Dict,
     logger: DebugLogger
 ) -> None:
-    """角度カラーリング
+    """発散部：角度カラーリングで着色する
     Args:
         colored (np.ndarray): 出力用のRGBA配列 (形状: (h, w, 4), dtype=float32)
         divergent_mask (np.ndarray): 発散した点のマスク (形状: (h, w), dtype=bool)
         z_vals (np.ndarray): 複素数配列
-        cmap (Colormap): 色マップ
+        cmap_func (Colormap): 発散部分用のカラーマップ関数
         params (Dict): 着色パラメータ
         logger (DebugLogger): ロガーインスタンス
     """
-    divergent = divergent_mask
+    # 複素数の角度を計算し、0〜1の範囲に正規化
+    # np.angle()は-π〜πの範囲を返すため、2πで割って0〜1の範囲に変換し、0.5を加算して0〜1の範囲に正規化
     angles = np.angle(z_vals) / (2 * np.pi) + 0.5
-    colored[divergent] = cmap(angles[divergent]) * 255.0
+
+    # 発散した点のみを対象にカラーマップを適用
+    # cmap_funcの結果を0〜255の範囲に変換してcolored配列に書き込む
+    colored[divergent_mask] = cmap_func(angles[divergent_mask]) * 255.0
