@@ -51,10 +51,10 @@ class ColorCache:
         cached_item = self.cache.get(key)
         if cached_item:
             # キーが長い場合があるのでログでは一部だけ表示する
-            self.logger.log(LogLevel.INFO, "Cache hit for key: " + key[:50] + "...")
+            self.logger.log(LogLevel.INFO, "キーのキャッシュヒット: " + key[:50] + "...")
             return cached_item['image']
         else:
-            self.logger.log(LogLevel.INFO, "Cache miss for key: " + key[:50] + "...")
+            self.logger.log(LogLevel.INFO, "キーのキャッシュミス: " + key[:50] + "...")
             return None
 
     def put_cache(self, params: Dict, data: np.ndarray) -> None:

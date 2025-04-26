@@ -88,7 +88,7 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger) -
     cache = ColorCache(logger=logger)
     cached_image = cache.get_cache(params)
     if cached_image is not None:
-        logger.log(LogLevel.INFO, "Returning cached image.")
+        logger.log(LogLevel.INFO, "キャッシュされた画像を返します。")
         return cached_image
 
     # --- 2. 必要なデータの準備 ---
@@ -97,10 +97,10 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger) -
     z_vals = results.get('z_vals')
 
     if iterations is None or mask is None or z_vals is None:
-        logger.log(LogLevel.ERROR, "Missing required keys in 'results' dictionary (iterations, mask, z_vals).")
+        logger.log(LogLevel.ERROR, "辞書に必要なキー (iterations、mask、z_vals) がありません。")
         raise ColorAlgorithmError("Invalid fractal results data.")
     if not (iterations.shape == mask.shape == z_vals.shape):
-         logger.log(LogLevel.ERROR, f"Shape mismatch: iterations={iterations.shape}, mask={mask.shape}, z_vals={z_vals.shape}")
+         logger.log(LogLevel.ERROR, f"形状の不一致: iterations={iterations.shape}, mask={mask.shape}, z_vals={z_vals.shape}")
          raise ColorAlgorithmError("Input data shapes do not match.")
 
     divergent_mask = ~mask
@@ -114,7 +114,7 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger) -
         cmap_func = plt.cm.get_cmap(diverge_cmap_name)
         non_cmap_func = plt.cm.get_cmap(non_diverge_cmap_name)
     except ValueError as e:
-        logger.log(LogLevel.ERROR, f"Invalid colormap name specified: {e}")
+        logger.log(LogLevel.ERROR, f"無効なカラーマップ名が指定されました: {e}")
         raise ColorAlgorithmError(f"Invalid colormap name: {e}") from e
 
     # --- 3. 着色処理の実行 ---
@@ -152,7 +152,7 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger) -
                     # 線形、対数、ヒストグラムなどは iterations が必要
                     algo_func(colored, divergent_mask, iterations, cmap_func, params, logger)
             else:
-                logger.log(LogLevel.WARNING, f"Unknown divergent coloring algorithm: {algo_name}. Using default (linear mapping).")
+                logger.log(LogLevel.WARNING, f"未知の発散色付けアルゴリズム: {algo_name}. Using default (linear mapping).")
                 DEFAULT_DIVERGENT_ALGORITHM(colored, divergent_mask, iterations, cmap_func, params, logger)
 
         # --- 3.2 非発散部分の着色 ---
@@ -177,7 +177,7 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger) -
                     # 他の多くの非発散アルゴリズムは z_vals が必要
                     algo_func(colored, non_divergent_mask, z_vals, non_cmap_func, params, logger)
             else:
-                logger.log(LogLevel.WARNING, f"Unknown non-divergent coloring algorithm: {algo_name}. Using default (solid color).")
+                logger.log(LogLevel.WARNING, f"未知の非発散色付けアルゴリズム: {algo_name}. Using default (solid color).")
                 DEFAULT_NON_DIVERGENT_ALGORITHM(colored, non_divergent_mask, params, logger)
 
         end_time = time.time()

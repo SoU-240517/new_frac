@@ -41,7 +41,7 @@ def compute_gradient(shape, logger: DebugLogger):
     normalized_distance = np.sqrt(
         (x - center_x)**2 + (y - center_y)**2
     ) / np.sqrt((shape[0]/2)**2 + (shape[1]/2)**2)
-    
-    logger.log(LogLevel.DEBUG, f"Normalized distance range: {normalized_distance.min()} to {normalized_distance.max()}")
-    
+
+    logger.log(LogLevel.DEBUG, f"正規化された距離範囲: {normalized_distance.min()} to {normalized_distance.max()}")
+
     return normalized_distance
