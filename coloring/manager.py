@@ -1,15 +1,12 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import time
-from matplotlib.colors import Colormap, Normalize
 from typing import Dict, Optional
-# UI関連のインポート (ロガーなど)
 from ui.zoom_function.debug_logger import DebugLogger
 from ui.zoom_function.enums import LogLevel
-# ユーティリティ関数とエラークラスをインポート
-from .utils import _normalize_and_color, _smooth_iterations, ColorAlgorithmError
-# gradient モジュール (グラデーション計算用)
-from . import gradient
+from .utils import ColorAlgorithmError
+from . import gradient # gradient モジュール (グラデーション計算用)
+
 # 各アルゴリズムモジュールから着色関数をインポート
 # 発散部
 from .divergent import linear as div_linear # 反復回数線形マッピング
