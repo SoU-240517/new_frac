@@ -11,7 +11,7 @@ class StatusBarManager:
     - 役割:
         - ステータスバーの表示とアニメーションを管理
     """
-    _TIME_FORMAT = "[{:>3}分 {:>2}秒 {:>3}ms] " # 時間表示のフォーマット（分:秒:ミリ秒）
+    _TIME_FORMAT = "[{:>3}分 {:02}秒 {:03}ms] " # 時間表示のフォーマット（分:秒:ミリ秒）
     _ANIMATION_INTERVAL = 0.1 # アニメーションの間隔（秒）
     _TIME_UPDATE_INTERVAL = 1000 # 時間更新の間隔（ミリ秒）
 
@@ -114,7 +114,7 @@ class StatusBarManager:
     def _update_time(self) -> None:
         """時間表示を更新し、次の更新をスケジュール"""
         if self._animation_state.is_running and self._draw_start_time is not None:
-            minutes, seconds = self._calculate_elapsed_time()
+            minutes, seconds, milliseconds = self._calculate_elapsed_time()
             self._update_label_text(f"描画中{'.' * self._animation_state.dots}")
             self._schedule_time_update()
 

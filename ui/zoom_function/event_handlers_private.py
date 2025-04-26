@@ -299,7 +299,7 @@ class EventHandlersPrivate:
         self.core.rect_manager.edge_change_finishing()
         final_state = ZoomState.EDIT
         rect_props = self.core.rect_manager.get_properties()
-        if not (rect_props and self.core.rect_manager.is_valid_size(rect_props[2], rect_props[3])):
+        if not (rect_props and self.core.rect_manager.is_valid_size_in_pixels(rect_props[2], rect_props[3])):
             self.core.logger.log(LogLevel.WARNING, "リサイズ中断: 無効なサイズになったためUndo試行")
             self.core.utils._undo_last_edit()
             if not self.core.rect_manager.get_rect(): # Undoの結果、矩形が消えた場合
