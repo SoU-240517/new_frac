@@ -4,11 +4,41 @@ Directory structure:
 └── sou-240517-new_frac/
     ├── readme.md
     ├── main.py
-    ├── user_ profile.md
     ├── coloring/
+    │   ├── __init__.py
     │   ├── color_algorithms.md
-    │   ├── color_algorithms.py
-    │   └── gradient.py
+    │   ├── gradient.py
+    │   ├── manager.py
+    │   ├── utils.py
+    │   ├── divergent/
+    │   │   ├── __init__.py
+    │   │   ├── angle.py
+    │   │   ├── distance.py
+    │   │   ├── histogram.py
+    │   │   ├── linear.py
+    │   │   ├── logarithmic.py
+    │   │   ├── orbit_trap.py
+    │   │   ├── potential.py
+    │   │   └── smoothing.py
+    │   └── non_divergent/
+    │       ├── __init__.py
+    │       ├── chaotic_orbit.py
+    │       ├── complex_potential.py
+    │       ├── convergence_speed.py
+    │       ├── derivative.py
+    │       ├── fourier_pattern.py
+    │       ├── fractal_texture.py
+    │       ├── gradient_based.py
+    │       ├── histogram_equalization.py
+    │       ├── internal_distance.py
+    │       ├── orbit_trap_circle.py
+    │       ├── palam_c_z.py
+    │       ├── phase_symmetry.py
+    │       ├── quantum_entanglement.py
+    │       └── solid_color.py
+    ├── document/
+    │   ├── directory_structure.md
+    │   └── user_ profile.md
     ├── fractal/
     │   ├── render.py
     │   └── fractal_types/
