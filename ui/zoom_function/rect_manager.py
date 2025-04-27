@@ -31,7 +31,6 @@ class RectManager:
         self.ax = ax
         self.rect: Optional[patches.Rectangle] = None
         self._angle: float = 0.0
-        # --- 追加 ---
         # 直前の有効なサイズを保持 (ドラッグ中に無効サイズになった場合に使用)
         self._last_valid_size_px: Optional[Tuple[float, float]] = None
 
@@ -45,7 +44,7 @@ class RectManager:
         return self.rect
 
     def setup_rect(self, x: float, y: float) -> None:
-        """新しいズーム領域の初期設定 (設置サイズ 0：回転なし)
+        """ズーム領域の初期設定 (設置サイズ 0：回転なし)
         Args:
             x (float): 矩形左上の x 座標
             y (float): 矩形左上の y 座標
@@ -56,9 +55,47 @@ class RectManager:
             linewidth=1, edgecolor='gray', facecolor='none', linestyle='--', visible=True)
         self.ax.add_patch(self.rect)
         self._angle = 0.0
-        # --- 追加 ---
         self._last_valid_size_px = None # 新規作成時はリセット
         self.logger.log(LogLevel.SUCCESS, "初期のズーム領域設置完了", {"x": x, "y": y})
+
+    def _calculate_rect_geometry(self,
+                                 ref_x: float, ref_y: float,
+                                 target_x: float, target_y: float
+                                 ) -> Tuple[float, float, float, float]:
+        """基準点と目標点から、アスペクト比を維持した矩形の左下座標、幅、高さを計算する
+        Args:
+            ref_x (float): 基準点の x 座標 (データ座標)
+            ref_y (float): 基準点の y 座標 (データ座標)
+            target_x (float): 目標点の x 座標 (データ座標)
+            target_y (float): 目標点の y 座標 (データ座標)
+        Returns:
+            Tuple[float, float, float, float]: (左下 x, 左下 y, 幅, 高さ)
+        """
+        # マウスの移動量を計算
+        dx = target_x - ref_x
+        dy = target_y - ref_y
+
+        # 幅と高さをアスペクト比に基づいて計算
+        # 幅の移動量の方がアスペクト比に対して大きいか等しい場合
+        if abs(dx) >= abs(dy) * self.ASPECT_RATIO_W_H:
+            width = abs(dx)
+            height = width / self.ASPECT_RATIO_W_H
+        else: # 高さの移動量の方がアスペクト比に対して大きい場合
+            height = abs(dy)
+            width = height * self.ASPECT_RATIO_W_H
+
+        # 矩形の左下座標 (x, y) を計算
+        if dx >= 0: # target_x が ref_x より右にあるか (dx >= 0)
+            x = ref_x
+        else: # target_x が ref_x より左にある (dx < 0)
+            x = ref_x - width
+
+        if dy >= 0: # target_y が ref_y より上にあるか (dy >= 0)
+            y = ref_y
+        else: # target_y が ref_y より下にある (dy < 0)
+            y = ref_y - height
+
+        return x, y, width, height
 
     def setting_rect_size(self, start_x: float, start_y: float, current_x: float, current_y: float) -> None:
         """ズーム領域のサイズと位置を更新 (作成中：回転なし、ピクセルサイズチェックあり)
@@ -71,33 +108,11 @@ class RectManager:
         if not self.rect:
             self.logger.log(LogLevel.ERROR, "ズーム領域なし：サイズ更新不可")
             return
-        # --- データ座標での幅、高さ、左下座標の計算 ---
-        # マウスの移動量を計算
-        dx = current_x - start_x
-        dy = current_y - start_y
 
-        # 幅と高さをアスペクト比に基づいて計算
-        # 幅の移動量の方がアスペクト比に対して大きいか等しい場合
-        if abs(dx) >= abs(dy) * self.ASPECT_RATIO_W_H:
-            width = abs(dx)
-            height = width / self.ASPECT_RATIO_W_H
-        else: # 高さの移動量の方がアスペクト比に対して大きい場合
-            height = abs(dy)
-            width = height * self.ASPECT_RATIO_W_H
+        # データ座標での幅、高さ、左下座標の計算
+        x, y, width, height = self._calculate_rect_geometry(start_x, start_y, current_x, current_y)
 
-        # 矩形の左下座標 (x, y) を計算
-        if dx >= 0: # current_x が start_x より右にあるか (dx >= 0)
-            x = start_x
-        else: # current_x が start_x より左にある (dx < 0)
-            x = start_x - width
-
-        if dy >= 0: # current_y が start_y より上にあるか (dy >= 0)
-            y = start_y
-        else: # current_y が start_y より下にある (dy < 0)
-            y = start_y - height
-        # --- データ座標計算ここまで ---
-
-        # --- ピクセルサイズチェック ---
+        # ピクセルサイズチェック
         is_valid, px_width, px_height = self._check_pixel_size(x, y, width, height)
 
         if is_valid:
@@ -171,32 +186,10 @@ class RectManager:
         current_y_unrotated = current_x_rel * sin_a + current_y_rel * cos_a + cy
         # --- 逆回転ここまで ---
 
-        # --- 回転前の座標系で新しい矩形を計算 ---
-        # 幅と高さの変化量を計算
-        dx_unrotated = current_x_unrotated - fixed_x_unrotated
-        dy_unrotated = current_y_unrotated - fixed_y_unrotated
-
-        # 新しい幅と高さをアスペクト比に基づいて計算
-        # 幅の変化量の方がアスペクト比に対して大きいか等しい場合
-        if abs(dx_unrotated) >= abs(dy_unrotated) * self.ASPECT_RATIO_W_H:
-            new_width = abs(dx_unrotated)
-            new_height = new_width / self.ASPECT_RATIO_W_H
-        else: # 高の変化量の方がアスペクト比に対して大きい場合
-            new_height = abs(dy_unrotated)
-            new_width = new_height * self.ASPECT_RATIO_W_H
-
-        # 新しい左下座標 (new_x, new_y) を計算
-        # current_x_unrotated が fixed_x_unrotated より右にあるか (dx_unrotated >= 0)
-        if dx_unrotated >= 0:
-            new_x = fixed_x_unrotated
-        else: # current_x_unrotated が fixed_x_unrotated より左にある (dx_unrotated < 0)
-            new_x = fixed_x_unrotated - new_width
-        # current_y_unrotated が fixed_y_unrotated より上にあるか (dy_unrotated >= 0)
-        if dy_unrotated >= 0:
-            new_y = fixed_y_unrotated
-        else: # current_y_unrotated が fixed_y_unrotated より下にある (dy_unrotated < 0)
-            new_y = fixed_y_unrotated - new_height
-        # --- 回転前計算ここまで ---
+        # 回転前の座標系で新しい矩形を計算
+        new_x, new_y, new_width, new_height = self._calculate_rect_geometry(
+            fixed_x_unrotated, fixed_y_unrotated, current_x_unrotated, current_y_unrotated
+        )
 
         # --- ピクセルサイズチェック ---
         is_valid, px_width, px_height = self._check_pixel_size(new_x, new_y, new_width, new_height)
@@ -216,14 +209,14 @@ class RectManager:
             # 今は単純に更新をスキップする
 
         # --- 矩形プロパティを設定 (まだ回転は適用しない) ---
-        self.rect.set_width(new_width)
-        self.rect.set_height(new_height)
-        self.rect.set_xy((new_x, new_y))
+        # self.rect.set_width(new_width) # is_valid チェック内で設定済み
+        # self.rect.set_height(new_height) # is_valid チェック内で設定済み
+        # self.rect.set_xy((new_x, new_y)) # is_valid チェック内で設定済み
         # --- 設定ここまで ---
 
         self.logger.log(LogLevel.DEBUG, f"リサイズ計算(回転前): x={new_x:.2f}, y={new_y:.2f}, w={new_width:.2f}, h={new_height:.2f}")
-        # 最後に現在の回転角度を再適用
-        self._apply_rotation()
+        # 最後に現在の回転角度を再適用 (is_valid の場合のみ適用される)
+        # self._apply_rotation() # is_valid チェック内で適用済み
 
     def is_valid_size_in_pixels(self, width_px: float, height_px: float) -> bool:
         """指定されたピクセル幅と高さが有効か (最小ピクセルサイズ以上か)
@@ -237,6 +230,19 @@ class RectManager:
         if not is_valid:
             self.logger.log(LogLevel.WARNING, f"無効なピクセルサイズ：px_w={width_px:.1f} (<{self.MIN_WIDTH_PX}), px_h={height_px:.1f} (<{self.MIN_HEIGHT_PX})")
         return is_valid
+
+    def is_last_calculated_size_valid(self) -> bool:
+        """最後に setting_rect_size または resize_rect_from_corners で
+           計算・キャッシュされたピクセルサイズが有効かどうかを返す
+        Returns:
+            bool: 最後の計算結果が有効なサイズだったか
+        """
+        if self._last_valid_size_px:
+            # is_valid_size_in_pixels を使って再検証する (念のため)
+            return self.is_valid_size_in_pixels(self._last_valid_size_px[0], self._last_valid_size_px[1])
+        # キャッシュがない場合は無効とみなす
+        self.logger.log(LogLevel.DEBUG, "最後の有効ピクセルサイズキャッシュなし")
+        return False
 
     def _temporary_creation(self, start_x: float, start_y: float, end_x: float, end_y: float) -> bool:
         """ズーム領域作成完了時の処理 (ピクセルサイズチェックあり)
@@ -252,30 +258,10 @@ class RectManager:
             self.logger.log(LogLevel.ERROR, "ズーム領域作成不可：ズーム領域なし")
             return False # Indicate failure
 
-        # --- データ座標での幅、高さ、左下座標の計算 ---
-        dx = end_x - start_x
-        dy = end_y - start_y
+        # データ座標での幅、高さ、左下座標の計算
+        x, y, width, height = self._calculate_rect_geometry(start_x, start_y, end_x, end_y)
 
-        # 幅と高さをアスペクト比に基づいて計算 (setting_rect_size と同じロジック)
-        if abs(dx) >= abs(dy) * self.ASPECT_RATIO_W_H:
-            width = abs(dx)
-            height = width / self.ASPECT_RATIO_W_H
-        else:
-            height = abs(dy)
-            width = height * self.ASPECT_RATIO_W_H
-
-        # 矩形の左下座標 (x, y) を計算
-        if dx >= 0:
-            x = start_x
-        else:
-            x = start_x - width
-        if dy >= 0:
-            y = start_y
-        else:
-            y = start_y - height
-        # --- データ座標計算ここまで ---
-
-        # --- ピクセルサイズチェック ---
+        # ピクセルサイズチェック
         is_valid, px_width, px_height = self._check_pixel_size(x, y, width, height)
 
         if not is_valid:
@@ -395,7 +381,6 @@ class RectManager:
         visible = state.get("visible", True) # デフォルトは表示
         edgecolor = state.get("edgecolor", "white") # デフォルトは白
         linestyle = state.get("linestyle", "-") # デフォルトは実線
-        # --- 追加 ---
         last_valid_w_px = state.get("last_valid_width_px")
         last_valid_h_px = state.get("last_valid_height_px")
 
@@ -422,11 +407,11 @@ class RectManager:
         # --- チェックここまで ---
 
         # --- 矩形の作成または更新 ---
-        if not self.is_valid_size_in_pixels(width, height): # サイズが有効かチェック
-            self.logger.log(LogLevel.WARNING, f"Undo: 矩形復元スキップ（サイズ無効 w={width:.4f}, h={height:.4f}）")
-            # 無効なサイズが指定された場合も、現在の矩形を削除する
-            self.delete_rect()
-            return
+        # if not self.is_valid_size_in_pixels(width, height): # サイズが有効かチェック # is_valid でチェック済み
+        #     self.logger.log(LogLevel.WARNING, f"Undo: 矩形復元スキップ（サイズ無効 w={width:.4f}, h={height:.4f}）")
+        #     # 無効なサイズが指定された場合も、現在の矩形を削除する
+        #     self.delete_rect()
+        #     return
         if not self.rect: # 矩形が存在しない場合は作成
              self.rect = patches.Rectangle((x, y), width, height,
                                          linewidth=1, edgecolor=edgecolor, facecolor='none',
@@ -442,13 +427,11 @@ class RectManager:
             self.rect.set_linestyle(linestyle) # 線のスタイルを復元
         self._angle = angle # 角度を設定
         self.rect.set_visible(visible) # 可視状態を復元
-        # --- 追加 ---
         # 復元したピクセルサイズをキャッシュに設定
         self._last_valid_size_px = (px_width, px_height)
         # 最後に回転を適用
         self._apply_rotation()
         self.logger.log(LogLevel.SUCCESS, "Undo/Redo: ズーム領域を復元完了", state)
-    # --- ここまで Undo/Redo 用メソッド ---
 
     def get_center(self) -> Optional[Tuple[float, float]]:
         """ズーム領域の中心座標を取得 (回転前の座標系)
