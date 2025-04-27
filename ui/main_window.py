@@ -178,15 +178,22 @@ class MainWindow:
         finally:
             self.is_drawing = False
 
+#    def _merge_zoom_and_panel_params(self, panel_params: dict) -> dict:
+#        """ズームパラメータとパネルパラメータを結合する
+#        Args:
+#            panel_params: パネルから取得したパラメータ
+#        Returns:
+#            dict: 結合されたパラメータ
+#        """
+#        current_params = self.zoom_params.copy()
+#        current_params.update(panel_params)
+#        return current_params
+
     def _merge_zoom_and_panel_params(self, panel_params: dict) -> dict:
-        """ズームパラメータとパネルパラメータを結合する
-        Args:
-            panel_params: パネルから取得したパラメータ
-        Returns:
-            dict: 結合されたパラメータ
-        """
+        """ズームパラメータとパネルパラメータを結合する"""
         current_params = self.zoom_params.copy()
         current_params.update(panel_params)
+        current_params["render_mode"] = self.parameter_panel.render_mode  # 描画モードを追加
         return current_params
 
     def on_zoom_confirm(self, x: float, y: float, w: float, h: float, angle: float) -> None:

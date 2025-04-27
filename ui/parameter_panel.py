@@ -24,6 +24,7 @@ class ParameterPanel:
         """
         self.logger = logger
         self.parent = parent
+        self.render_mode = "quick"  # "quick" or "full"
         self.update_callback = update_callback
         self.reset_callback = reset_callback
         self._setup_panel()
@@ -146,13 +147,23 @@ class ParameterPanel:
         combo.bind("<<ComboboxSelected>>", self._common_callback)
         self._non_diverge_section_last_row = row
 
+#    def _setup_buttons(self) -> None:
+#        """ボタンのセットアップ"""
+#        row = self._non_diverge_section_last_row + 1
+#        self._add_button("描画", row, 0, 2, lambda: [self.update_callback(), self._update_colorbars()])
+#        row += 1
+#        if self.reset_callback is not None:
+#            self._add_button("描画リセット", row, 0, 2, lambda: [self.reset_callback(), self._update_colorbars()])
+
     def _setup_buttons(self) -> None:
         """ボタンのセットアップ"""
         row = self._non_diverge_section_last_row + 1
-        self._add_button("描画", row, 0, 2, lambda: [self.update_callback(), self._update_colorbars()])
+        # 「描画」ボタン - フル描画モード
+        self._add_button("描画", row, 0, 2, lambda: [setattr(self, 'render_mode', 'full'), self.update_callback(), self._update_colorbars()])
         row += 1
         if self.reset_callback is not None:
-            self._add_button("描画リセット", row, 0, 2, lambda: [self.reset_callback(), self._update_colorbars()])
+            # 「描画リセット」ボタン - クイック描画モード
+            self._add_button("描画リセット", row, 0, 2, lambda: [setattr(self, 'render_mode', 'quick'), self.reset_callback(), self._update_colorbars()])
 
     def _add_label(self, text, row, col, columnspan=1, padx=10, pady=2) -> None:
         """ラベルを追加する
@@ -215,8 +226,14 @@ class ParameterPanel:
         btn.grid(row=row, column=col, columnspan=colspan, sticky=tk.W+tk.E, padx=10, pady=10)
         return btn
 
+#    def _common_callback(self, event=None) -> None:
+#        """共通のコールバック関数"""
+#        self.update_callback()
+#        self._update_colorbars()
+
     def _common_callback(self, event=None) -> None:
         """共通のコールバック関数"""
+        self.render_mode = "quick"  # 簡易描画モードに設定
         self.update_callback()
         self._update_colorbars()
 

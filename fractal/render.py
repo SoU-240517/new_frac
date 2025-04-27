@@ -175,9 +175,22 @@ def render_fractal(params: dict, logger: DebugLogger, cache=None) -> np.ndarray:
     Returns:
         np.ndarray: フラクタル画像 (uint8 [0, 255] RGBA 配列)
     """
+    render_mode = params.get("render_mode", "quick")  # デフォルトは簡易モード
+
+#    # 動的解像度計算
+#    resolution = _calculate_dynamic_resolution(params.get("width", 4.0))
+#    logger.log(LogLevel.SUCCESS, f"動的解像度計算完了: {resolution}x{resolution}")
+
     # 動的解像度計算
-    resolution = _calculate_dynamic_resolution(params.get("width", 4.0))
-    logger.log(LogLevel.SUCCESS, f"動的解像度計算完了: {resolution}x{resolution}")
+    if render_mode == "quick":
+        resolution = _calculate_dynamic_resolution(params.get("width", 4.0)) // 2  # 解像度を半分に
+        samples_per_pixel = 1  # アンチエイリアシングなし
+    else:
+        resolution = _calculate_dynamic_resolution(params.get("width", 4.0))
+        zoom_level = 4.0 / params.get("width", 4.0)
+        samples_per_pixel = 2 if zoom_level < 0.8 else 4
+
+    logger.log(LogLevel.SUCCESS, f"描画モード: {render_mode}, 解像度: {resolution}x{resolution}, サンプル数: {samples_per_pixel}")
 
     # アンチエイリアシング設定
     zoom_level = 4.0 / params.get("width", 4.0)
