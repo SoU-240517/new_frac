@@ -28,7 +28,7 @@ class CursorManager:
 
     def __init__(self, zoom_selector: 'ZoomSelector', logger: DebugLogger) -> None:
         """CursorManagerの初期化
-        
+
         Args:
             zoom_selector: ZoomSelectorインスタンス
             logger: ログ出力用の DebugLogger インスタンス
@@ -63,15 +63,15 @@ class CursorManager:
 
     def _should_update_cursor(self, event: MouseEvent) -> bool:
         """カーソル更新が必要かを判定
-        
+
         Args:
             event: MouseEvent オブジェクト
-            
+
         Returns:
             bool: カーソル更新が必要か
         """
-        if not event.inaxes:
-            return False
+        if event is None: return False
+        if not event.inaxes: return False
 
         validation_result = self.validator.validate_event(event, self.zoom_selector.ax)
         return validation_result.is_in_axes and validation_result.has_coords
