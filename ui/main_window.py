@@ -1,5 +1,3 @@
-# main_window.py の修正案
-
 import tkinter as tk
 import numpy as np
 import threading
@@ -17,10 +15,12 @@ class MainWindow:
         - UIコンポーネントの初期化と管理を行う
         - フラクタル描画を行う
     Attributes:
+        canvas_frame: キャンバスを配置するフレーム
         root: Tkinterのルートウィンドウ
         logger: デバッグログを管理するLogger
         fractal_canvas: フラクタルを描画するキャンバス
         parameter_panel: パラメータを管理するパネル
+        parameter_frame: パラメータパネルを配置するフレーム
         status_bar_manager: ステータスバーを管理するクラス
         zoom_params: ズーム操作のパラメータ
         prev_zoom_params: ズーム前のパラメータ（キャンセル用）
@@ -72,7 +72,9 @@ class MainWindow:
         status_frame.pack(fill=tk.X, side=tk.BOTTOM, pady=(0, 5))
         self.logger.log(LogLevel.INIT, "StatusBarManager クラスのインスタンスを作成")
         self.status_bar_manager = StatusBarManager(
-            self.root, status_frame, self.logger
+            self.root,
+            status_frame,
+            self.logger
         )
 
     def _setup_parameter_frame(self) -> None:
@@ -83,7 +85,8 @@ class MainWindow:
             fill=tk.Y,
             padx=(0, 5),
             pady=5,
-            expand=False)
+            expand=False
+        )
         self.parameter_frame.pack_propagate(False)
 
         self.logger.log(LogLevel.INIT, "ParameterPanel クラスのインスタンスを作成")

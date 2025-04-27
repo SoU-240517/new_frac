@@ -198,7 +198,6 @@ def render_fractal(params: dict, logger: DebugLogger, cache=None) -> np.ndarray:
     results = _compute_fractal(Z, params, logger)
 
     # 着色処理
-#    colored_high_res = color_algorithms.apply_coloring_algorithm(results, params, logger)
     colored_high_res = manager.apply_coloring_algorithm(results, params, logger)
 
     # ダウンサンプリング
