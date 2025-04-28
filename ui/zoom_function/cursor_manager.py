@@ -21,17 +21,27 @@ CURSORS = {
 
 class CursorManager:
     """マウスカーソルの形状を操作状態に応じて変更するクラス
-    - 役割:
-        - イベントと状態に基づいてカーソル形状を更新する
-        - カーソルの状態を管理する
+    - イベントと状態に基づいてカーソル形状を更新する
+    - カーソルの状態を管理する
+    Attributes:
+        zoom_selector: ZoomSelectorインスタンス
+        logger: ログ出力用の DebugLogger インスタンス
+        validator: イベントの検証を行う EventValidator インスタンス
+        _current_cursor: 現在のカーソル
+        _canvas_widget: カーソルを操作する対象のキャンバスウィジェット
     """
 
     def __init__(self, zoom_selector: 'ZoomSelector', logger: DebugLogger) -> None:
         """CursorManagerの初期化
+        - ZoomSelectorとロガーを設定する
+        - イベントバリデーターを初期化する
+        - キャンバスウィジェットを取得する
 
         Args:
             zoom_selector: ZoomSelectorインスタンス
             logger: ログ出力用の DebugLogger インスタンス
+        Raises:
+            ValueError: Tkinter ウィジェットが取得できない場合
         """
         self.zoom_selector = zoom_selector
         self.logger = logger
@@ -47,6 +57,10 @@ class CursorManager:
                       near_corner_index: Optional[int] = None,
                       is_rotating: bool = False) -> None:
         """イベントと状態に基づいてカーソル形状を更新する
+        - カーソルを更新する必要があるかを判定する
+        - 新しいカーソルを決定する
+        - 現在のカーソルと異なる場合にカーソルを更新する
+
         Args:
             event: MouseEvent オブジェクト
             state: 現在の ZoomState
@@ -63,6 +77,8 @@ class CursorManager:
 
     def _should_update_cursor(self, event: MouseEvent) -> bool:
         """カーソル更新が必要かを判定
+        - イベントが存在しない、またはAxes内にない場合はFalseを返す
+        - イベントの検証を行い、Axes内にあり、座標を持つ場合はTrueを返す
 
         Args:
             event: MouseEvent オブジェクト
@@ -82,11 +98,16 @@ class CursorManager:
                          near_corner_index: Optional[int],
                          is_rotating: bool) -> str:
         """カーソルの種類を決定する
+        - 回転モードの場合、角に近い場合は回転カーソル、そうでなければデフォルトカーソルを返す
+        - 角に近い場合、位置に応じてリサイズカーソルを返す
+        - 状態に応じてカーソルを返す (CREATE: 十字, ON_MOVE/EDIT: 移動, その他: デフォルト)
+
         Args:
             event: MouseEvent オブジェクト
             state: 現在の状態
             near_corner_index: 近接している角のインデックス
             is_rotating: 回転モードが有効かどうか
+
         Returns:
             str: カーソルの種類
         """
@@ -107,6 +128,9 @@ class CursorManager:
 
     def _update_cursor(self, new_cursor: str, state: ZoomState) -> None:
         """カーソルを更新する
+        - 新しいカーソルを適用し、現在のカーソルを更新する
+        - 成功または失敗をログに出力する
+
         Args:
             new_cursor: 新しいカーソルの種類
             state: 現在の状態
@@ -119,6 +143,8 @@ class CursorManager:
             self.logger.log(LogLevel.ERROR, f"カーソル変更失敗: {e}", {"state": state.name})
 
     def set_default_cursor(self) -> None:
-        """カーソルをデフォルトに戻す"""
+        """カーソルをデフォルトに戻す
+        - 現在のカーソルがデフォルトでない場合に、デフォルトカーソルに更新する
+        """
         if self._current_cursor != CURSORS['default']:
             self._update_cursor(CURSORS['default'], ZoomState.DEFAULT)

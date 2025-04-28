@@ -8,27 +8,29 @@ from ui.zoom_function.enums import LogLevel
 
 class ColorAlgorithmError(Exception):
     """着色アルゴリズム関連のエラーを処理する例外クラス
-    この例外は、着色処理中に発生するエラーをキャッチするために使用される
-    主に以下のケースで発生：
-    - 不正な着色アルゴリズムの指定
-    - 計算値の範囲エラー
-    - パラメータの不整合
+    - 着色処理中に発生するエラーを扱う
+    - 主に、不正なアルゴリズム指定、計算値範囲エラー、パラメータ不整合で発生
     """
     pass
 
 def _normalize_and_color(values: np.ndarray, cmap: Colormap, vmin: Optional[float] = None, vmax: Optional[float] = None) -> np.ndarray:
-    """値を正規化してカラーマップを適用し、RGBA配列（0-255）を返す
+    """値を正規化し、カラーマップを適用してRGBA配列を返す
+    - 入力値を正規化
+    - 指定されたカラーマップを適用
+    - RGBA配列（0-255）を返す
+
     Args:
-        values (np.ndarray): 着色対象の値 (NaN や Inf を含まないこと)
-        cmap (Colormap): 色マップ
-        vmin (float, optional): 正規化の最小値。Noneの場合は値から自動計算。
-        vmax (float, optional): 正規化の最大値。Noneの場合は値から自動計算。
+        values (np.ndarray): 着色対象の値 (NaN, Inf 非対応)
+        cmap (Colormap): カラーマップ
+        vmin (float, optional): 正規化の最小値 (Noneで自動計算)
+        vmax (float, optional): 正規化の最大値 (Noneで自動計算)
+
     Returns:
-        np.ndarray: 着色されたRGBA配列 (形状: values.shape + (4,), dtype=float32, 値域: 0.0-255.0)
+        np.ndarray: 着色されたRGBA配列 (shape: values.shape + (4,), dtype=np.float32, range: 0.0-255.0)
+
     Notes:
-        - 入力 values に NaN や Inf が含まれている場合の動作は未定義です。
-          呼び出し側で適切に処理してください。
-        - vmin と vmax が同じ場合、vmaxに微小値を加算してゼロ除算を防ぎます。
+        - NaN/Inf の扱いは未定義。呼び出し側で処理が必要
+        - vmin == vmax の場合、ゼロ除算防止のため vmax に微小値を加算
     """
     # vmin/vmax が指定されていない、または NaN/Inf の場合に計算
     # np.isfiniteで有限な値のみを対象にする
@@ -59,11 +61,15 @@ def _normalize_and_color(values: np.ndarray, cmap: Colormap, vmin: Optional[floa
     return colored_values
 
 def _smooth_iterations(z: np.ndarray, iters: np.ndarray, method: str = 'standard') -> np.ndarray:
-    """反復回数のスムージングを適用
+    """反復回数のスムージング処理を行う
+    - 複素数配列と反復回数配列を入力
+    - 指定された方法で反復回数をスムージング
+
     Args:
         z (np.ndarray): 複素数配列
         iters (np.ndarray): 反復回数配列
         method (str): スムージング方法 ('standard', 'fast', 'exponential')
+
     Returns:
         np.ndarray: スムージングされた反復回数配列
     """
@@ -123,10 +129,13 @@ def _smooth_iterations(z: np.ndarray, iters: np.ndarray, method: str = 'standard
 
 def fast_smoothing(z: np.ndarray, iters: np.ndarray, out: np.ndarray) -> None:
     """高速スムージングアルゴリズム（インプレース処理）
+    - 高速な手法で反復回数のスムージングを行う
+    - 結果は `out` 配列に直接格納される
+
     Args:
         z (np.ndarray): 複素数配列
         iters (np.ndarray): 反復回数配列
-        out (np.ndarray): スムージング結果を格納する配列 (itersと同じ形状)
+        out (np.ndarray): スムージング結果格納用配列 (iters と同形状)
     """
     with np.errstate(divide='ignore', invalid='ignore'):
         abs_z = np.abs(z)

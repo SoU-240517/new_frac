@@ -13,18 +13,15 @@ def apply_potential(
     params: Dict,
     logger: DebugLogger
 ) -> None:
-    """発散部：ポテンシャル関数法で着色する
-        ポテンシャル関数法とは、発散した点の強度を対数関数を用いて計算し、
-        その値をカラーマップに変換して可視化する方法です。
-        マンデルブロ集合などのフラクタル画像において、
-        発散速度の違いを色で表現することで、より詳細な構造を可視化できます。
+    """発散領域に対して、ポテンシャル関数法に基づくカラーリングを適用する
+    - ポテンシャル関数を用いて発散の度合いを計算し、カラーマップで着色する
     Args:
-        colored (np.ndarray): 出力用のRGBA配列 (形状: (h, w, 4), dtype=float32)
-        divergent_mask (np.ndarray): 発散した点のマスク (形状: (h, w), dtype=bool)
-        z_vals (np.ndarray): 複素数配列
-        cmap_func (Colormap): 発散部分用のカラーマップ関数
-        params (Dict): 着色パラメータ
-        logger (DebugLogger): ロガーインスタンス
+        colored (np.ndarray): 出力先のRGBA配列 (形状: (h, w, 4), dtype=float32)
+        divergent_mask (np.ndarray): 発散した点のマスク配列 (形状: (h, w), dtype=bool)
+        z_vals (np.ndarray): 各点での複素数の値を持つ配列 (形状: (h, w), dtype=complex)
+        cmap_func (Colormap): 発散領域の着色に使うカラーマップ関数
+        params (Dict): 使用しない
+        logger (DebugLogger): デバッグ用ロガー
     """
     # 発散していない部分のマスクを作成
     mask = ~divergent_mask

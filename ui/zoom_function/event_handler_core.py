@@ -15,9 +15,39 @@ if TYPE_CHECKING:
 
 class EventHandler:
     """マウス/キーボードイベントを処理し、適切な操作に変換するクラス
-    - 役割:
-        - matplotlib のイベントを処理し、各コンポーネントに指示を出す
-        - イベントの種類と現在の状態に応じて、具体的な処理を行うクラスに処理を委譲する（振り分ける）
+    - matplotlib のイベントを処理し、各コンポーネントに指示を出す
+    - イベントの種類と現在の状態に応じて、具体的な処理を行うクラスに処理を委譲する（振り分ける）
+    Attributes:
+        logger: デバッグログ出力用ロガー
+        zoom_selector: ZoomSelector インスタンス。矩形選択処理を管理する
+        state_handler: ZoomStateHandler インスタンス。状態遷移を管理する
+        rect_manager: RectManager インスタンス。矩形描画を管理する
+        cursor_manager: CursorManager インスタンス。カーソル表示を管理する
+        validator: EventValidator インスタンス。イベントの検証を行う
+        canvas: FigureCanvasTkAgg インスタンス。matplotlibの描画領域
+        private_handlers: EventHandlersPrivate インスタンス。イベント処理の実装詳細
+        utils: EventHandlersUtils インスタンス。ユーティリティ関数群
+        _create_logged: 矩形作成ログ出力フラグ
+        _move_logged: 矩形移動ログ出力フラグ
+        _resize_logged: 矩形リサイズログ出力フラグ
+        _rotate_logged: 矩形回転ログ出力フラグ
+        _cid_press: マウスボタン押下イベント接続ID
+        _cid_release: マウスボタン解放イベント接続ID
+        _cid_motion: マウス移動イベント接続ID
+        _cid_key_press: キー押下イベント接続ID
+        _cid_key_release: キー解放イベント接続ID
+        start_x: 矩形作成開始時のX座標
+        start_y: 矩形作成開始時のY座標
+        move_start_x: 矩形移動開始時のマウスX座標
+        move_start_y: 矩形移動開始時のマウスY座標
+        rect_start_pos: 矩形移動開始時の矩形左下座標
+        resize_corner_index: リサイズ中の角のインデックス
+        fixed_corner_pos: リサイズ中の固定された対角の座標
+        _alt_pressed: Altキーが押されているか
+        rotate_start_mouse_pos: 回転開始時のマウス座標
+        rotate_center: 回転中心座標
+        previous_vector_angle: 前回のベクトル角度
+        edit_history: Undo用編集履歴
     """
     # ズーム領域回転時の振動を調整するためのパラメータ
     ROTATION_THRESHOLD = 2.0 # この値以下の角度変化（度単位）は無視して更新しない
@@ -35,16 +65,16 @@ class EventHandler:
                  validator: 'EventValidator',
                  logger: 'DebugLogger',
                  canvas):
-        """イベントハンドラのコンストラクタ（親: ZoomSelector）
+        """イベントハンドラのコンストラクタ
 
         Args:
-            zoom_selector: ZoomSelector インスタンス
-            state_handler: ZoomStateHandler インスタンス
-            rect_manager: RectManager インスタンス
-            cursor_manager: CursorManager インスタンス
-            validator: EventValidator インスタンス
-            logger: DebugLogger インスタンス
-            canvas: FigureCanvasTkAgg インスタンス
+            zoom_selector: ZoomSelector インスタンス。矩形選択処理を管理する
+            state_handler: ZoomStateHandler インスタンス。状態遷移を管理する
+            rect_manager: RectManager インスタンス。矩形描画を管理する
+            cursor_manager: CursorManager インスタンス。カーソル表示を管理する
+            validator: EventValidator インスタンス。イベントの検証を行う
+            logger: DebugLogger インスタンス。デバッグログ出力用
+            canvas: FigureCanvasTkAgg インスタンス。matplotlibの描画領域
         """
         self.logger = logger
 
@@ -100,7 +130,9 @@ class EventHandler:
 		# --- 内部状態ここまで ---
 
     def connect(self):
-        """全イベントハンドラを接続"""
+        """全イベントハンドラを接続
+        - 各種matplotlibイベントと、対応するハンドラメソッドを接続する
+        """
         if self._cid_press is None: # すでに接続されている場合は何もしない
             self._cid_press = self.canvas.mpl_connect('button_press_event', self.on_press)
             self._cid_motion = self.canvas.mpl_connect('motion_notify_event', self.on_motion)
@@ -111,8 +143,9 @@ class EventHandler:
     # --- イベント処理メソッド (ディスパッチャ) ---
     def on_press(self, event: MouseEvent) -> None:
         """マウスボタン押下イベントのディスパッチャ
+        - イベントの検証を行い、状態に応じて適切なハンドラを呼び出す
         Args:
-            event: MouseEvent オブジェクト
+            event: MouseEvent オブジェクト。発生したイベントの情報を含む
         """
         validation_result = self.validator.validate_event(event, self.zoom_selector.ax)
         if not validation_result.is_press_valid:
@@ -133,8 +166,9 @@ class EventHandler:
 
     def on_motion(self, event: MouseEvent) -> None:
         """マウス移動イベントのディスパッチャ
+        - イベントの検証を行い、状態に応じて適切なハンドラを呼び出す
         Args:
-            event: MouseEvent オブジェクト
+            event: MouseEvent オブジェクト。発生したイベントの情報を含む
         """
         validation_result = self.validator.validate_event(event, self.zoom_selector.ax)
         if not (validation_result.is_in_axes and validation_result.has_coords):
@@ -161,8 +195,9 @@ class EventHandler:
 
     def on_release(self, event: MouseEvent) -> None:
         """マウスボタン解放イベントのディスパッチャ
+        - イベントの検証を行い、状態に応じて適切なハンドラを呼び出す
         Args:
-            event: MouseEvent オブジェクト
+            event: MouseEvent オブジェクト。発生したイベントの情報を含む
         """
         validation_result = self.validator.validate_event(event, self.zoom_selector.ax)
         is_outside = not validation_result.has_coords # 軸外でのリリースか
@@ -200,8 +235,9 @@ class EventHandler:
 
     def on_key_press(self, event: KeyEvent) -> None:
         """キーボード押下イベントのディスパッチャ
+        - キー入力に応じて特定の処理を呼び出す
         Args:
-            event: KeyEvent オブジェクト
+            event: KeyEvent オブジェクト。発生したイベントの情報を含む
         """
         if event.key == 'escape':
             self.private_handlers._handle_key_escape(event)
@@ -215,8 +251,9 @@ class EventHandler:
 
     def on_key_release(self, event: KeyEvent) -> None:
         """キーボード解放イベントのディスパッチャ
+        - キー解放に応じて特定の処理を呼び出す
         Args:
-            event: KeyEvent オブジェクト
+            event: KeyEvent オブジェクト。発生したイベントの情報を含む
         """
         if event.key == 'alt':
             if not self.rect_manager.get_rect(): return
@@ -229,7 +266,9 @@ class EventHandler:
 
     # --- 状態リセットメソッド ---
     def reset_internal_state(self):
-        """全ての内部状態と編集履歴をリセット"""
+        """全ての内部状態と編集履歴をリセット
+        - 内部状態を初期化し、編集履歴をクリアする
+        """
         # EventHandler の公開メソッドとして残しておく
         # ただし、内部での具体的なリセット処理は utils に依頼する
         self.utils.reset_internal_state()
@@ -237,7 +276,9 @@ class EventHandler:
 
     # --- Undo 関連メソッド ---
     def clear_edit_history(self):
-        """編集履歴をクリア"""
+        """編集履歴をクリア
+        - 内部に保持している編集履歴を削除する
+        """
         # EventHandler の公開メソッドとして残しておく
         # ただし、内部での具体的なクリア処理は utils に依頼する
         self.utils.clear_edit_history()

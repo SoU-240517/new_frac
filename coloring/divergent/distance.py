@@ -13,14 +13,15 @@ def apply_distance_coloring(
     params: Dict,
     logger: DebugLogger
 ) -> None:
-    """発散部：距離カラーリングで着色する
+    """発散領域に対して、原点からの距離に基づいたカラーリングを適用する
+    - 発散した点の原点からの距離を計算し、その距離に基づいて色を付ける
     Args:
-        colored (np.ndarray): 出力用のRGBA配列 (形状: (h, w, 4), dtype=float32)
-        divergent_mask (np.ndarray): 発散した点のマスク (形状: (h, w), dtype=bool)
-        z_vals (np.ndarray): 複素数配列
-        cmap_func (Colormap): 発散部分用のカラーマップ関数
-        params (Dict): 着色パラメータ
-        logger (DebugLogger): ロガーインスタンス
+        colored (np.ndarray): 出力先のRGBA配列 (形状: (h, w, 4), dtype=float32)
+        divergent_mask (np.ndarray): 発散した点のマスク配列 (形状: (h, w), dtype=bool)
+        z_vals (np.ndarray): 各点での複素数の値を持つ配列 (形状: (h, w), dtype=complex)
+        cmap_func (Colormap): 発散領域の着色に使うカラーマップ関数
+        params (Dict): 使用しない
+        logger (DebugLogger): デバッグ用ロガー
     """
     # 発散した点の距離を計算
     divergent = divergent_mask

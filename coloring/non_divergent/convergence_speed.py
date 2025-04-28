@@ -12,30 +12,26 @@ def apply_convergence_speed(
     params: Dict,
     logger: DebugLogger
 ) -> None:
-    """非発散部：反復収束速度で着色する
+    """非発散領域を収束速度で着色する
+    - 各ピクセルが非発散領域に収束する速さを計算し、それに基づいて色を決定する
     Args:
         colored (np.ndarray): 出力用のRGBA配列 (形状: (h, w, 4), dtype=float32)
-        non_divergent_mask (np.ndarray): 非発散した点のマスク (形状: (h, w), dtype=bool)
-        z_vals (np.ndarray): 複素数配列
-        non_cmap_func (Colormap): 非発散部分用のカラーマップ関数
-        params (Dict): 着色パラメータ
-        logger (DebugLogger): ロガーインスタンス
+        non_divergent_mask (np.ndarray): 非発散点のマスク配列 (形状: (h, w), dtype=bool)
+        z_vals (np.ndarray): 複素数値の配列
+        non_cmap_func (Colormap): 非発散領域の着色に使用するカラーマップ関数
+        params (Dict): 使用しない
+        logger (DebugLogger): デバッグ用ロガーインスタンス
     """
-    # 収束速度の計算：1/|z|で計算し、zが0に近づくほど収束が速いと判断
-    # 1e-10の加算はゼロ除算を防ぐための安全対策
+    # 収束速度の計算：1/|z|で計算し、zが0に近いほど収束が速いとみなす
+    # ゼロ除算を防ぐために微小値を加える
     speed = 1 / (np.abs(z_vals[non_divergent_mask]) + 1e-10)
 
-    # 速度値を0-1の範囲に正規化
-    # この正規化により、カラーマップに適切な値を供給できる
+    # 速度を0-1の範囲に正規化
     normalized = (speed - np.min(speed)) / (np.max(speed) - np.min(speed))
 
-    # ガンマ補正
-    # 1.5: カラートランジションをより自然に見せる
-    # 1.0: 線形補正
-    # 2.0: より急なトランジション
-    gamma = 1.5  # 1.0～2.0で調整
+    # ガンマ補正を適用して色の遷移を調整
+    gamma = 1.5  # 1.0～2.0の範囲で調整
     normalized = normalized ** (1/gamma)
 
-    # 正規化された位相値をカラーマップに適用
-    # 結果を255倍して0-255の範囲に変換
+    # 正規化された値をカラーマップに適用し、0-255の範囲に変換
     colored[non_divergent_mask] = non_cmap_func(normalized) * 255.0

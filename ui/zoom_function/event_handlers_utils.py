@@ -6,16 +6,16 @@ if TYPE_CHECKING:
     from .event_handler_core import EventHandler
 
 class EventHandlersUtils:
-    """EventHandler から呼び出され、補助的な機能（計算、Undo、状態リセットなど）を提供するクラス
-    - 役割:
-        - 角度計算などの共通処理を行う
-        - 編集履歴の管理（Undo/Redo機能の基盤）を行う
-        - 各種内部状態のリセット処理を行う
-        - 親である EventHandler インスタンスを通じて、必要な情報にアクセスする
+    """EventHandler から呼び出され、補助的な機能を提供するクラス
+    - 角度計算などの共通処理
+    - 編集履歴の管理 (Undo/Redo)
+    - 各種内部状態のリセット
+    Attributes:
+        core: 親である EventHandler インスタンス
     """
 
     def __init__(self, core: 'EventHandler'):
-        """EventHandlersUtils クラスのコンストラクタ（親: EventHandler）
+        """EventHandlersUtils クラスのコンストラクタ
         Args:
             core: 親である EventHandler インスタンス
         """
@@ -23,27 +23,27 @@ class EventHandlersUtils:
 
     # --- ヘルパーメソッド ---
     def _calculate_angle(self, cx: float, cy: float, px: float, py: float) -> float:
-        """中心点から点へのベクトル角度を計算 (度, -180から180)
+        """中心点から点へのベクトル角度を計算
         Args:
-            cx (float): 中心点 x 座標
-            cy (float): 中心点 y 座標
-            px (float): 点 x 座標
-            py (float): 点 y 座標
+            cx: 中心点 x 座標
+            cy: 中心点 y 座標
+            px: 点 x 座標
+            py: 点 y 座標
         Returns:
-            float: ベクトル角度 (度, -180から180)
+            ベクトル角度 (度, -180から180)
         """
-        # このメソッドは親の情報を使わない計算だが、ユーティリティとしてここにまとめる
+        # 親の情報を使わない計算だが、ユーティリティとしてここにまとめる
         return math.degrees(math.atan2(py - cy, px - cx))
 
     def _normalize_angle_diff(self, angle1: float, angle2: float) -> float:
         """角度差を -180度から180度の範囲に正規化
         Args:
-            angle1 (float): 角度1
-            angle2 (float): 角度2
+            angle1: 角度1
+            angle2: 角度2
         Returns:
-            float: 正規化した角度差
+            正規化した角度差
         """
-        # このメソッドは親の情報を使わない計算だが、ユーティリティとしてここにまとめる
+        # 親の情報を使わない計算だが、ユーティリティとしてここにまとめる
         diff = angle1 - angle2
         while diff <= -180: diff += 360
         while diff > 180: diff -= 360
@@ -54,7 +54,7 @@ class EventHandlersUtils:
     def _add_history(self, state: Optional[Dict[str, Any]]) -> None:
         """編集履歴に状態を追加
         Args:
-            state (Optional[Dict[str, Any]]): 状態情報
+            state: 状態情報
         """
         self.core.edit_history.append(state) # edit_history に状態を追加
         self.core.logger.log(LogLevel.DEBUG, f"履歴追加: 現在の履歴数={len(self.core.edit_history)}")
@@ -66,7 +66,7 @@ class EventHandlersUtils:
     def _remove_last_history(self) -> Optional[Dict[str, Any]]:
         """最後の履歴を削除
         Returns:
-            Optional[Dict[str, Any]]: 削除された状態情報
+            削除された状態情報
         """
         if self.core.edit_history:
             removed = self.core.edit_history.pop() # edit_history から最後の要素を削除
@@ -81,7 +81,7 @@ class EventHandlersUtils:
         self.core.logger.log(LogLevel.SUCCESS, "編集履歴クリア完了")
 
     def _undo_last_edit(self):
-        """ 最後に行った編集操作を元に戻す """
+        """最後に行った編集操作を元に戻す"""
         # edit_history の数をチェック
         if len(self.core.edit_history) > 0: # 履歴が1つ以上あれば Undo 可能
             prev_state = self.core.edit_history.pop() # 現在の状態は破棄し、一つ前の状態を取り出す
@@ -95,7 +95,7 @@ class EventHandlersUtils:
             self.core.logger.log(LogLevel.WARNING, "Undo不可: 編集履歴なし")
 
     def _undo_or_cancel_edit(self):
-        """ ESCキーによるUndoまたは編集キャンセル """
+        """ESCキーによるUndoまたは編集キャンセル"""
         # edit_history の数をチェック
         if len(self.core.edit_history) > 1: # 初期状態 + 1回以上の編集履歴があれば Undo
             self._undo_last_edit()

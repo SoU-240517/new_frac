@@ -12,17 +12,16 @@ def apply_parameter_coloring(
     params: Dict,
     logger: DebugLogger
 ) -> None:
-    """非発散部：パラメータ(C)とパラメータ(Z)で着色する
-        非発散した点（フラクタルの内部）を、以下のいずれかで着色します。
-        - パラメータC（複素数Cの角度）
-        - パラメータZ（最終的な複素数Zの角度）
+    """非発散部の着色処理
+        非発散した点（フラクタルの内部）を、指定されたアルゴリズムに基づいて着色する。
+        着色アルゴリズムは、パラメータCの角度または最終的な複素数Zの値の角度を使用する。
     Args:
         colored (np.ndarray): 出力用のRGBA配列 (形状: (h, w, 4), dtype=float32)
-        non_divergent_mask (np.ndarray): 非発散した点のマスク (形状: (h, w), dtype=bool)
-        z_vals (np.ndarray): 複素数配列
-        non_cmap_func (Colormap): 非発散部分用のカラーマップ関数
-        params (Dict): 着色パラメータ
-        logger (DebugLogger): ロガーインスタンス
+        non_divergent_mask (np.ndarray): 非発散領域を示すマスク配列 (形状: (h, w), dtype=bool)
+        z_vals (np.ndarray): 各点における複素数Zの最終値の配列 (形状: (h, w), dtype=complex128)
+        non_cmap_func (Colormap): 非発散領域の着色に使用するカラーマップ関数
+        params (Dict): 着色に関するパラメータを含む辞書
+        logger (DebugLogger): デバッグログ出力用ロガーインスタンス
     """
     algo_name = params.get("diverge_algorithm")
     if algo_name == "パラメータ(C)":
@@ -40,6 +39,7 @@ def apply_parameter_coloring(
             # Mandelbrot集合の場合、Cは初期値（通常0）なので意味がない
             # 代わりに黒で塗るか、別のデフォルト色を使う
             colored[non_divergent_mask] = [0.0, 0.0, 0.0, 255.0]
+            #colored[non_divergent_mask] = [0.0, 0.0, 255.0, 255.0] # 青色で塗りつぶす例
     else:  # パラメータ(Z)の場合
         # zの値による着色処理
         # 非発散した点の最終的な複素数Zの値を使って着色

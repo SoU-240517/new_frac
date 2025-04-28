@@ -10,30 +10,37 @@ from .zoom_function.debug_logger import DebugLogger
 from .zoom_function.enums import LogLevel
 
 class MainWindow:
-    """MainWindow クラス
-    - 役割:
-        - UIコンポーネントの初期化と管理を行う
-        - フラクタル描画を行う
+    """アプリケーションのメインウィンドウを管理するクラス
+        - UIコンポーネントの初期化、配置を行う
+        - フラクタルの描画、ズーム操作、ステータス表示、ログ管理を行う
     Attributes:
-        canvas_frame: キャンバスを配置するフレーム
-        root: Tkinterのルートウィンドウ
-        logger: デバッグログを管理するLogger
-        fractal_canvas: フラクタルを描画するキャンバス
-        parameter_panel: パラメータを管理するパネル
-        parameter_frame: パラメータパネルを配置するフレーム
-        status_bar_manager: ステータスバーを管理するクラス
-        zoom_params: ズーム操作のパラメータ
-        prev_zoom_params: ズーム前のパラメータ（キャンセル用）
-        is_drawing: 描画中かどうかのフラグ
-        draw_thread: フラクタル描画スレッド
+        root (tk.Tk): Tkinter のルートウィンドウ
+        logger (DebugLogger): デバッグログを管理するロガーインスタンス
+        canvas_frame (ttk.Frame): フラクタル描画領域 (FractalCanvas) を配置するフレーム
+        fractal_canvas (FractalCanvas): フラクタルを描画するキャンバス
+        parameter_frame (ttk.Frame): パラメータパネル (ParameterPanel) を配置するフレーム
+        parameter_panel (ParameterPanel): フラクタルのパラメータを管理するパネル
+        status_bar_manager (StatusBarManager): ステータスバーを管理するクラス
+        zoom_params (dict): 現在のズーム操作に関するパラメータ (中心座標、表示範囲の幅、高さ、回転角)
+        prev_zoom_params (dict): 直前のズーム操作のパラメータ (ズーム操作をキャンセルする場合に使用)
+        is_drawing (bool): フラクタル描画中かどうかを示すフラグ
+        draw_thread (threading.Thread): フラクタル描画処理を実行するスレッド
+        canvas_width (int): キャンバスの幅 (ピクセル単位)
+        canvas_height (int): キャンバスの高さ (ピクセル単位)
     """
 
     def __init__(self, root: tk.Tk, logger: DebugLogger):
         """MainWindow クラスのコンストラクタ
+            - ルートウィンドウの設定を行う
+            - UIコンポーネントの初期化を行う
+            - ズームパラメータの初期化を行う
+            - 初期描画を開始する
+
         Args:
-            root: Tkinterのルートウィンドウ
-            logger: デバッグログを管理するLogger
+            root (tk.Tk): Tkinter のルートウィンドウ
+            logger (DebugLogger): デバッグログを管理するロガーインスタンス
         """
+
         self.logger = logger
         self.root = root
 
@@ -41,11 +48,11 @@ class MainWindow:
         self._setup_components()
 
         self.zoom_params = {
-            "center_x": 0.0, # 中心X座標を調整
-            "center_y": 0.0,  # 中心Y座標
-            "width": 5.5,     # 幅を広くして多くのフラクタルを表示（16:9考慮）
-            "height": 5.5 * (9/16), # 幅に合わせて高さを設定（不要だがconsistencyのために残す）
-            "rotation": 0.0   # 回転角
+            "center_x": 0.0,       # 中心X座標
+            "center_y": 0.0,       # 中心Y座標
+            "width": 5.5,          # 初期表示範囲の幅
+            "height": 5.5 * (9/16), # 16:9のアスペクト比を維持
+            "rotation": 0.0        # 回転角
         }
 
         self.prev_zoom_params = None
@@ -56,18 +63,25 @@ class MainWindow:
         self._start_initial_drawing()
 
     def _setup_root_window(self) -> None:
-        """ルートウィンドウの基本設定を行う"""
+        """ルートウィンドウ (tk.Tk) の基本設定を行う
+            - タイトル設定
+            - ウィンドウの初期サイズ設定
+        """
         self.root.title("フラクタル描画アプリケーション")
         self.root.geometry("1200x800")
 
     def _setup_components(self) -> None:
-        """UIコンポーネントの初期化を行う"""
+        """UIコンポーネントの初期化を行う
+            - ステータスバー
+            - パラメータパネル
+            - キャンバスフレーム
+        """
         self._setup_status_bar()
         self._setup_parameter_frame()
         self._setup_canvas_frame()
 
     def _setup_status_bar(self) -> None:
-        """ステータスバーの初期化を行う"""
+        """ステータスバーを初期化し、ルートウィンドウの下部に配置する"""
         status_frame = ttk.Frame(self.root)
         status_frame.pack(fill=tk.X, side=tk.BOTTOM, pady=(0, 5))
         self.logger.log(LogLevel.INIT, "StatusBarManager クラスのインスタンスを作成")
@@ -78,7 +92,7 @@ class MainWindow:
         )
 
     def _setup_parameter_frame(self) -> None:
-        """パラメータパネルのフレームを初期化する"""
+        """パラメータパネルを配置するフレームを初期化し、ルートウィンドウの右側に配置する"""
         self.parameter_frame = ttk.Frame(self.root, width=300)
         self.parameter_frame.pack(
             side=tk.RIGHT,
@@ -98,7 +112,7 @@ class MainWindow:
         )
 
     def _setup_canvas_frame(self) -> None:
-        """キャンバスフレームの初期化を行う"""
+        """フラクタル描画領域を配置するキャンバスフレームを初期化し、ルートウィンドウの左側に配置する"""
         self.canvas_frame = ttk.Frame(self.root)
         self.canvas_frame.pack(
             side=tk.LEFT,
@@ -113,15 +127,18 @@ class MainWindow:
         self.logger.log(LogLevel.INIT, "FractalCanvas クラスのインスタンスを作成")
         self.fractal_canvas = FractalCanvas(
             self.canvas_frame,
-            width=1067,
-            height=600,
+            width=1067, # 16:9のアスペクト比を考慮した幅
+            height=600, # 16:9のアスペクト比を考慮した高さ
             logger=self.logger,
             zoom_confirm_callback=self.on_zoom_confirm,
             zoom_cancel_callback=self.on_zoom_cancel
         )
 
     def _start_initial_drawing(self) -> None:
-        """アプリケーション起動時の初期描画を開始する"""
+        """アプリケーション起動時の初期描画を開始する
+            - ステータスバーにメッセージを表示
+            - 別スレッドでフラクタル描画処理を開始
+        """
         self.logger.log(LogLevel.CALL, "ステータスバーテキスト設定要求")
         self.status_bar_manager.set_text("準備中...")
 
@@ -134,7 +151,10 @@ class MainWindow:
         self.draw_thread.start()
 
     def update_fractal(self) -> None:
-        """フラクタルを再描画する（非同期処理）"""
+        """フラクタルを再描画する
+            - 描画中の場合は新しい描画要求を無視
+            - 描画中はステータスバーにアニメーションを表示し、別スレッドで描画処理を実行
+        """
         if self.is_drawing:
             self.logger.log(LogLevel.WARNING, "描画中でスキップ：前回の描画が未完了")
             return
@@ -150,7 +170,12 @@ class MainWindow:
         self.draw_thread.start()
 
     def _update_fractal_thread(self) -> None:
-        """フラクタル更新の実際の処理（別スレッドで実行）"""
+        """フラクタル更新処理を別スレッドで実行する
+            - パラメータパネルから描画パラメータを取得
+            - フラクタル画像を生成
+            - 生成された画像をメインスレッドでキャンバスに描画
+            - エラー発生時はログ出力とステータスバーにエラーメッセージを表示
+        """
         try:
             self.logger.log(LogLevel.CALL, "描画パラメータ：取得開始（スレッド内）")
             panel_params = self.parameter_panel._get_parameters()
@@ -166,44 +191,43 @@ class MainWindow:
 
             self.status_bar_manager.stop_animation("完了")
         except Exception as e:
-#            # スタックトレースを取得
-#            import traceback
-#            stack_trace = traceback.format_exc()
+            # 参考用としてキープ（デバッグ用スタックトレース出力）
+            # import traceback
+            # stack_trace = traceback.format_exc()
+            # self.logger.log(LogLevel.ERROR, f"フラクタル更新スレッドエラー: {str(e)}",
+            #                 context={"stack_trace": stack_trace})
 
-#            # ログ出力時にスタックトレースをコンテキストとして渡す
-#            self.logger.log(LogLevel.ERROR, f"フラクタル更新スレッドエラー: {str(e)}",
-#                            context={"stack_trace": stack_trace})
             self.logger.log(LogLevel.ERROR, f"フラクタル更新スレッドエラー: {str(e)}")
             self.status_bar_manager.stop_animation(f"エラー: {str(e)}")
         finally:
             self.is_drawing = False
 
-#    def _merge_zoom_and_panel_params(self, panel_params: dict) -> dict:
-#        """ズームパラメータとパネルパラメータを結合する
-#        Args:
-#            panel_params: パネルから取得したパラメータ
-#        Returns:
-#            dict: 結合されたパラメータ
-#        """
-#        current_params = self.zoom_params.copy()
-#        current_params.update(panel_params)
-#        return current_params
-
     def _merge_zoom_and_panel_params(self, panel_params: dict) -> dict:
-        """ズームパラメータとパネルパラメータを結合する"""
+        """ズームパラメータとパラメータパネルのパラメータを結合する
+
+        Args:
+            panel_params (dict): パラメータパネルから取得したパラメータ
+
+        Returns:
+            dict: 結合されたパラメータ
+        """
         current_params = self.zoom_params.copy()
         current_params.update(panel_params)
         current_params["render_mode"] = self.parameter_panel.render_mode  # 描画モードを追加
         return current_params
 
     def on_zoom_confirm(self, x: float, y: float, w: float, h: float, angle: float) -> None:
-        """ズーム確定時のコールバック
+        """ズーム操作確定時のコールバック関数
+            - 新しい中心座標、幅、高さ、回転角を計算
+            - フラクタルを再描画
+            - ズームファクターに応じて最大イテレーション回数も調整
+
         Args:
-            x: 矩形左上のx座標
-            y: 矩形左上のy座標
-            w: 矩形の幅
-            h: 矩形の高さ
-            angle: 矩形の回転角度
+            x (float): ズーム矩形の左上隅のX座標
+            y (float): ズーム矩形の左上隅のY座標
+            w (float): ズーム矩形の幅
+            h (float): ズーム矩形の高さ
+            angle (float): ズーム矩形の回転角度 (度数法)
         """
         center_x = x + w / 2
         center_y = y + h / 2
@@ -211,7 +235,7 @@ class MainWindow:
         self.prev_zoom_params = self.zoom_params.copy()
 
         new_width = w
-        new_height = new_width * (9 / 16)
+        new_height = new_width * (9 / 16) # 16:9 アスペクト比維持
 
         zoom_factor = self.zoom_params["width"] / new_width if new_width > 0 else 1
         current_max_iter = int(self.parameter_panel.max_iter_var.get())
@@ -246,19 +270,25 @@ class MainWindow:
         self.update_fractal()
 
     def _calculate_max_iterations(self, current_max_iter: int, zoom_factor: float) -> int:
-        """ズームファクターに基づいて最大反復回数を計算する
+        """ズームファクターに基づいてフラクタル計算の最大イテレーション回数を計算する
+            - ズームインするほど詳細なフラクタル構造を表示するために、最大イテレーション回数を増やす
+
         Args:
-            current_max_iter: 現在の最大反復回数
-            zoom_factor: ズームファクター
+            current_max_iter (int): 現在の最大イテレーション回数
+            zoom_factor (float): ズームファクター (1より大きい場合、ズームイン)
+
         Returns:
-            int: 計算された新しい最大反復回数
+            int: 計算された新しい最大イテレーション回数
         """
-        if zoom_factor > 1:
+        if zoom_factor > 1: # ズームインの場合
+            # 最大イテレーション回数を増やす（上限 1000）
             return min(1000, max(current_max_iter, int(current_max_iter + 50 * np.log2(zoom_factor))))
-        return current_max_iter
+        return current_max_iter # ズームアウトまたは変化なしの場合
 
     def on_zoom_cancel(self):
-        """ズームキャンセル時のコールバック"""
+        """ズーム操作キャンセル時のコールバック関数
+            - 直前のズームパラメータに戻してフラクタルを再描画
+        """
         if self.prev_zoom_params is not None:
             self.logger.log(LogLevel.CALL, "直前のズームパラメータに戻す")
             self.zoom_params = self.prev_zoom_params.copy()
@@ -268,31 +298,38 @@ class MainWindow:
             self.logger.log(LogLevel.WARNING, "キャンセル処理をスキップ：直前のパラメータなし")
 
     def reset_zoom(self):
-        """操作パネルの「描画リセット」ボタン押下時の処理"""
+        """操作パネルの「描画リセット」ボタン押下時の処理
+            - ズームパラメータを初期状態に戻し、フラクタルを再描画
+        """
         self.zoom_params = {
-            "center_x": 0.0, # 中心X座標を調整
-            "center_y": 0.0,  # 中心Y座標
-            "width": 5.5,     # 幅を広くして多くのフラクタルを表示（16:9考慮）
-            "height": 5.5 * (9/16), # 幅に合わせて高さを設定（不要だがconsistencyのために残す）
-            "rotation": 0.0   # 回転角
+            "center_x": 0.0,       # 中心X座標を初期値に設定
+            "center_y": 0.0,       # 中心Y座標を初期値に設定
+            "width": 5.5,          # 幅を初期値に設定 (16:9考慮)
+            "height": 5.5 * (9/16), # 高さを幅に合わせて設定 (16:9考慮)
+            "rotation": 0.0        # 回転角を初期値に設定
         }
 
         self.prev_zoom_params = None
-        self.parameter_panel.max_iter_var.set("500")
+        self.parameter_panel.max_iter_var.set("500") # 最大イテレーション回数を初期値に設定
         self.logger.log(LogLevel.CALL, "ZoomSelector の状態リセット開始")
-        self.fractal_canvas.reset_zoom_selector()
+        self.fractal_canvas.reset_zoom_selector() # ズーム選択領域をリセット
         self.update_fractal()
 
     def _on_canvas_frame_configure(self, event):
-        """キャンバスフレームのリサイズ時に Matplotlib Figure のサイズを更新し、16:9 の縦横比を維持する"""
+        """キャンバスフレームのリサイズ時に、内部の Matplotlib Figure のサイズを調整し、16:9 の縦横比を維持する
+
+        Args:
+            event (tk.Event): Tkinter の Configure イベント
+        """
         frame_width_pixels = event.width
         frame_height_pixels = event.height
 
+        # フレームサイズが有効でない場合は処理をスキップ
         if frame_width_pixels <= 0 or frame_height_pixels <= 0:
             self.logger.log(LogLevel.INFO, "Figure サイズ更新をスキップ：フレームサイズが無効なため")
             return
 
-        target_aspect = 16 / 9
+        target_aspect = 16 / 9 # 目標のアスペクト比
 
         frame_aspect = frame_width_pixels / frame_height_pixels if frame_height_pixels > 0 else float('inf')
 

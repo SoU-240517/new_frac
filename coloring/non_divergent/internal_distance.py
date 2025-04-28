@@ -12,14 +12,15 @@ def apply_internal_distance(
     params: Dict,
     logger: DebugLogger
 ) -> None:
-    """非発散部：内部距離で着色する
+    """非発散領域を内部距離に基づいて着色する
+    - 各ピクセルの複素数値から内部距離を計算し、それに基づいて色を割り当てる
     Args:
         colored (np.ndarray): 出力用のRGBA配列 (形状: (h, w, 4), dtype=float32)
-        non_divergent_mask (np.ndarray): 非発散した点のマスク (形状: (h, w), dtype=bool)
-        z_vals (np.ndarray): 複素数配列
-        non_cmap_func (Colormap): 非発散部分用のカラーマップ関数
-        params (Dict): 着色パラメータ
-        logger (DebugLogger): ロガーインスタンス
+        non_divergent_mask (np.ndarray): 非発散点のマスク配列 (形状: (h, w), dtype=bool)
+        z_vals (np.ndarray): 複素数値の配列
+        non_cmap_func (Colormap): 非発散領域の着色に使用するカラーマップ関数
+        params (Dict): 使用しない
+        logger (DebugLogger): デバッグ用ロガーインスタンス
     """
     with np.errstate(invalid='ignore', divide='ignore'):
         # z_valsの絶対値を計算 (0にならないように微小値を加算)

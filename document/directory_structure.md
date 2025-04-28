@@ -2,12 +2,10 @@
 
 Directory structure:
 └── sou-240517-new_frac/
-    ├── readme.md
     ├── main.py
     ├── coloring/
     │   ├── __init__.py
     │   ├── cache.py
-    │   ├── color_algorithms.md
     │   ├── gradient.py
     │   ├── manager.py
     │   ├── utils.py
@@ -38,8 +36,6 @@ Directory structure:
     │       ├── quantum_entanglement.py
     │       └── solid_color.py
     ├── document/
-    │   ├── directory_structure.md
-    │   └── user_ profile.md
     ├── fractal/
     │   ├── render.py
     │   └── fractal_types/

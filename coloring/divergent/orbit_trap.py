@@ -14,18 +14,19 @@ def apply_orbit_trap(
     params: Dict,
     logger: DebugLogger
 ) -> None:
-    """発散部：軌道トラップ法で着色する
+    """発散領域に対して、軌道トラップ法に基づくカラーリングを適用する
+    - 複素数列がある特定の領域（トラップ）にどれだけ近づくかに基づいて色を付ける
     Args:
-        colored (np.ndarray): 出力用のRGBA配列 (形状: (h, w, 4), dtype=float32)
-        divergent_mask (np.ndarray): 発散した点のマスク (形状: (h, w), dtype=bool)
-        iterations (np.ndarray): 反復回数配列
-        z_vals (np.ndarray): 複素数配列
-        cmap_func (Colormap): 発散部分用のカラーマップ関数
-        params (Dict): 着色パラメータ
-            - trap_type: 'circle' | 'square' | 'cross' | 'triangle'
-            - trap_size: トラップのサイズ
-            - trap_position: (x, y) の座標
-        logger (DebugLogger): ロガーインスタンス
+        colored (np.ndarray): 出力先のRGBA配列 (形状: (h, w, 4), dtype=float32)
+        divergent_mask (np.ndarray): 発散した点のマスク配列 (形状: (h, w), dtype=bool)
+        iterations (np.ndarray): 各点での反復回数を持つ配列 (形状: (h, w), dtype=int)
+        z_vals (np.ndarray): 各点での複素数の値を持つ配列 (形状: (h, w), dtype=complex)
+        cmap_func (Colormap): 発散領域の着色に使うカラーマップ関数
+        params (Dict): 軌道トラップのパラメータを含む辞書
+            - trap_type (str, optional): トラップの形状。'circle', 'square', 'cross', 'triangle' のいずれか。デフォルトは 'circle'
+            - trap_size (float, optional): トラップのサイズ。デフォルトは 0.5
+            - trap_position (Tuple[float, float], optional): トラップの中心座標 (x, y)。デフォルトは (0.0, 0.0)
+        logger (DebugLogger): デバッグ用ロガー
     """
     # デフォルトパラメータ
     trap_type = params.get('trap_type', 'circle')

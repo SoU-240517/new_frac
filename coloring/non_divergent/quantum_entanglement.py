@@ -12,17 +12,16 @@ def apply_quantum_entanglement(
     params: Dict,
     logger: DebugLogger
 ) -> None:
-    """非発散部：量子もつれで着色する
-        量子もつれの複雑な性質を視覚化するために、複素数の実部と虚部を用いて
-        量子的なパターンを生成します。このパターンは、複素数の位相と振幅の
-        相互作用を表現することで、量子もつれの性質を模倣します。
+    """非発散領域を量子もつれ風のパターンで着色する
+        複素数の実部と虚部を用いて量子的なパターンを生成し、非発散領域を着色する。
+        このパターンは、量子もつれの性質を模倣することを意図している。
     Args:
         colored (np.ndarray): 出力用のRGBA配列 (形状: (h, w, 4), dtype=float32)
-        non_divergent_mask (np.ndarray): 非発散した点のマスク (形状: (h, w), dtype=bool)
-        z_vals (np.ndarray): 複素数配列
-        non_cmap_func (Colormap): 非発散部分用のカラーマップ関数
-        params (Dict): 着色パラメータ
-        logger (DebugLogger): ロガーインスタンス
+        non_divergent_mask (np.ndarray): 非発散領域を示すマスク配列 (形状: (h, w), dtype=bool)
+        z_vals (np.ndarray): 各点における複素数Zの配列 (形状: (h, w), dtype=complex128)
+        non_cmap_func (Colormap): 非発散領域の着色に使用するカラーマップ関数
+        params (Dict): 着色に関するパラメータを含む辞書
+        logger (DebugLogger): デバッグログ出力用ロガーインスタンス
     """
     # 複素数の実部と虚部を抽出
     real_part = np.real(z_vals[non_divergent_mask])

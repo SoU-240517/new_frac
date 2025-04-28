@@ -15,19 +15,20 @@ def apply_smoothing(
     smoothing_method: str, # 'standard', 'fast', or 'exponential'
     logger: DebugLogger
     ) -> None:
-    """発散部：各種スムージングで反復回数に基づいて着色する (インプレース処理)
-
+    """発散領域に対して、指定されたスムージングメソッドを用いて反復回数に基づくカラーリングを適用する (インプレース処理)
+    - colored配列の該当箇所を直接変更する
+    - スムージング処理を行い、その結果を用いてカラーマップで着色する
     Args:
         colored (np.ndarray): 着色結果を格納するRGBA配列 (形状: (height, width, 4), dtype=float32)
-                              この配列の該当箇所が直接変更されます。
+                              この配列の該当箇所が直接変更されます
         divergent_mask (np.ndarray): 発散した点のマスク (形状: (height, width), dtype=bool)
-                                     True のピクセルが発散部分です。
+                                     True のピクセルが発散部分
         iterations (np.ndarray): 元の反復回数配列 (形状: (height, width), dtype=int)
         z_vals (np.ndarray): 計算終了時の複素数値配列 (形状: (height, width), dtype=complex)
         cmap_func (Colormap): 発散部分用のカラーマップ関数
         params (Dict): 計算パラメータ辞書 (現在は未使用だが将来的な拡張のため)
         smoothing_method (str): 使用するスムージングの種類 ('standard', 'fast', 'exponential')
-        logger (DebugLogger): デバッグログを出力するためのロガーインスタンス。
+        logger (DebugLogger): デバッグログを出力するためのロガーインスタンス
     """
     # 指定された方法でスムージング処理を実行
     try:

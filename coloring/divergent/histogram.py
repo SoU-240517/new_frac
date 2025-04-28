@@ -13,14 +13,15 @@ def apply_histogram_flattening(
     params: Dict,
     logger: DebugLogger
 ) -> None:
-    """発散部：ヒストグラム平坦化法で着色する
+    """発散領域に対して、ヒストグラム平坦化に基づくカラーリングを適用する
+    - 発散領域の反復回数のヒストグラムを計算し、累積分布関数に基づいて色を割り当てる
     Args:
-        colored (np.ndarray): 出力用のRGBA配列 (形状: (h, w, 4), dtype=float32)
-        divergent_mask (np.ndarray): 発散した点のマスク (形状: (h, w), dtype=bool)
-        iterations (np.ndarray): 反復回数配列 (形状: (h, w), dtype=int)
-        cmap_func (Colormap): 発散部分用のカラーマップ関数
-        params (Dict): 計算パラメータ辞書 ('max_iterations' を含む)
-        logger (DebugLogger): ロガーインスタンス
+        colored (np.ndarray): 出力先のRGBA配列 (形状: (h, w, 4), dtype=float32)
+        divergent_mask (np.ndarray): 発散した点のマスク配列 (形状: (h, w), dtype=bool)
+        iterations (np.ndarray): 各点での反復回数を持つ配列 (形状: (h, w), dtype=int)
+        cmap_func (Colormap): 発散領域の着色に使うカラーマップ関数
+        params (Dict): 計算パラメータを含む辞書。'max_iterations'キーが必要
+        logger (DebugLogger): デバッグ用ロガー
     """
     # 発散した点を抽出
     # iterations > 0 は、発散した点（反復回数が0より大きい点）を意味します

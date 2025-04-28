@@ -74,10 +74,12 @@ DEFAULT_NON_DIVERGENT_ALGORITHM = ndiv_solid.apply_solid_color
 
 # --- メインの着色関数 ---
 def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger) -> np.ndarray:
-    """フラクタルの着色アルゴリズムを適用 (ディスパッチャ)
+    """フラクタルの着色アルゴリズムを適用するディスパッチャ関数
+    - 計算結果とパラメータに基づき、発散領域と非発散領域に対して適切な着色アルゴリズムを選択し、適用する
+    - 結果をキャッシュし、パフォーマンスを向上させる
     Args:
-        results (dict): フラクタル計算結果 ('iterations', 'mask', 'z_vals')
-        params (dict): 着色パラメータ ('diverge_algorithm', 'non_diverge_algorithm', etc.)
+        results (dict): フラクタル計算結果。'iterations' (反復回数), 'mask' (発散マスク), 'z_vals' (複素数値) を含む
+        params (dict): 着色パラメータ。使用するアルゴリズム名やカラーマップなどを含む
         logger (DebugLogger): デバッグログ用ロガー
     Returns:
         np.ndarray: 着色されたRGBA配列 (形状: (h, w, 4), dtype=float32, 値域: 0-255)
