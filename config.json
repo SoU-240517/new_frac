@@ -1,0 +1,56 @@
+{
+    "ui_settings": {
+      "window_width": 1280,
+      "window_height": 800,
+      "colorbar_width": 150,
+      "colorbar_height": 15
+    },
+    "fractal_defaults": {
+      "initial_zoom": {
+        "center_x": 0.0,
+        "center_y": 0.0,
+        "width": 4.0,
+        "height_ratio": 0.5625,
+        "rotation": 0.0
+      },
+      "parameter_panel": {
+        "fractal_type": "Mandelbrot",
+        "max_iterations": 200,
+        "z_real": 0.0,
+        "z_imag": 0.0,
+        "c_real": -0.8,
+        "c_imag": 0.156,
+        "diverge_algorithm": "Smoothing",
+        "non_diverge_algorithm": "Solid Color",
+        "diverge_colormap": "viridis",
+        "non_diverge_colormap": "magma"
+      },
+      "reset_max_iterations": 200
+    },
+    "coloring_options": {
+      "available_colormaps": [
+        "viridis", "plasma", "inferno", "magma", "cividis",
+        "twilight", "twilight_shifted", "turbo",
+        "Blues", "BrBG", "BuGn", "BuPu", "CMRmap", "GnBu",
+        "Greens", "Greys", "OrRd", "Oranges", "PRGn", "PiYG",
+        "PuBu", "PuBuGn", "PuOr", "PuRd", "Purples", "RdBu",
+        "RdGy", "RdPu", "RdYlBu", "RdYlGn", "Reds", "Spectral",
+        "Wistia", "YlGn", "YlGnBu", "YlOrBr", "YlOrRd", "afmhot",
+        "autumn", "binary", "bone", "brg", "bwr", "cool", "coolwarm",
+        "copper", "cubehelix", "flag", "gist_earth", "gist_gray",
+        "gist_heat", "gist_ncar", "gist_rainbow", "gist_stern",
+        "gist_yarg", "gnuplot", "gnuplot2", "gray", "hot", "hsv",
+        "jet", "nipy_spectral", "ocean", "pink", "prism", "rainbow",
+        "seismic", "spring", "summer", "terrain", "winter"
+      ],
+      "available_diverge_algorithms": [
+          "Smoothing", "Linear", "Logarithmic", "Histogram", "Distance", "Angle", "Potential", "Orbit Trap"
+      ],
+      "available_non_diverge_algorithms": [
+          "Solid Color", "Gradient", "Internal Distance", "Orbit Trap Circle", "Phase Symmetry",
+          "Convergence Speed", "Derivative", "Histogram Equalization", "Complex Potential",
+          "Chaotic Orbit", "Fourier Pattern", "Fractal Texture", "Quantum Entanglement",
+          "Parameter C", "Parameter Z"
+      ]
+    }
+  }
