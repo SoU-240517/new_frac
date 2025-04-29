@@ -54,7 +54,7 @@ class StatusBarManager:
         self.status_label.pack(side=tk.LEFT, padx=5, pady=2)
 
         # アニメーション状態の初期化
-        self.logger.log(LogLevel.INIT, "AnimationState クラスのインスタンスを作成")
+        self.logger.log(LogLevel.INIT, "AnimationState クラスのインスタンス作成開始")
         self._animation_state = AnimationState()
 
     def start_animation(self) -> None:
@@ -164,6 +164,7 @@ class StatusBarManager:
         - 時間更新タイマーが設定されていれば、キャンセルする
         """
         if self._status_timer_id:
+            self.logger.log(LogLevel.DEBUG, "タイマーキャンセル")
             self.root.after_cancel(self._status_timer_id)
             self._status_timer_id = None
 

@@ -58,14 +58,14 @@ class ParameterPanel:
         self.logger = logger
         self.parent = parent
         self.config = config # 設定データをインスタンス変数に保存
-        self.render_mode = "quick"  # "quick" or "full"
         self.update_callback = update_callback
         self.reset_callback = reset_callback
+        self.render_mode = "quick"  # "quick" or "full"
 
         ui_settings = self.config.get("ui_settings", {})
         self.COLORBAR_WIDTH = ui_settings.get("colorbar_width", 150)
         self.COLORBAR_HEIGHT = ui_settings.get("colorbar_height", 15)
-        self.logger.log(LogLevel.INIT, f"カラーバーサイズ設定: {self.COLORBAR_WIDTH}x{self.COLORBAR_HEIGHT}")
+        self.logger.log(LogLevel.SUCCESS, f"カラーバーサイズ設定完了: {self.COLORBAR_WIDTH}x{self.COLORBAR_HEIGHT}")
 
         self._setup_panel()
         self._update_colorbars() # 初期カラーバー表示
@@ -91,11 +91,18 @@ class ParameterPanel:
         """
         row = 0
         self._add_label("フラクタルタイプ:", row, 0, pady=(5,0))
-        # デフォルト値を設定ファイルから取得
-        default_fractal_type = self.config.get("fractal_settings", {}).get("parameter_panel", {}).get("fractal_type", "Mandelbrot")
+
+        # フラクタルタイプのデフォルト値を設定ファイルから取得
+        default_fractal_type = self.config.get("fractal_settings", {}).get("parameter_panel", {}).get("fractal_type", "Julia")
         self.fractal_type_var = tk.StringVar(value=default_fractal_type)
-        # フラクタルタイプの選択肢も設定ファイルから読み込めるようにしても良い (今はハードコード)
-        fractal_types = ["Julia", "Mandelbrot"]
+        # フラクタルタイプのリストを設定ファイルから読み込む
+        fractal_types = self.config.get("fractal_settings", {}).get("available_fractal_types", [])
+
+        # リストが空の場合のフォールバック
+        if not fractal_types:
+            self.logger.log(LogLevel.WARNING, "設定ファイルにフラクタルタイプリストが見つからないか空なので、デフォルトリストを使用")
+            fractal_types = ["Julia", "Mandelbrot"] # フォールバック
+
         combo = self._add_combobox(row, 1, self.fractal_type_var, fractal_types)
         # コンボボックス選択時と数式表示更新を紐付け
         combo.bind("<<ComboboxSelected>>", lambda event: [self._common_callback(event), self._show_formula_display()])

@@ -11,9 +11,9 @@ class ZoomState(Enum):
 
 class LogLevel(Enum):
     """ ログレベル """
+    DEBUG = auto()
     INIT = auto() # 初期化処理
     CALL = auto() # メソッド呼出し元
-    DEBUG = auto()
     SUCCESS = auto()
     INFO = auto()
     WARNING = auto()

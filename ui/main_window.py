@@ -12,13 +12,20 @@ from .zoom_function.debug_logger import DebugLogger
 from .zoom_function.enums import LogLevel
 
 def load_config(logger: DebugLogger, config_path="config.json") -> dict:
-    """設定ファイル (JSON) を読み込む"""
-    logger.log(LogLevel.INIT, f"設定ファイル読み込み開始: {config_path}")
+    """設定ファイル (JSON) を読み込む
+
+    Args:
+        logger (DebugLogger): デバッグログ用インスタンス
+        config_path (str): 読み込む設定ファイルのパス
+    Returns:
+        dict: 読み込んだ設定データ
+    """
     if not os.path.exists(config_path):
         logger.log(LogLevel.ERROR, f"設定ファイルが見つかりません: {config_path}")
         # デフォルト設定を返すか、エラーを発生させるかを選択
         # ここでは空の辞書を返し、呼び出し元でデフォルト値を使う想定
         return {}
+
     try:
         with open(config_path, 'r', encoding='utf-8') as f:
             config = json.load(f)
@@ -68,8 +75,8 @@ class MainWindow:
         self.logger = logger
         self.root = root
 
-        self.config = load_config(self.logger)  # 設定ファイルを読み込む
-        self.ui_settings = self.config.get("ui_settings", {})
+        self.config = load_config(self.logger)  # 設定ファイルを読み込む準備
+        self.ui_settings = self.config.get("ui_settings", {}) # ui_settings 分を設定ファイルから読み込む
 
         self._setup_root_window()
         self._setup_components()
@@ -85,15 +92,12 @@ class MainWindow:
             - タイトル設定
             - ウィンドウの初期サイズ設定 (設定ファイルから読み込む)
         """
-        # 設定ファイルからウィンドウサイズを取得、なければデフォルト値を使用
         app_title = self.ui_settings.get("app_title", "フラクタル描画アプリケーション")
-        width = self.ui_settings.get("window_width", 1200)
-        height = self.ui_settings.get("window_height", 800)
+        window_width = self.ui_settings.get("window_width", 1280)
+        window_height = self.ui_settings.get("window_height", 800)
 
         self.root.title(app_title)
-        self.root.geometry(f"{width}x{height}")
-
-        self.logger.log(LogLevel.INIT, f"ウィンドウサイズ設定: {width}x{height}")
+        self.root.geometry(f"{window_width}x{window_height}")
 
     def _setup_components(self) -> None:
         """UIコンポーネントの初期化を行う
@@ -110,7 +114,7 @@ class MainWindow:
         status_frame = ttk.Frame(self.root)
         status_frame.pack(fill=tk.X, side=tk.BOTTOM, pady=(0, 5))
 
-        self.logger.log(LogLevel.INIT, "StatusBarManager クラスのインスタンスを作成")
+        self.logger.log(LogLevel.INIT, "StatusBarManager クラスのインスタンス作成開始")
         self.status_bar_manager = StatusBarManager(
             self.root,
             status_frame,
@@ -139,7 +143,7 @@ class MainWindow:
             "height": height,           # 幅と比率から計算
             "rotation": rotation        # 回転角
         }
-        self.logger.log(LogLevel.INIT, "初期ズームパラメータ設定完了", context=self.zoom_params)
+        self.logger.log(LogLevel.SUCCESS, "初期ズームパラメータ設定完了", context=self.zoom_params)
 
         self.prev_zoom_params = None
 
@@ -157,7 +161,7 @@ class MainWindow:
         )
         self.parameter_frame.pack_propagate(False)
 
-        self.logger.log(LogLevel.INIT, "ParameterPanel クラスのインスタンスを作成")
+        self.logger.log(LogLevel.INIT, "ParameterPanel クラスのインスタンス作成開始")
         self.parameter_panel = ParameterPanel(
             self.parameter_frame,
             self.update_fractal,
@@ -182,7 +186,7 @@ class MainWindow:
         initial_canvas_width = self.ui_settings.get("initial_canvas_width", 1067)
         initial_canvas_height = self.ui_settings.get("initial_canvas_height", 600)
 
-        self.logger.log(LogLevel.INIT, "FractalCanvas クラスのインスタンスを作成")
+        self.logger.log(LogLevel.INIT, "FractalCanvas クラスのインスタンス作成開始")
         self.fractal_canvas = FractalCanvas(
             self.canvas_frame,
             width=initial_canvas_width,

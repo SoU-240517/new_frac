@@ -9,7 +9,7 @@ if __name__ == "__main__":
     logger.log(LogLevel.INFO, "App START")
     root = tk.Tk() # Tkinter ルートウィンドウを作成
 
-    logger.log(LogLevel.DEBUG, "MainWindow クラスのインスタンスを作成")
+    logger.log(LogLevel.INIT, "MainWindow クラスのインスタンス作成開始")
     app = MainWindow(root, logger)
 
     logger.log(LogLevel.DEBUG, "Tkinter のメインイベントループを開始")
