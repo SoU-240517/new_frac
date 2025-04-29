@@ -2,7 +2,7 @@ import matplotlib.transforms as transforms
 import matplotlib.patches as patches
 import numpy as np
 from matplotlib.axes import Axes
-from typing import Callable, Optional, Tuple
+from typing import Callable, Optional, Tuple, Dict, Any
 from .cursor_manager import CursorManager
 from .debug_logger import DebugLogger
 from .enums import ZoomState, LogLevel
@@ -22,7 +22,8 @@ class ZoomSelector:
                 ax: Axes,
                 on_zoom_confirm: Callable[[float, float, float, float, float], None],
                 on_zoom_cancel: Callable[[], None],
-                logger: DebugLogger
+                logger: DebugLogger,
+                config: Dict[str, Any]
     ):
         """ZoomSelector クラスのコンストラクタ
         - ZoomSelectorの初期化
@@ -32,7 +33,9 @@ class ZoomSelector:
             on_zoom_confirm: ズーム確定時に呼び出すコールバック関数。引数として (x, y, w, h, rotation_angle) を取る
             on_zoom_cancel: ズームキャンセル時に呼び出すコールバック関数。引数はなし
             logger: ログ出力用の DebugLogger インスタンス
+            config: 設定データを含む辞書
         """
+        self.config = config
         self._initialize_components(ax, logger)
         self._setup_callbacks(on_zoom_confirm, on_zoom_cancel)
         self._connect_events()
@@ -85,7 +88,7 @@ class ZoomSelector:
         - ズーム領域の矩形描画と変形を管理する RectManager のインスタンスを生成する
         """
         self.logger.log(LogLevel.INIT, "RectManager クラスのインスタンスを作成")
-        self.rect_manager = RectManager(self.ax, self.logger)
+        self.rect_manager = RectManager(self.ax, self.logger, self.config)
 
     def _initialize_cursor_manager(self) -> None:
         """CursorManagerの初期化
@@ -107,7 +110,8 @@ class ZoomSelector:
             self.cursor_manager,
             self.validator,
             self.logger,
-            self.canvas
+            self.canvas,
+            self.config
         )
         self.state_handler.event_handler = self.event_handler
 

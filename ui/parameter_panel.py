@@ -3,6 +3,7 @@ import numpy as np
 import tkinter as tk
 from PIL import Image, ImageTk
 from tkinter import ttk
+from typing import Dict, Any # 型ヒント用
 from .zoom_function.debug_logger import DebugLogger
 from .zoom_function.enums import LogLevel
 
@@ -39,11 +40,10 @@ class ParameterPanel:
         non_diverge_algorithms: 非発散部アルゴリズムリスト
         COLORBAR_WIDTH: カラーバー幅
         COLORBAR_HEIGHT: カラーバー高さ
+        config (dict): config.json から読み込んだ設定データ
     """
-    COLORBAR_WIDTH = 150
-    COLORBAR_HEIGHT = 15
 
-    def __init__(self, parent, update_callback, reset_callback, logger: DebugLogger):
+    def __init__(self, parent, update_callback, reset_callback, logger: DebugLogger, config: Dict[str, Any]):
         """ParameterPanel クラスのコンストラクタ
         - パネルのセットアップ
         - カラーバーの初期化
@@ -53,14 +53,22 @@ class ParameterPanel:
             update_callback: 描画更新コールバック関数
             reset_callback: 描画リセットコールバック関数
             logger: デバッグロガーインスタンス
+            config (Dict[str, Any]): config.json から読み込んだ設定データ
         """
         self.logger = logger
         self.parent = parent
+        self.config = config # 設定データをインスタンス変数に保存
         self.render_mode = "quick"  # "quick" or "full"
         self.update_callback = update_callback
         self.reset_callback = reset_callback
+
+        ui_settings = self.config.get("ui_settings", {})
+        self.COLORBAR_WIDTH = ui_settings.get("colorbar_width", 150)
+        self.COLORBAR_HEIGHT = ui_settings.get("colorbar_height", 15)
+        self.logger.log(LogLevel.INIT, f"カラーバーサイズ設定: {self.COLORBAR_WIDTH}x{self.COLORBAR_HEIGHT}")
+
         self._setup_panel()
-        self._update_colorbars()
+        self._update_colorbars() # 初期カラーバー表示
 
     def _setup_panel(self) -> None:
         """パネルのセットアップ
@@ -79,12 +87,18 @@ class ParameterPanel:
         """フラクタルタイプセクションのセットアップ
         - ラベルとコンボボックスの追加
         - イベントバインド
+        - 初期値を設定ファイルから読み込む
         """
         row = 0
         self._add_label("フラクタルタイプ:", row, 0, pady=(5,0))
-        self.fractal_type_var = tk.StringVar(value="Julia")
-        combo = self._add_combobox(row, 1, self.fractal_type_var, ["Julia", "Mandelbrot"])
-        combo.bind("<<ComboboxSelected>>", self._common_callback)
+        # デフォルト値を設定ファイルから取得
+        default_fractal_type = self.config.get("fractal_settings", {}).get("parameter_panel", {}).get("fractal_type", "Mandelbrot")
+        self.fractal_type_var = tk.StringVar(value=default_fractal_type)
+        # フラクタルタイプの選択肢も設定ファイルから読み込めるようにしても良い (今はハードコード)
+        fractal_types = ["Julia", "Mandelbrot"]
+        combo = self._add_combobox(row, 1, self.fractal_type_var, fractal_types)
+        # コンボボックス選択時と数式表示更新を紐付け
+        combo.bind("<<ComboboxSelected>>", lambda event: [self._common_callback(event), self._show_formula_display()])
         self._fractal_type_row = row
 
     def _setup_formula_section(self) -> None:
@@ -96,44 +110,68 @@ class ParameterPanel:
         self.formula_var = tk.StringVar()
         self.formula_label = ttk.Label(self.parent, textvariable=self.formula_var, font=("Courier", 10))
         self.formula_label.grid(row=row, column=0, columnspan=2, sticky=tk.W, padx=10, pady=2)
-        self._show_formula_display()
+        self._show_formula_display() # 初期表示
         self._formula_row = row
 
     def _setup_parameter_section(self) -> None:
         """パラメータ表示セクションのセットアップ
         - 各パラメータのラベルと入力欄の追加
         - イベントバインド
+        - 初期値を設定ファイルから読み込む
         """
         row = self._formula_row + 1
+        param_defaults = self.config.get("fractal_settings", {}).get("parameter_panel", {})
+
         # 最大反復回数
         self._add_label("最大反復回数:", row, 0)
-        self.max_iter_var = tk.StringVar(value="100")
+        default_max_iter = str(param_defaults.get("max_iterations", 100)) # 文字列に変換
+        self.max_iter_var = tk.StringVar(value=default_max_iter)
         entry = self._add_entry(row, 1, self.max_iter_var)
-        entry.bind("<Return>", self._common_callback)
-        params = [("Z (実部):", "z_real_var", "0.0"),
-                  ("Z (虚部):", "z_imag_var", "0.0"),
-                  ("C (実部):", "c_real_var", "-0.7"),
-                  ("C (虚部):", "c_imag_var", "0.27015"
-        )]
-        for label, varname, default in params:
+        entry.bind("<Return>", self._common_callback) # Enterキーでクイック描画
+
+        # Z と C のパラメータ
+        params_config = [
+            ("Z (実部):", "z_real_var", "z_real", "0.0"),
+            ("Z (虚部):", "z_imag_var", "z_imag", "0.0"),
+            ("C (実部):", "c_real_var", "c_real", "-0.7"),
+            ("C (虚部):", "c_imag_var", "c_imag", "0.27015")
+        ]
+
+        for label_text, var_name, config_key, fallback_default in params_config:
             row += 1
-            self._add_label(label, row, 0)
-            setattr(self, varname, tk.StringVar(value=default))
-            entry = self._add_entry(row, 1, getattr(self, varname))
-            entry.bind("<Return>", self._common_callback)
+            self._add_label(label_text, row, 0)
+            # 設定ファイルからデフォルト値を取得、なければフォールバック値
+            default_value = str(param_defaults.get(config_key, fallback_default)) # 文字列に変換
+            # インスタンス変数として StringVar を設定
+            setattr(self, var_name, tk.StringVar(value=default_value))
+            # _add_entry に渡すのはインスタンス変数
+            entry = self._add_entry(row, 1, getattr(self, var_name))
+            entry.bind("<Return>", self._common_callback) # Enterキーでクイック描画
+
         self._param_section_last_row = row
 
     def _setup_diverge_section(self) -> None:
         """発散部セクションのセットアップ
         - 各ウィジェットの追加と設定
         - イベントバインド
+        - 初期値とリストを設定ファイルから読み込む
         """
         row = self._param_section_last_row + 1
         self._add_label("--- 発散部 ---", row, 0, columnspan=2, pady=(10, 0))
+        param_defaults = self.config.get("fractal_settings", {}).get("parameter_panel", {})
+        coloring_options = self.config.get("coloring_options", {})
+
+        # 着色アルゴリズム
         row += 1
         self._add_label("着色アルゴリズム:", row, 0, pady=(5,0))
-        self.diverge_algo_var = tk.StringVar(value="スムージング")
-        self.diverge_algorithms = [
+        default_diverge_algo = param_defaults.get("diverge_algorithm", "Smoothing")
+        self.diverge_algo_var = tk.StringVar(value=default_diverge_algo)
+        # アルゴリズムリストを設定ファイルから取得、なければ空リスト
+        self.diverge_algorithms = coloring_options.get("available_diverge_algorithms", [])
+        # リストが空の場合のフォールバックを追加
+        if not self.diverge_algorithms:
+            self.logger.log(LogLevel.WARNING, "設定ファイルに発散部アルゴリズムリストが見つからないか空なので、デフォルトリストを使用")
+            self.diverge_algorithms = [
             "スムージング",
             "高速スムージング",
             "指数スムージング",
@@ -144,31 +182,53 @@ class ParameterPanel:
             "角度カラーリング",
             "ポテンシャル関数法",
             "軌道トラップ法"
-        ]
+            ] # フォールバック
         combo = self._add_combobox(row, 1, self.diverge_algo_var, self.diverge_algorithms)
         combo.bind("<<ComboboxSelected>>", self._common_callback)
+
+        # カラーバー表示用ラベル
         row += 1
         self.diverge_colorbar_label = tk.Label(self.parent)
         self.diverge_colorbar_label.grid(row=row, column=1, sticky=tk.W, padx=10, pady=(5,0))
+
+        # カラーマップ選択
         row += 1
-        self.colormaps = sorted([m for m in plt.colormaps() if not m.endswith('_r')])
         self._add_label("カラーマップ:", row, 0, pady=(2,5))
-        self.diverge_colormap_var = tk.StringVar(value="viridis")
+        default_diverge_cmap = param_defaults.get("diverge_colormap", "viridis")
+        self.diverge_colormap_var = tk.StringVar(value=default_diverge_cmap)
+        # カラーマップリストを設定ファイルから取得
+        self.colormaps = coloring_options.get("available_colormaps", [])
+         # リストが空の場合のフォールバック
+        if not self.colormaps:
+            self.logger.log(LogLevel.WARNING, "設定ファイルにカラーマップリストが見つからないか空なので、matplotlibから取得")
+            self.colormaps = sorted([m for m in plt.colormaps() if not m.endswith('_r')]) # フォールバック
         combo = self._add_combobox(row, 1, self.diverge_colormap_var, self.colormaps, width=18)
         combo.bind("<<ComboboxSelected>>", self._common_callback)
+
         self._diverge_section_last_row = row
 
     def _setup_non_diverge_section(self) -> None:
         """非発散部セクションのセットアップ
         - 各ウィジェットの追加と設定
         - イベントバインド
+        - 初期値とリストを設定ファイルから読み込む
         """
         row = self._diverge_section_last_row + 1
         self._add_label("--- 非発散部 ---", row, 0, columnspan=2, pady=(10, 0))
+        param_defaults = self.config.get("fractal_settings", {}).get("parameter_panel", {})
+        coloring_options = self.config.get("coloring_options", {})
+
+        # 着色アルゴリズム
         row += 1
         self._add_label("着色アルゴリズム:", row, 0, pady=(5,0))
-        self.non_diverge_algo_var = tk.StringVar(value="単色")
-        self.non_diverge_algorithms = [
+        default_non_diverge_algo = param_defaults.get("non_diverge_algorithm", "Solid Color")
+        self.non_diverge_algo_var = tk.StringVar(value=default_non_diverge_algo)
+        # アルゴリズムリストを設定ファイルから取得
+        self.non_diverge_algorithms = coloring_options.get("available_non_diverge_algorithms", [])
+        # リストが空の場合のフォールバック
+        if not self.non_diverge_algorithms:
+            self.logger.log(LogLevel.WARNING, "設定ファイルに非発散部アルゴリズムリストが見つからないか空なので、デフォルトリストを使用")
+            self.non_diverge_algorithms = [""
             "単色",
             "グラデーション",
             "内部距離（Escape Time Distance）",
@@ -184,17 +244,25 @@ class ParameterPanel:
             "量子もつれ（Quantum Entanglement）",
             "パラメータ(C)",
             "パラメータ(Z)"
-        ]
+            ] # フォールバック
         combo = self._add_combobox(row, 1, self.non_diverge_algo_var, self.non_diverge_algorithms)
         combo.bind("<<ComboboxSelected>>", self._common_callback)
+
+        # カラーバー表示用ラベル
         row += 1
         self.non_diverge_colorbar_label = tk.Label(self.parent)
         self.non_diverge_colorbar_label.grid(row=row, column=1, sticky=tk.W, padx=10, pady=(5,0))
+
+        # カラーマップ選択
         row += 1
         self._add_label("カラーマップ:", row, 0, pady=(2,5))
-        self.non_diverge_colormap_var = tk.StringVar(value="plasma")
+        default_non_diverge_cmap = param_defaults.get("non_diverge_colormap", "magma")
+        self.non_diverge_colormap_var = tk.StringVar(value=default_non_diverge_cmap)
+        # カラーマップリストは発散部と共通なので再利用
+        # self.colormaps = coloring_options.get("available_colormaps", []) # 再取得は不要
         combo = self._add_combobox(row, 1, self.non_diverge_colormap_var, self.colormaps, width=18)
         combo.bind("<<ComboboxSelected>>", self._common_callback)
+
         self._non_diverge_section_last_row = row
 
     def _setup_buttons(self) -> None:
@@ -204,11 +272,27 @@ class ParameterPanel:
         """
         row = self._non_diverge_section_last_row + 1
         # 「描画」ボタン - フル描画モード
-        self._add_button("描画", row, 0, 2, lambda: [setattr(self, 'render_mode', 'full'), self.update_callback(), self._update_colorbars()])
+        # コールバック内で render_mode を設定し、update_callback を呼び出す
+        self._add_button(
+            "描画", row, 0, 2,
+            lambda: [
+                setattr(self, 'render_mode', 'full'), # フル描画モードに設定
+                self.logger.log(LogLevel.INFO, "描画ボタンクリック: フル描画モード"),
+                self.update_callback() # 描画更新
+            ]
+        )
         row += 1
         if self.reset_callback is not None:
             # 「描画リセット」ボタン - クイック描画モード
-            self._add_button("描画リセット", row, 0, 2, lambda: [setattr(self, 'render_mode', 'quick'), self.reset_callback(), self._update_colorbars()])
+            # コールバック内で render_mode を設定し、reset_callback を呼び出す
+            self._add_button(
+                "描画リセット", row, 0, 2,
+                lambda: [
+                    setattr(self, 'render_mode', 'quick'), # クイック描画モードに設定
+                    self.logger.log(LogLevel.INFO, "描画リセットボタンクリック: クイック描画モード"),
+                    self.reset_callback() # リセット処理
+                ]
+            )
 
     def _add_label(self, text, row, col, columnspan=1, padx=10, pady=2) -> None:
         """ラベルを追加する
@@ -285,10 +369,12 @@ class ParameterPanel:
         - 描画モードをクイックに設定
         - 描画更新コールバックを呼び出し
         - カラーバーを更新
+        - 数式表示を更新
         """
         self.render_mode = "quick"  # 簡易描画モードに設定
-        self.update_callback()
-        self._update_colorbars()
+        self.logger.log(LogLevel.INFO, f"UI操作イベント: クイック描画モード設定 ({event})")
+        self.update_callback()      # 描画更新をトリガー
+        self._update_colorbars()    # カラーバーを更新
 
     def _create_colorbar_image(self, cmap_name: str) -> ImageTk.PhotoImage:
         """カラーバー画像を生成する
@@ -301,21 +387,26 @@ class ParameterPanel:
         """
         try:
             cmap = plt.get_cmap(cmap_name)
-            gradient = np.linspace(0, 1, self.COLORBAR_WIDTH)
+            gradient = np.linspace(0, 1, self.COLORBAR_WIDTH) # インスタンス変数を使用
             colors = cmap(gradient)
+            # タイルする高さもインスタンス変数を使用
             rgba_image = np.uint8(np.tile(colors, (self.COLORBAR_HEIGHT, 1, 1)) * 255)
             pil_image = Image.fromarray(rgba_image, 'RGBA')
             photo_image = ImageTk.PhotoImage(pil_image)
-            self.logger.log(LogLevel.SUCCESS, "カラーバー生成完了")
+            # self.logger.log(LogLevel.SUCCESS, f"カラーバー生成完了: {cmap_name}") # ログが多いのでコメントアウトも検討
             return photo_image
         except ValueError:
-            self.logger.log(LogLevel.WARNING, f"無効なカラーマップ名: {cmap_name}")
+            self.logger.log(LogLevel.WARNING, f"無効なカラーマップ名: {cmap_name}：ダミー画像を表示する")
+             # ダミー画像生成 (サイズはインスタンス変数から)
             dummy_rgba = np.zeros((self.COLORBAR_HEIGHT, self.COLORBAR_WIDTH, 4), dtype=np.uint8)
+            dummy_rgba[:, :, 0] = 128 # 灰色など、エラーを示す色にしても良い
+            dummy_rgba[:, :, 3] = 255 # 不透明
             pil_image = Image.fromarray(dummy_rgba, 'RGBA')
             photo_image = ImageTk.PhotoImage(pil_image)
             return photo_image
         except Exception as e:
-            self.logger.log(LogLevel.ERROR, f"カラーバー生成中にエラー ({cmap_name}): {e}")
+            self.logger.log(LogLevel.ERROR, f"カラーバー生成中に予期せぬエラー ({cmap_name}): {e}")
+            # ダミー画像生成
             dummy_rgba = np.zeros((self.COLORBAR_HEIGHT, self.COLORBAR_WIDTH, 4), dtype=np.uint8)
             pil_image = Image.fromarray(dummy_rgba, 'RGBA')
             photo_image = ImageTk.PhotoImage(pil_image)
@@ -326,15 +417,18 @@ class ParameterPanel:
         - 発散部と非発散部のカラーバー画像を生成し、ラベルに設定する
         """
         diverge_cmap_name = self.diverge_colormap_var.get()
-        self.logger.log(LogLevel.CALL, "カラーバー更新：発散部")
+        # self.logger.log(LogLevel.CALL, f"カラーバー更新開始: 発散部={diverge_cmap_name}") # ログが多いのでコメントアウトも検討
         diverge_photo = self._create_colorbar_image(diverge_cmap_name)
         self.diverge_colorbar_label.config(image=diverge_photo)
+        # self.diverge_colorbar_label.image に参照を保持しないとガベージコレクションされる
         self.diverge_colorbar_label.image = diverge_photo
+
         non_diverge_cmap_name = self.non_diverge_colormap_var.get()
-        self.logger.log(LogLevel.CALL, "カラーバー更新：非発散部")
+        # self.logger.log(LogLevel.CALL, f"カラーバー更新開始: 非発散部={non_diverge_cmap_name}") # ログが多いのでコメントアウトも検討
         non_diverge_photo = self._create_colorbar_image(non_diverge_cmap_name)
         self.non_diverge_colorbar_label.config(image=non_diverge_photo)
         self.non_diverge_colorbar_label.image = non_diverge_photo
+        # self.logger.log(LogLevel.SUCCESS, "カラーバー更新完了")
 
     def _show_formula_display(self) -> None:
         """数式を表示する
@@ -343,8 +437,10 @@ class ParameterPanel:
         fractal_type = self.fractal_type_var.get()
         if fractal_type == "Julia":
             self.formula_var.set("Z(n+1) = Z(n)² + C")
-        else:
+        elif fractal_type == "Mandelbrot":
             self.formula_var.set("Z(n+1) = Z(n)² + C\n(Z(0)=0, C=座標)")
+        else:
+            self.formula_var.set("") # 未知のタイプの場合は空に
 
     def _get_parameters(self) -> dict:
         """パラメータを取得する
@@ -376,10 +472,22 @@ class ParameterPanel:
                 "diverge_colormap": self.diverge_colormap_var.get(),
                 "non_diverge_colormap": self.non_diverge_colormap_var.get()
             }
+            # 最大反復回数が正かチェック
             if panel_params["max_iterations"] <= 0:
-                self.logger.log(LogLevel.WARNING, "最大反復回数は正の整数である必要があります。")
-                panel_params["max_iterations"] = 100
+                self.logger.log(LogLevel.WARNING, f"最大反復回数({panel_params['max_iterations']})は正の整数が必要なので、100に補正")
+                panel_params["max_iterations"] = 100 # 強制的にデフォルト値に
+
+            # アルゴリズムやカラーマップがリストに含まれているかチェック (任意)
+            # if panel_params["diverge_algorithm"] not in self.diverge_algorithms: ...
+            # if panel_params["diverge_colormap"] not in self.colormaps: ...
+
+            self.logger.log(LogLevel.SUCCESS, "パラメータ取得成功", context=panel_params)
+            return panel_params
         except ValueError as e:
-            self.logger.log(LogLevel.ERROR, f"パラメータ取得エラー: 無効な数値入力 - {e}")
-            panel_params = {}
-        return panel_params
+            # tk.messagebox などでユーザーに通知しても良い
+            self.logger.log(LogLevel.ERROR, f"パラメータ取得エラー: 無効な数値入力 - {e}。UIの値を要確認")
+            # ここでNoneや空辞書を返すと描画が中断される (MainWindow側でハンドリング)
+            return None # エラーがあった場合は None を返す
+        except Exception as e:
+            self.logger.log(LogLevel.CRITICAL, f"パラメータ取得中に予期せぬエラー: {e}")
+            return None

@@ -67,39 +67,13 @@ class MainWindow:
 
         self.logger = logger
         self.root = root
+
         self.config = load_config(self.logger)  # 設定ファイルを読み込む
+        self.ui_settings = self.config.get("ui_settings", {})
 
         self._setup_root_window()
         self._setup_components()
-
-        # 初期ズームパラメータを設定ファイルから読み込む
-        initial_zoom_config = self.config.get("fractal_defaults", {}).get("initial_zoom", {})
-        # 既存のデフォルト値をフォールバックとして使用
-        default_center_x = 0.0
-        default_center_y = 0.0
-        default_width = 4.0
-        default_height_ratio = 9/16
-        default_rotation = 0.0
-
-        center_x = initial_zoom_config.get("center_x", default_center_x)
-        center_y = initial_zoom_config.get("center_y", default_center_y)
-        width = initial_zoom_config.get("width", default_width)
-        # 高さは幅と比率から計算 (設定ファイルに height_ratio あり)
-        height_ratio = initial_zoom_config.get("height_ratio", default_height_ratio)
-        height = width * height_ratio
-        rotation = initial_zoom_config.get("rotation", default_rotation)
-
-        self.zoom_params = {
-            "center_x": center_x,       # 中心X座標
-            "center_y": center_y,       # 中心Y座標
-            "width": width,             # 初期表示範囲の幅
-            "height": height,           # 幅と比率から計算
-            "rotation": rotation        # 回転角
-        }
-        self.logger.log(LogLevel.INIT, "初期ズームパラメータ設定完了", context=self.zoom_params)
-
-
-        self.prev_zoom_params = None
+        self._setup_zoom_params()
 
         self.is_drawing = False
         self.draw_thread = None
@@ -111,12 +85,14 @@ class MainWindow:
             - タイトル設定
             - ウィンドウの初期サイズ設定 (設定ファイルから読み込む)
         """
-        self.root.title("フラクタル描画アプリケーション")
         # 設定ファイルからウィンドウサイズを取得、なければデフォルト値を使用
-        ui_settings = self.config.get("ui_settings", {})
-        width = ui_settings.get("window_width", 1200)
-        height = ui_settings.get("window_height", 800)
+        app_title = self.ui_settings.get("app_title", "フラクタル描画アプリケーション")
+        width = self.ui_settings.get("window_width", 1200)
+        height = self.ui_settings.get("window_height", 800)
+
+        self.root.title(app_title)
         self.root.geometry(f"{width}x{height}")
+
         self.logger.log(LogLevel.INIT, f"ウィンドウサイズ設定: {width}x{height}")
 
     def _setup_components(self) -> None:
@@ -133,6 +109,7 @@ class MainWindow:
         """ステータスバーを初期化し、ルートウィンドウの下部に配置する"""
         status_frame = ttk.Frame(self.root)
         status_frame.pack(fill=tk.X, side=tk.BOTTOM, pady=(0, 5))
+
         self.logger.log(LogLevel.INIT, "StatusBarManager クラスのインスタンスを作成")
         self.status_bar_manager = StatusBarManager(
             self.root,
@@ -140,9 +117,37 @@ class MainWindow:
             self.logger
         )
 
+    def _setup_zoom_params(self) -> None:
+        """ズーム操作に関するパラメータを初期化する
+            - 初期ズームパラメータを設定ファイルから読み込む
+            - 既存のデフォルト値をフォールバックとして使用
+        """
+        # 初期ズームパラメータを設定ファイルから読み込む
+        initial_zoom_config = self.config.get("fractal_settings", {}).get("initial_zoom", {})
+        center_x = initial_zoom_config.get("center_x", 0.0)
+        center_y = initial_zoom_config.get("center_y", 0.0)
+        width = initial_zoom_config.get("width", 4.0)
+        # 高さは幅と比率から計算 (設定ファイルに height_ratio あり)
+        height_ratio = initial_zoom_config.get("height_ratio", 9 / 16)
+        height = width * height_ratio
+        rotation = initial_zoom_config.get("rotation", 0.0)
+
+        self.zoom_params = {
+            "center_x": center_x,       # 中心X座標
+            "center_y": center_y,       # 中心Y座標
+            "width": width,             # 初期表示範囲の幅
+            "height": height,           # 幅と比率から計算
+            "rotation": rotation        # 回転角
+        }
+        self.logger.log(LogLevel.INIT, "初期ズームパラメータ設定完了", context=self.zoom_params)
+
+        self.prev_zoom_params = None
+
     def _setup_parameter_frame(self) -> None:
         """パラメータパネルを配置するフレームを初期化し、ルートウィンドウの右側に配置する"""
-        self.parameter_frame = ttk.Frame(self.root, width=300)
+        width = self.ui_settings.get("parameter_panel_width", 300)
+
+        self.parameter_frame = ttk.Frame(self.root, width=width)
         self.parameter_frame.pack(
             side=tk.RIGHT,
             fill=tk.Y,
@@ -174,18 +179,18 @@ class MainWindow:
 
         self.canvas_frame.bind("<Configure>", self._on_canvas_frame_configure)
 
+        initial_canvas_width = self.ui_settings.get("initial_canvas_width", 1067)
+        initial_canvas_height = self.ui_settings.get("initial_canvas_height", 600)
+
         self.logger.log(LogLevel.INIT, "FractalCanvas クラスのインスタンスを作成")
-        # FractalCanvas の初期サイズはフレームの <Configure> で調整されるため、
-        # ここでの width/height は初期表示用だが、重要度は低いかもしれない
-        initial_canvas_width = 1067
-        initial_canvas_height = 600
         self.fractal_canvas = FractalCanvas(
             self.canvas_frame,
-            width=initial_canvas_width, # 初期値
-            height=initial_canvas_height, # 初期値
+            width=initial_canvas_width,
+            height=initial_canvas_height,
             logger=self.logger,
             zoom_confirm_callback=self.on_zoom_confirm,
-            zoom_cancel_callback=self.on_zoom_cancel
+            zoom_cancel_callback=self.on_zoom_cancel,
+            config=self.config
         )
 
     def _start_initial_drawing(self) -> None:
@@ -242,11 +247,8 @@ class MainWindow:
 
             current_params = self._merge_zoom_and_panel_params(panel_params)
 
-            # render_fractal に config を渡す必要があればここで追加する
-            # fractal_image = render_fractal(current_params, self.logger, config=self.config)
-            # 現状では render_fractal は config を受け取らない想定
             self.logger.log(LogLevel.CALL, "フラクタル計算と着色処理を開始（スレッド内）")
-            fractal_image = render_fractal(current_params, self.logger)
+            fractal_image = render_fractal(current_params, self.logger, config=self.config)
 
             self.logger.log(LogLevel.CALL, "メインスレッドでキャンバス更新要求（スレッド内）")
             # メインスレッドでキャンバス更新をスケジュール
@@ -302,7 +304,7 @@ class MainWindow:
 
         new_width = w
         # 高さは設定ファイルから読み込んだ比率を使うように変更
-        height_ratio = self.config.get("fractal_defaults", {}).get("initial_zoom", {}).get("height_ratio", 9/16)
+        height_ratio = self.config.get("fractal_settings", {}).get("initial_zoom", {}).get("height_ratio", 9/16)
         new_height = new_width * height_ratio # 16:9 アスペクト比維持
 
         zoom_factor = self.zoom_params["width"] / new_width if new_width > 0 else 1
@@ -313,7 +315,7 @@ class MainWindow:
             current_max_iter = panel_params.get("max_iterations", 100) # デフォルト値を追加
         else:
             # パラメータ取得に失敗した場合のデフォルト処理
-            current_max_iter = self.config.get("fractal_defaults", {}).get("parameter_panel", {}).get("max_iterations", 100)
+            current_max_iter = self.config.get("fractal_settings", {}).get("parameter_panel", {}).get("max_iterations", 100)
             self.logger.log(LogLevel.WARNING, "パラメータパネルから最大反復回数を取得できませんでした。設定ファイルのデフォルト値を使用します。")
 
 
@@ -388,34 +390,20 @@ class MainWindow:
             - ズームパラメータを初期状態に戻し、フラクタルを再描画
             - 初期値は設定ファイルから読み込む
         """
-        # 設定ファイルから初期ズームパラメータを取得
-        initial_zoom_config = self.config.get("fractal_defaults", {}).get("initial_zoom", {})
-        default_center_x = 0.0
-        default_center_y = 0.0
-        default_width = 4.0
-        default_height_ratio = 9/16
-        default_rotation = 0.0
+        self._setup_zoom_params()
 
-        center_x = initial_zoom_config.get("center_x", default_center_x)
-        center_y = initial_zoom_config.get("center_y", default_center_y)
-        width = initial_zoom_config.get("width", default_width)
-        height_ratio = initial_zoom_config.get("height_ratio", default_height_ratio)
-        height = width * height_ratio
-        rotation = initial_zoom_config.get("rotation", default_rotation)
+        reset_iter = self.config.get("fractal_settings", {}).get("reset_max_iterations", 200)
+        self.parameter_panel.max_iter_var.set(str(reset_iter))
+        self.logger.log(LogLevel.CALL, f"最大反復回数をリセット: {reset_iter}")
 
-        self.zoom_params = {
-            "center_x": center_x,
-            "center_y": center_y,
-            "width": width,
-            "height": height,
-            "rotation": rotation
-        }
-        self.logger.log(LogLevel.CALL, "ズームパラメータを初期値にリセット", context=self.zoom_params)
-
-        self.prev_zoom_params = None
-        self.parameter_panel.max_iter_var.set("500") # 最大イテレーション回数を初期値に設定
         self.logger.log(LogLevel.CALL, "ZoomSelector の状態リセット開始")
-        self.fractal_canvas.reset_zoom_selector() # ズーム選択領域をリセット
+
+        # FractalCanvas が初期化されているか確認
+        if hasattr(self, 'fractal_canvas') and self.fractal_canvas:
+            self.fractal_canvas.reset_zoom_selector() # ズーム選択領域をリセット
+        else:
+             self.logger.log(LogLevel.WARNING, "FractalCanvas が初期化されていないため、ZoomSelector のリセットをスキップ")
+
         self.update_fractal()
 
     def _on_canvas_frame_configure(self, event):
@@ -428,13 +416,14 @@ class MainWindow:
         frame_height_pixels = event.height
 
         # フレームサイズが有効でない場合は処理をスキップ
-        if frame_width_pixels <= 0 or frame_height_pixels <= 0:
-            self.logger.log(LogLevel.INFO, "Figure サイズ更新をスキップ：フレームサイズが無効なため")
+        if frame_width_pixels <= 1 or frame_height_pixels <= 1: # 0以下だとエラーになる可能性があるので1以下でチェック
+            self.logger.log(LogLevel.INFO, f"Figure サイズ更新をスキップ：フレームサイズが無効 ({frame_width_pixels}x{frame_height_pixels})")
             return
 
-        target_aspect = 16 / 9 # 目標のアスペクト比
+        # 目標アスペクト比 (設定ファイルから読み込むことも可能だが、現状維持)
+        target_aspect = 16 / 9
 
-        frame_aspect = frame_width_pixels / frame_height_pixels if frame_height_pixels > 0 else float('inf')
+        frame_aspect = frame_width_pixels / frame_height_pixels
 
         if frame_aspect > target_aspect:
             new_height_pixels = frame_height_pixels
@@ -445,16 +434,23 @@ class MainWindow:
             new_height_pixels = int(new_width_pixels / target_aspect) if target_aspect > 0 else frame_height_pixels
             self.logger.log(LogLevel.DEBUG, f"縦長/同等フレーム：幅を基準に Figure サイズ計算 ({new_width_pixels}x{new_height_pixels})")
 
-        dpi = self.fractal_canvas.fig.get_dpi() if self.fractal_canvas and hasattr(self.fractal_canvas, 'fig') and self.fractal_canvas.fig else 100
+        # Figureオブジェクトが存在するか確認
+        if not (self.fractal_canvas and hasattr(self.fractal_canvas, 'fig') and self.fractal_canvas.fig):
+             self.logger.log(LogLevel.WARNING, "FractalCanvas または Figure が利用不可（Figure サイズ更新スキップ）")
+             return
+
+        dpi = self.fractal_canvas.fig.get_dpi()
+
+        # ピクセル数が小さすぎる場合、インチ数がほぼゼロになりエラーになる可能性
+        if new_width_pixels < 1 or new_height_pixels < 1:
+             self.logger.log(LogLevel.WARNING, f"計算後のピクセル数が小さすぎるため更新をスキップ: {new_width_pixels}x{new_height_pixels}")
+             return
 
         new_width_inches = new_width_pixels / dpi
         new_height_inches = new_height_pixels / dpi
 
         try:
-            if self.fractal_canvas and hasattr(self.fractal_canvas, 'fig') and self.fractal_canvas.fig:
-                self.fractal_canvas.fig.set_size_inches(new_width_inches, new_height_inches, forward=True)
-                self.logger.log(LogLevel.SUCCESS, f"Matplotlib Figure サイズ更新完了: {new_width_inches:.2f}x{new_height_inches:.2f}インチ ({new_width_pixels}x{new_height_pixels}ピクセル)")
-            else:
-                self.logger.log(LogLevel.WARNING, "FractalCanvas または Figure が利用不可（Figure サイズ更新スキップ）")
+            self.fractal_canvas.fig.set_size_inches(new_width_inches, new_height_inches, forward=True)
+            self.logger.log(LogLevel.SUCCESS, f"Matplotlib Figure サイズ更新完了: {new_width_inches:.2f}x{new_height_inches:.2f}インチ ({new_width_pixels}x{new_height_pixels}ピクセル)")
         except Exception as e:
             self.logger.log(LogLevel.ERROR, f"Matplotlib Figure サイズ更新中にエラー: {e}")

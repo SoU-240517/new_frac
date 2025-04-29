@@ -26,7 +26,8 @@ class FractalCanvas:
                 master: tk.Tk,
                 width: int, height: int,
                 logger: DebugLogger,
-                zoom_confirm_callback: Callable, zoom_cancel_callback: Callable
+                zoom_confirm_callback: Callable, zoom_cancel_callback: Callable,
+                config: Dict[str, float]
     ):
         """FractalCanvas クラスのコンストラクタ
         - FigureとAxesの初期化
@@ -40,9 +41,11 @@ class FractalCanvas:
             logger: デバッグログ用のLogger
             zoom_confirm_callback: ズーム確定時のコールバック関数
             zoom_cancel_callback: ズームキャンセル時のコールバック関数
+            config: ZoomSelectorの設定
         """
         self.logger = logger
         self.parent = master
+        self.config = config
 
         # FigureとAxesの初期化
         self._setup_figure(width, height)
@@ -104,7 +107,8 @@ class FractalCanvas:
             self.ax,
             on_zoom_confirm=self.zoom_confirmed,
             on_zoom_cancel=self.zoom_cancelled,
-            logger=self.logger
+            logger=self.logger,
+            config=self.config
         )
 
     def _set_black_background(self) -> None:

@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import time
-from typing import Dict, Callable, Any # CallableとAnyを追加
+from typing import Dict, Callable, Any
 from ui.zoom_function.debug_logger import DebugLogger
 from ui.zoom_function.enums import LogLevel
 from .utils import ColorAlgorithmError
@@ -68,12 +68,12 @@ NON_DIVERGENT_ALGORITHMS: Dict[str, Callable] = {
     'パラメータ(Z)': ndiv_palam_c_z.apply_parameter_coloring, # 同上
 }
 
-# デフォルトのアルゴリズム関数
-DEFAULT_DIVERGENT_ALGORITHM = div_linear.apply_linear_mapping
-DEFAULT_NON_DIVERGENT_ALGORITHM = ndiv_solid.apply_solid_color
+# デフォルトアルゴリズム関数 (フォールバック用、これも関数自体ではなく名前で管理しても良い)
+DEFAULT_DIVERGENT_ALGO_NAME = "スムージング" # フォールバック用のデフォルト名
+DEFAULT_NON_DIVERGENT_ALGO_NAME = "単色" # フォールバック用のデフォルト名
 
 # --- メインの着色関数 ---
-def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger) -> np.ndarray:
+def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger, config: Dict[str, Any]) -> np.ndarray:
     """フラクタルの着色アルゴリズムを適用するディスパッチャ関数
     - 計算結果とパラメータに基づき、発散領域と非発散領域に対して適切な着色アルゴリズムを選択し、適用する
     - 結果をキャッシュし、パフォーマンスを向上させる
@@ -81,118 +81,200 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger) -
         results (dict): フラクタル計算結果。'iterations' (反復回数), 'mask' (発散マスク), 'z_vals' (複素数値) を含む
         params (dict): 着色パラメータ。使用するアルゴリズム名やカラーマップなどを含む
         logger (DebugLogger): デバッグログ用ロガー
+        config (Dict[str, Any]): config.json から読み込んだ設定データ
     Returns:
         np.ndarray: 着色されたRGBA配列 (形状: (h, w, 4), dtype=float32, 値域: 0-255)
     Raises:
         ColorAlgorithmError: 対応するアルゴリズムが見つからない場合や、着色処理中にエラーが発生した場合
     """
-    # --- 1. キャッシュ確認 ---
-    cache = ColorCache(logger=logger)
-    cached_image = cache.get_cache(params)
+    # --- 1. キャッシュ管理クラスの初期化とキャッシュ確認 ---
+    # ColorCache の初期化時に config を渡す
+    cache = ColorCache(config=config, logger=logger)
+    # キャッシュキー生成のために params を渡す (params に config を含めない想定)
+    # キャッシュキーに影響するパラメータのみを抽出して渡す方がより良い場合もある
+    cache_params = params.copy() # params をコピーして使う
+    # 必要に応じてキャッシュキーに含めない項目を削除
+    # cache_params.pop('render_mode', None)
+    cached_image = cache.get_cache(cache_params)
     if cached_image is not None:
         logger.log(LogLevel.INFO, "キャッシュされた画像を返します。")
         return cached_image
 
     # --- 2. 必要なデータの準備 ---
     iterations = results.get('iterations')
-    mask = results.get('mask')
+    mask = results.get('mask') # True が非発散 (集合内部), False が発散 (集合外部)
     z_vals = results.get('z_vals')
 
+    # 必須データの存在チェック
     if iterations is None or mask is None or z_vals is None:
-        logger.log(LogLevel.ERROR, "辞書に必要なキー (iterations、mask、z_vals) がありません。")
-        raise ColorAlgorithmError("Invalid fractal results data.")
+        logger.log(LogLevel.CRITICAL, "着色に必要なデータ (iterations, mask, z_vals) が results 辞書にありません。")
+        raise ColorAlgorithmError("Invalid fractal results data for coloring.")
+    # 形状チェック
     if not (iterations.shape == mask.shape == z_vals.shape):
-         logger.log(LogLevel.ERROR, f"形状の不一致: iterations={iterations.shape}, mask={mask.shape}, z_vals={z_vals.shape}")
-         raise ColorAlgorithmError("Input data shapes do not match.")
+         logger.log(LogLevel.CRITICAL, f"着色データの形状不一致: iterations={iterations.shape}, mask={mask.shape}, z_vals={z_vals.shape}")
+         raise ColorAlgorithmError("Input data shapes for coloring do not match.")
 
-    divergent_mask = ~mask
-    non_divergent_mask = mask # 元のコードに合わせて非発散マスクも用意
+    # マスクの準備 (元のコードに合わせて bool 型を想定)
+    # divergent_mask: 発散領域 (集合外部) -> True
+    # non_divergent_mask: 非発散領域 (集合内部) -> True
+    divergent_mask = ~mask if mask.dtype == bool else mask == 0 # bool でない場合も考慮
+    non_divergent_mask = mask if mask.dtype == bool else mask != 0 # bool でない場合も考慮
+
     image_shape = iterations.shape
-    colored = np.zeros((*image_shape, 4), dtype=np.float32)
+    # 出力画像の初期化 (float32 で計算し、最後に uint8 に変換する方が精度が良い)
+    colored = np.zeros((*image_shape, 4), dtype=np.float32) # float32 に変更
 
+    # カラーマップの取得 (エラー処理強化)
     try:
-        diverge_cmap_name = params.get("diverge_colormap", "viridis")
-        non_diverge_cmap_name = params.get("non_diverge_colormap", "plasma")
-        cmap_func = plt.cm.get_cmap(diverge_cmap_name)
-        non_cmap_func = plt.cm.get_cmap(non_diverge_cmap_name)
+        diverge_cmap_name = params.get("diverge_colormap", "viridis") # デフォルト値
+        non_diverge_cmap_name = params.get("non_diverge_colormap", "plasma") # デフォルト値
+        cmap_func = plt.get_cmap(diverge_cmap_name)
+        non_cmap_func = plt.get_cmap(non_diverge_cmap_name)
+        logger.log(LogLevel.DEBUG, f"カラーマップ取得: 発散部={diverge_cmap_name}, 非発散部={non_diverge_cmap_name}")
     except ValueError as e:
-        logger.log(LogLevel.ERROR, f"無効なカラーマップ名が指定されました: {e}")
-        raise ColorAlgorithmError(f"Invalid colormap name: {e}") from e
+        logger.log(LogLevel.CRITICAL, f"無効なカラーマップ名が指定されました: {e}")
+        # 無効な場合、デフォルトに戻すかエラーにするか。ここではエラーにする。
+        raise ColorAlgorithmError(f"Invalid colormap name specified: {e}") from e
+    except Exception as e:
+        logger.log(LogLevel.CRITICAL, f"カラーマップ取得中に予期せぬエラー: {e}")
+        raise ColorAlgorithmError("Unexpected error while getting colormap.") from e
 
     # --- 3. 着色処理の実行 ---
     try:
-        start_time = time.time()
+        start_time = time.time() # perf_counter の方がより正確
+        start_perf_counter = time.perf_counter()
 
         # --- 3.1 発散部分の着色 ---
-        if np.any(divergent_mask):
-            algo_name = params.get("diverge_algorithm", "反復回数線形マッピング") # デフォルト名を指定
-            logger.log(LogLevel.DEBUG, f"発散部分の着色: {algo_name}")
+        if np.any(divergent_mask): # 処理対象が存在するかチェック
+            # params からアルゴリズム名を取得、なければデフォルト名を使用
+            # ParameterPanel で設定された名前と辞書のキーを一致させる
+            algo_name = params.get("diverge_algorithm", DEFAULT_DIVERGENT_ALGO_NAME)
+            logger.log(LogLevel.INFO, f"発散部分の着色開始: アルゴリズム='{algo_name}'")
 
-            # 辞書からアルゴリズム関数を取得、見つからなければデフォルトを使用
+            # 辞書からアルゴリズム関数を取得
             algo_func = DIVERGENT_ALGORITHMS.get(algo_name)
+
             if algo_func:
-                # スムージング系は辞書のラムダ式で smooth_method が設定される
-                # 他のアルゴリズムは直接関数を呼び出す
-                # 引数はアルゴリズム関数が必要とするものを渡す必要がある
-                # ここでは代表的な引数を渡すが、アルゴリズムによっては調整が必要な場合がある
-                if algo_name in ['スムージング', '高速スムージング', '指数スムージング']:
-                    smooth_method_map = {
-                        'スムージング': 'standard',
-                        '高速スムージング': 'fast',
-                        '指数スムージング': 'exponential'
-                    }
-                    smooth_method = smooth_method_map.get(algo_name, 'standard')
-                    # スムージング系は z_vals が必要
-                    algo_func(colored, divergent_mask, iterations, z_vals, cmap_func, params, smooth_method, logger)
-                elif algo_name in ['距離カラーリング', '角度カラーリング', 'ポテンシャル関数法']:
-                    # これらは z_vals が必要
-                    algo_func(colored, divergent_mask, z_vals, cmap_func, params, logger)
-                elif algo_name == '軌道トラップ法':
-                   # 軌道トラップ法は iterations と z_vals が必要
-                   algo_func(colored, divergent_mask, iterations, z_vals, cmap_func, params, logger)
-                else:
-                    # 線形、対数、ヒストグラムなどは iterations が必要
-                    algo_func(colored, divergent_mask, iterations, cmap_func, params, logger)
+                try:
+                    # アルゴリズムに応じて必要な引数を渡す
+                    if algo_name == 'スムージング': # Smoothing は特別扱い
+                        # smooth_method を params から取得するか、ここで決定する
+                        # ここでは params に含まれている想定（なければ 'standard'）
+                        smooth_method = params.get('smoothing_method', 'standard')
+                        logger.log(LogLevel.DEBUG, f"Smoothing method: {smooth_method}")
+                        # Smoothing 関数は mask, iterations, z_vals, cmap, params, method, logger を受け取る想定
+                        algo_func(colored, divergent_mask, iterations, z_vals, cmap_func, params, smooth_method, logger)
+                    elif algo_name in ['距離カラーリング', '角度カラーリング', 'ポテンシャル関数法']:
+                        # これらは z_vals が必要
+                        algo_func(colored, divergent_mask, z_vals, cmap_func, params, logger)
+                    elif algo_name == '軌道トラップ法':
+                       # 軌道トラップ法は iterations と z_vals が必要
+                       algo_func(colored, divergent_mask, iterations, z_vals, cmap_func, params, logger)
+                    else: # Linear, Logarithmic, Histogram など
+                        # これらは iterations が必要
+                        algo_func(colored, divergent_mask, iterations, cmap_func, params, logger)
+                    logger.log(LogLevel.SUCCESS, f"発散部分の着色完了: '{algo_name}'")
+                except Exception as algo_e:
+                    logger.log(LogLevel.ERROR, f"発散アルゴリズム '{algo_name}' 実行中にエラー: {algo_e}")
+                    # エラーが発生した場合、この領域の着色はスキップされるか、
+                    # またはデフォルトの安全なアルゴリズムで再試行するなどの対策が必要
+                    # ここではエラーを上に投げる
+                    raise ColorAlgorithmError(f"Error during divergent algorithm '{algo_name}'.") from algo_e
             else:
-                logger.log(LogLevel.WARNING, f"未知の発散色付けアルゴリズム: {algo_name}. Using default (linear mapping).")
-                DEFAULT_DIVERGENT_ALGORITHM(colored, divergent_mask, iterations, cmap_func, params, logger)
+                # アルゴリズム名が辞書にない場合
+                logger.log(LogLevel.WARNING, f"未知の発散色付けアルゴリズム: '{algo_name}'。 フォールバック ({DEFAULT_DIVERGENT_ALGO_NAME}) を試みます。")
+                fallback_func = DIVERGENT_ALGORITHMS.get(DEFAULT_DIVERGENT_ALGO_NAME)
+                if fallback_func:
+                     try:
+                         # フォールバック関数を実行 (ここでは Linear を想定)
+                         fallback_func(colored, divergent_mask, iterations, cmap_func, params, logger)
+                     except Exception as fallback_e:
+                         logger.log(LogLevel.ERROR, f"フォールバック発散アルゴリズム '{DEFAULT_DIVERGENT_ALGO_NAME}' 実行中にもエラー: {fallback_e}")
+                         raise ColorAlgorithmError(f"Fallback divergent algorithm '{DEFAULT_DIVERGENT_ALGO_NAME}' failed.") from fallback_e
+                else:
+                    # フォールバック関数すら見つからない場合 (致命的)
+                    logger.log(LogLevel.CRITICAL, f"デフォルトの発散アルゴリズム '{DEFAULT_DIVERGENT_ALGO_NAME}' が見つかりません。")
+                    raise ColorAlgorithmError(f"Default divergent algorithm '{DEFAULT_DIVERGENT_ALGO_NAME}' not found.")
+
+        else:
+            logger.log(LogLevel.INFO, "発散領域が存在しないため、発散部分の着色をスキップします。")
 
         # --- 3.2 非発散部分の着色 ---
-        if np.any(non_divergent_mask):
-            algo_name = params.get("non_diverge_algorithm", "単色") # デフォルト名を指定
-            logger.log(LogLevel.DEBUG, f"非発散部分の着色: {algo_name}")
+        if np.any(non_divergent_mask): # 処理対象が存在するかチェック
+            # params からアルゴリズム名を取得、なければデフォルト名を使用
+            algo_name = params.get("non_diverge_algorithm", DEFAULT_NON_DIVERGENT_ALGO_NAME)
+            logger.log(LogLevel.INFO, f"非発散部分の着色開始: アルゴリズム='{algo_name}'")
 
-            # 辞書からアルゴリズム関数を取得、見つからなければデフォルトを使用
+            # 辞書からアルゴリズム関数を取得
             algo_func = NON_DIVERGENT_ALGORITHMS.get(algo_name)
-            if algo_func:
-                # グラデーションは特別扱いが必要（gradient_valuesを計算）
-                if algo_name == 'グラデーション':
-                    gradient_values = gradient.compute_gradient(image_shape, logger)
-                    algo_func(colored, non_divergent_mask, iterations, gradient_values, non_cmap_func, params, logger)
-                elif algo_name == '統計分布（Histogram Equalization）':
-                     # 統計分布は iterations が必要
-                    algo_func(colored, non_divergent_mask, iterations, non_cmap_func, params, logger)
-                elif algo_name == '単色':
-                     # 単色は params のみ必要
-                     algo_func(colored, non_divergent_mask, params, logger)
-                else:
-                    # 他の多くの非発散アルゴリズムは z_vals が必要
-                    algo_func(colored, non_divergent_mask, z_vals, non_cmap_func, params, logger)
-            else:
-                logger.log(LogLevel.WARNING, f"未知の非発散色付けアルゴリズム: {algo_name}. Using default (solid color).")
-                DEFAULT_NON_DIVERGENT_ALGORITHM(colored, non_divergent_mask, params, logger)
 
-        end_time = time.time()
-        logger.log(LogLevel.INFO, f"着色処理時間 {end_time - start_time:.4f} 秒")
+            if algo_func:
+                try:
+                    # アルゴリズムに応じて必要な引数を渡す
+                    if algo_name == 'グラデーション':
+                        # グラデーション用の値は事前に計算しておく必要がある
+                        logger.log(LogLevel.DEBUG, "グラデーション値を計算します...")
+                        gradient_values = gradient.compute_gradient(image_shape, logger)
+                        logger.log(LogLevel.DEBUG, f"グラデーション値 計算完了: shape={gradient_values.shape}")
+                        # Gradient 関数は mask, iterations, gradient_values, cmap, params, logger を受け取る想定
+                        algo_func(colored, non_divergent_mask, iterations, gradient_values, non_cmap_func, params, logger)
+                    elif algo_name == '統計分布（Histogram Equalization）':
+                         # 統計分布は iterations が必要
+                        algo_func(colored, non_divergent_mask, iterations, non_cmap_func, params, logger)
+                    elif algo_name == '単色':
+                         # 単色は params のみ必要 (色情報が params に含まれる想定)
+                         algo_func(colored, non_divergent_mask, params, logger)
+                    elif algo_name in ['パラメータ(C)', 'パラメータ(Z)']:
+                         # パラメータカラーリングは mask, z_vals, cmap, params, logger を受け取る想定
+                         # 関数内部で C か Z かを params['fractal_type'] などで判断する
+                         algo_func(colored, non_divergent_mask, z_vals, non_cmap_func, params, logger)
+                    else:
+                        # 他の多くの非発散アルゴリズムは z_vals が必要と想定
+                        algo_func(colored, non_divergent_mask, z_vals, non_cmap_func, params, logger)
+                    logger.log(LogLevel.SUCCESS, f"非発散部分の着色完了: '{algo_name}'")
+                except Exception as algo_e:
+                    logger.log(LogLevel.ERROR, f"非発散アルゴリズム '{algo_name}' 実行中にエラー: {algo_e}")
+                    raise ColorAlgorithmError(f"Error during non-divergent algorithm '{algo_name}'.") from algo_e
+            else:
+                 # アルゴリズム名が辞書にない場合
+                logger.log(LogLevel.WARNING, f"未知の非発散色付けアルゴリズム: '{algo_name}'。 フォールバック ({DEFAULT_NON_DIVERGENT_ALGO_NAME}) を試みます。")
+                fallback_func = NON_DIVERGENT_ALGORITHMS.get(DEFAULT_NON_DIVERGENT_ALGO_NAME)
+                if fallback_func:
+                     try:
+                         # フォールバック関数を実行 (ここでは Solid Color を想定)
+                         fallback_func(colored, non_divergent_mask, params, logger)
+                     except Exception as fallback_e:
+                         logger.log(LogLevel.ERROR, f"フォールバック非発散アルゴリズム '{DEFAULT_NON_DIVERGENT_ALGO_NAME}' 実行中にもエラー: {fallback_e}")
+                         raise ColorAlgorithmError(f"Fallback non-divergent algorithm '{DEFAULT_NON_DIVERGENT_ALGO_NAME}' failed.") from fallback_e
+                else:
+                    # フォールバック関数すら見つからない場合 (致命的)
+                    logger.log(LogLevel.CRITICAL, f"デフォルトの非発散アルゴリズム '{DEFAULT_NON_DIVERGENT_ALGO_NAME}' が見つかりません。")
+                    raise ColorAlgorithmError(f"Default non-divergent algorithm '{DEFAULT_NON_DIVERGENT_ALGO_NAME}' not found.")
+
+        else:
+            logger.log(LogLevel.INFO, "非発散領域が存在しないため、非発散部分の着色をスキップします。")
+
+        end_perf_counter = time.perf_counter()
+        logger.log(LogLevel.SUCCESS, f"全着色処理完了 ({end_perf_counter - start_perf_counter:.4f} 秒)")
 
         # --- 4. 結果のキャッシュと返却 ---
-        cache.put_cache(params, colored)
+        # キャッシュに保存
+        # 注意: `colored` は float32 (0-255) の状態。キャッシュもこの形式で保存。
+        # uint8 への変換はキャッシュから取得した後か、render_fractal の最後で行う。
+        cache.put_cache(cache_params, colored.copy()) # copy() して渡す方が安全
         logger.log(LogLevel.DEBUG,
-            f"最終的な色付き配列の統計: dtype={colored.dtype}, "
-            f"shape={colored.shape}, min={np.min(colored)}, max={np.max(colored)}"
+            f"最終的な色付き float 配列の統計: dtype={colored.dtype}, "
+            f"shape={colored.shape}, min={np.min(colored):.1f}, max={np.max(colored):.1f}"
         )
+        # 関数としては float32 の配列を返す (render_fractal 側で uint8 に変換)
         return colored
 
+    except ColorAlgorithmError:
+        # 既にログ出力されているはずなので、そのまま再raise
+        raise
     except Exception as e:
-        logger.log(LogLevel.CRITICAL, f"色付け中に予期しないエラーが発生しました: {e}")
-        raise ColorAlgorithmError("Coloring failed due to an internal error: " + str(e)) from e
+        # 予期せぬエラー (アルゴリズム実行前など)
+        logger.log(LogLevel.CRITICAL, f"色付け処理の準備または後処理中に予期しないエラーが発生しました: {e}", exc_info=True) # スタックトレースも記録
+        # エラーが発生した場合、安全な値 (例: 真っ黒な画像) を返すか、エラーを投げるか
+        # ここではエラーを投げる
+        raise ColorAlgorithmError("Coloring failed due to an unexpected internal error.") from e

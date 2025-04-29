@@ -267,8 +267,8 @@ class EventHandlersPrivate:
                 self.core.previous_vector_angle)
 
             # 角度変化が閾値を超えた場合に矩形を回転
-            if abs(delta_angle) > self.core.ROTATION_THRESHOLD:
-                adjusted_delta_angle = delta_angle * self.core.ROTATION_SENSITIVITY
+            if abs(delta_angle) > self.core.rotation_threshold:
+                adjusted_delta_angle = delta_angle * self.core.rotation_sensitivity
                 current_rect_angle = self.core.rect_manager.get_rotation()
                 new_angle = current_rect_angle + adjusted_delta_angle
                 self.core.rect_manager.set_rotation(new_angle)

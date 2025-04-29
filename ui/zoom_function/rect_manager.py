@@ -13,22 +13,27 @@ class RectManager:
     - ズーム領域をリサイズする
     - ズーム領域を回転する
     Attributes:
+        ax (Axes): Matplotlib の Axes オブジェクト
+        logger (DebugLogger): ログ出力用の DebugLogger インスタンス
         rect (Optional[patches.Rectangle]): ズーム領域の矩形パッチ
         _angle (float): 矩形の回転角度（度数法）
         _last_valid_size_px (Optional[Tuple[float, float]]): 最後に有効だった矩形のピクセルサイズ
+        min_width_px (int): 矩形の最小許容幅 (ピクセル単位、設定ファイルから読み込み)
+        min_height_px (int): 矩形の最小許容高さ (ピクセル単位、設定ファイルから読み込み)
+        aspect_ratio_w_h (float): 矩形の目標アスペクト比 (幅 / 高さ、設定ファイルから読み込み)
     """
-    MIN_WIDTH_PX = 5
-    MIN_HEIGHT_PX = 5
-    ASPECT_RATIO_W_H = 16 / 9 # 目標とするアスペクト比 (幅 / 高さ)
 
-    def __init__(self,
-                ax: Axes,
-                logger: DebugLogger
+    def __init__(
+        self,
+        ax: Axes,
+        logger: DebugLogger,
+        config: Dict[str, Any]
     ):
         """RectManager クラスのコンストラクタ
         Args:
             ax (Axes): Matplotlib の Axes オブジェクト
             logger (DebugLogger): ログ出力用の DebugLogger インスタンス
+            config (Dict[str, Any]): config.json から読み込んだ設定データ
         """
         self.logger = logger
         self.ax = ax
@@ -36,6 +41,31 @@ class RectManager:
         self._angle: float = 0.0
         # 直前の有効なサイズを保持 (ドラッグ中に無効サイズになった場合に使用)
         self._last_valid_size_px: Optional[Tuple[float, float]] = None
+
+        # 設定ファイルから矩形関連の設定を読み込む
+        ui_settings = config.get("ui_settings", {})
+        # フォールバック用のデフォルト値を設定
+        default_min_width = 5
+        default_min_height = 5
+        default_aspect_ratio = 16 / 9
+
+        # インスタンス変数として設定値を保存
+        self.min_width_px = ui_settings.get("zoom_rect_min_width_px", default_min_width)
+        self.min_height_px = ui_settings.get("zoom_rect_min_height_px", default_min_height)
+        self.aspect_ratio_w_h = ui_settings.get("zoom_rect_aspect_ratio", default_aspect_ratio)
+
+        # 読み込んだ値のバリデーション (例: 0以下でないか)
+        if self.min_width_px <= 0:
+            self.logger.log(LogLevel.WARNING, f"設定ファイルの zoom_rect_min_width_px ({self.min_width_px}) が無効です。デフォルト値 ({default_min_width}) を使用します。")
+            self.min_width_px = default_min_width
+        if self.min_height_px <= 0:
+            self.logger.log(LogLevel.WARNING, f"設定ファイルの zoom_rect_min_height_px ({self.min_height_px}) が無効です。デフォルト値 ({default_min_height}) を使用します。")
+            self.min_height_px = default_min_height
+        if self.aspect_ratio_w_h <= 0:
+             self.logger.log(LogLevel.WARNING, f"設定ファイルの zoom_rect_aspect_ratio ({self.aspect_ratio_w_h}) が無効です。デフォルト値 ({default_aspect_ratio}) を使用します。")
+             self.aspect_ratio_w_h = default_aspect_ratio
+
+        self.logger.log(LogLevel.INIT, f"RectManager 初期設定: min_w={self.min_width_px}px, min_h={self.min_height_px}px, aspect={self.aspect_ratio_w_h:.4f}")
 
     def get_rect(self) -> Optional[patches.Rectangle]:
         """現在のズーム領域の矩形パッチを取得
@@ -78,12 +108,15 @@ class RectManager:
 
         # 幅と高さをアスペクト比に基づいて計算
         # 幅の移動量の方がアスペクト比に対して大きいか等しい場合
-        if abs(dx) >= abs(dy) * self.ASPECT_RATIO_W_H:
+        # アスペクト比をインスタンス変数から読み込む
+        if abs(dx) >= abs(dy) * self.aspect_ratio_w_h:
             width = abs(dx)
-            height = width / self.ASPECT_RATIO_W_H
+            # アスペクト比が0でないことを確認
+            height = width / self.aspect_ratio_w_h if self.aspect_ratio_w_h > 0 else 0
         else: # 高さの移動量の方がアスペクト比に対して大きい場合
             height = abs(dy)
-            width = height * self.ASPECT_RATIO_W_H
+            # アスペクト比をインスタンス変数から読み込む
+            width = height * self.aspect_ratio_w_h
 
         # 矩形の左下座標 (x, y) を計算
         if dx >= 0: # target_x が ref_x より右にある場合
@@ -99,6 +132,8 @@ class RectManager:
         return x, y, width, height
 
     def setting_rect_size(self, start_x: float, start_y: float, current_x: float, current_y: float) -> None:
+    # setting_rect_size は _calculate_rect_geometry と _check_pixel_size を使うので、
+    # これらの内部でインスタンス変数を使うように変更されていれば、このメソッド自体は変更不要
         """ズーム領域のサイズと位置を更新 (作成中、回転なし、ピクセルサイズチェックあり)
         Args:
             start_x (float): ドラッグ開始点の x 座標 (データ座標)
@@ -110,10 +145,10 @@ class RectManager:
             self.logger.log(LogLevel.ERROR, "ズーム領域なし：サイズ更新不可")
             return
 
-        # データ座標での幅、高さ、左下座標の計算
+        # データ座標での幅、高さ、左下座標の計算 (内部で self.aspect_ratio_w_h を使用)
         x, y, width, height = self._calculate_rect_geometry(start_x, start_y, current_x, current_y)
 
-        # ピクセルサイズチェック
+        # ピクセルサイズチェック (内部で self.min_width_px, self.min_height_px を使用)
         is_valid, px_width, px_height = self._check_pixel_size(x, y, width, height)
 
         if is_valid:
@@ -127,9 +162,7 @@ class RectManager:
             self.logger.log(LogLevel.DEBUG, f"サイズ更新(有効): px_w={px_width:.1f}, px_h={px_height:.1f}")
         else:
             # 無効なサイズの場合、ログを出力し、矩形は更新しない
-            # (直前の有効なサイズのまま表示される)
             self.logger.log(LogLevel.INFO, f"サイズ更新中止(無効): px_w={px_width:.1f}, px_h={px_height:.1f}")
-            # ここで何もしなければ、矩形の見た目は変化しない
 
     def edge_change_editing(self) -> None:
         """ズーム領域のエッジを変更 (灰色、破線)"""
@@ -153,6 +186,7 @@ class RectManager:
                                  fixed_x_rotated: float, fixed_y_rotated: float,
                                  current_x: float, current_y: float
                                  ) -> None:
+    # resize_rect_from_corners も内部で _calculate_rect_geometry と _check_pixel_size を使うため、変更不要
         """固定された回転後の角と現在のマウス位置からズーム領域を更新 (リサイズ中、回転考慮、ピクセルサイズチェックあり)
         Args:
             fixed_x_rotated (float): 固定された回転後の x 座標 (データ座標)
@@ -187,12 +221,12 @@ class RectManager:
         current_y_unrotated = current_x_rel * sin_a + current_y_rel * cos_a + cy
         # --- 逆回転ここまで ---
 
-        # 回転前の座標系で新しい矩形を計算
+        # 回転前の座標系で新しい矩形を計算 (内部で self.aspect_ratio_w_h を使用)
         new_x, new_y, new_width, new_height = self._calculate_rect_geometry(
             fixed_x_unrotated, fixed_y_unrotated, current_x_unrotated, current_y_unrotated
         )
 
-        # --- ピクセルサイズチェック ---
+        # --- ピクセルサイズチェック --- (内部で self.min_width_px 等を使用)
         is_valid, px_width, px_height = self._check_pixel_size(new_x, new_y, new_width, new_height)
 
         if is_valid:
@@ -206,8 +240,6 @@ class RectManager:
         else:
             # サイズが無効なら更新しない
             self.logger.log(LogLevel.INFO, f"リサイズ中止(無効): px_w={px_width:.1f}, px_h={px_height:.1f}")
-            # 必要ならここで直前の有効な状態に戻す処理を追加することも可能だが、
-            # 今は単純に更新をスキップする
 
         self.logger.log(LogLevel.DEBUG, f"リサイズ計算(回転前): x={new_x:.2f}, y={new_y:.2f}, w={new_width:.2f}, h={new_height:.2f}")
         # 最後に現在の回転角度を再適用 (is_valid の場合のみ適用される)
@@ -221,9 +253,11 @@ class RectManager:
         Returns:
             bool: 幅と高さが最小ピクセルサイズ以上か
         """
-        is_valid = width_px >= self.MIN_WIDTH_PX and height_px >= self.MIN_HEIGHT_PX
+        # 最小サイズをインスタンス変数から読み込む
+        is_valid = width_px >= self.min_width_px and height_px >= self.min_height_px
         if not is_valid:
-            self.logger.log(LogLevel.WARNING, f"無効なピクセルサイズ：px_w={width_px:.1f} (<{self.MIN_WIDTH_PX}), px_h={height_px:.1f} (<{self.MIN_HEIGHT_PX})")
+            # ログにもインスタンス変数の最小値を表示
+            self.logger.log(LogLevel.WARNING, f"無効なピクセルサイズ：px_w={width_px:.1f} (<{self.min_width_px}), px_h={height_px:.1f} (<{self.min_height_px})")
         return is_valid
 
     def is_last_calculated_size_valid(self) -> bool:
@@ -232,7 +266,7 @@ class RectManager:
             bool: 最後の計算結果が有効なサイズだったか
         """
         if self._last_valid_size_px:
-            # is_valid_size_in_pixels を使って再検証する (念のため)
+            # is_valid_size_in_pixels を使って再検証 (内部で self.min_width_px 等を使用)
             return self.is_valid_size_in_pixels(self._last_valid_size_px[0], self._last_valid_size_px[1])
         # キャッシュがない場合は無効とみなす
         self.logger.log(LogLevel.DEBUG, "最後の有効ピクセルサイズキャッシュなし")
@@ -309,6 +343,7 @@ class RectManager:
             finally:
                 self.rect = None # 参照をクリア
                 self._angle = 0.0 # 角度もリセット
+                self._last_valid_size_px = None # キャッシュもクリア
         else:
             self.logger.log(LogLevel.WARNING, "ズーム領域なし：削除スキップ")
 
@@ -325,6 +360,9 @@ class RectManager:
 
     # --- Undo/Redo 用メソッド ---
     def get_state(self) -> Optional[Dict[str, Any]]:
+    # get_state, set_state は状態の保存・復元用。
+    # 最小サイズやアスペクト比自体は config から読むので、state に含める必要はない。
+    # _last_valid_size_px は含めておくべき。
         """現在の状態 (Undo用) を取得
         Returns:
             Optional[Dict[str, Any]]: 状態データ。矩形がない場合は None
@@ -332,7 +370,6 @@ class RectManager:
         props = self.get_properties()
         if props and self.rect: # rect が存在することも確認
             x, y, width, height = props
-            # --- 追加 ---
             # 状態に最後に有効だったピクセルサイズも保存
             last_valid_px = self._last_valid_size_px if self._last_valid_size_px else (0, 0)
             return {
@@ -344,18 +381,12 @@ class RectManager:
                 "visible": self.rect.get_visible(),
                 "edgecolor": self.rect.get_edgecolor(),
                 "linestyle": self.rect.get_linestyle(),
-                # --- 追加 ---
                 "last_valid_width_px": last_valid_px[0],
                 "last_valid_height_px": last_valid_px[1],
             }
-        # 矩形がない場合も None を返すことを明示
-        elif not self.rect:
-             self.logger.log(LogLevel.WARNING, "矩形が存在しないため状態取得で None を返す")
-             return None
-        # --- 追加 ---
-        # props はあるが rect がないケース (理論上稀だが念のため)
-        self.logger.log(LogLevel.WARNING, "プロパティはあるが矩形がないため状態取得で None を返す")
-        return None # Rect がなければ None
+        # 矩形がない場合
+        self.logger.log(LogLevel.WARNING, "矩形が存在しないため状態取得で None を返す")
+        return None
 
     def set_state(self, state: Optional[Dict[str, Any]]):
         """指定された状態に矩形を復元 (Undo/Redo用)
@@ -385,13 +416,12 @@ class RectManager:
              self.delete_rect()
              return
 
-        # --- ★ 復元時もピクセルサイズチェックを行う ---
-        # state に last_valid_... が含まれていればそれを使う、なければ再計算
+        # --- 復元時もピクセルサイズチェックを行う ---
+        # (内部で self.min_width_px, self.min_height_px を使用)
         if last_valid_w_px is not None and last_valid_h_px is not None:
              is_valid = self.is_valid_size_in_pixels(last_valid_w_px, last_valid_h_px)
-             px_width, px_height = last_valid_w_px, last_valid_h_px # 状態からの値を使用
+             px_width, px_height = last_valid_w_px, last_valid_h_px
         else:
-             # 状態にピクセルサイズ情報がない場合 (古い状態など) は再計算してチェック
              is_valid, px_width, px_height = self._check_pixel_size(x, y, width, height)
 
         if not is_valid:
@@ -492,7 +522,7 @@ class RectManager:
         if not self.rect:
             self.logger.log(LogLevel.ERROR, "ズーム領域回転不可：ズーム領域なし")
             return
-        self._angle = angle % 360 # 0-360度の範囲に正規化（-180から180にする場合は調整）
+        self._angle = angle % 360 # 0-360度の範囲に正規化
         self._apply_rotation()
 
     def _apply_rotation(self):
@@ -538,6 +568,14 @@ class RectManager:
             corner2_data = (x + width, y + height)
 
             # 2点をピクセル座標に変換
+            # 座標変換が利用可能かチェック (Axes が描画済みか)
+            if not self.ax or not hasattr(self.ax, 'transData'):
+                # キャッシュされた最後の有効なサイズを使用
+                if self._last_valid_size_px:
+                    return True, *self._last_valid_size_px
+                self.logger.log(LogLevel.WARNING, "ピクセルサイズチェック不可: Axes が無効")
+                return False, 0.0, 0.0 # 変換できない場合は無効とする
+
             corners_px = self.ax.transData.transform([corner1_data, corner2_data])
             corner1_px = corners_px[0]
             corner2_px = corners_px[1]
@@ -546,7 +584,7 @@ class RectManager:
             px_width = abs(corner2_px[0] - corner1_px[0])
             px_height = abs(corner2_px[1] - corner1_px[1])
 
-            # ピクセルサイズが有効かチェック
+            # ピクセルサイズが有効かチェック (インスタンス変数を使用)
             is_valid = self.is_valid_size_in_pixels(px_width, px_height)
             return is_valid, px_width, px_height
 

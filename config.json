@@ -1,11 +1,21 @@
 {
     "ui_settings": {
+      "app_title": "フラクタル描画アプリケーション",
       "window_width": 1280,
       "window_height": 800,
+      "initial_canvas_width": 1067,
+      "initial_canvas_height": 600,
       "colorbar_width": 150,
-      "colorbar_height": 15
+      "colorbar_height": 15,
+      "parameter_panel_width": 300,
+      "zoom_rect_min_width_px": 10,
+      "zoom_rect_min_height_px": 10,
+      "zoom_rect_aspect_ratio": 1.7777777777777777,
+      "rotation_threshold": 2.0,
+      "rotation_sensitivity": 1.0,
+      "rotation_throttle_interval": 0.016666
     },
-    "fractal_defaults": {
+    "fractal_settings": {
       "initial_zoom": {
         "center_x": 0.0,
         "center_y": 0.0,
@@ -14,18 +24,36 @@
         "rotation": 0.0
       },
       "parameter_panel": {
-        "fractal_type": "Mandelbrot",
+        "fractal_type": "Julia",
         "max_iterations": 200,
         "z_real": 0.0,
         "z_imag": 0.0,
         "c_real": -0.8,
         "c_imag": 0.156,
-        "diverge_algorithm": "Smoothing",
-        "non_diverge_algorithm": "Solid Color",
+        "diverge_algorithm": "スムージング",
+        "non_diverge_algorithm": "単色",
         "diverge_colormap": "viridis",
         "non_diverge_colormap": "magma"
       },
+      "dynamic_resolution": {
+        "base": 600,
+        "min": 300,
+        "max": 1200,
+        "log_factor": 5.0
+      },
+      "super_sampling": {
+        "zoom_threshold": 0.8,
+        "low_samples": 2,
+        "high_samples": 4
+      },
       "reset_max_iterations": 200
+    },
+    "coloring_settings": {
+      "cache_max_size": 150
+    },
+    "logging": {
+    "debug_enabled": true,
+    "min_level": "DEBUG"
     },
     "coloring_options": {
       "available_colormaps": [
@@ -44,13 +72,33 @@
         "seismic", "spring", "summer", "terrain", "winter"
       ],
       "available_diverge_algorithms": [
-          "Smoothing", "Linear", "Logarithmic", "Histogram", "Distance", "Angle", "Potential", "Orbit Trap"
+        "スムージング",
+        "高速スムージング",
+        "指数スムージング",
+        "反復回数線形マッピング",
+        "反復回数対数マッピング",
+        "ヒストグラム平坦化法",
+        "距離カラーリング",
+        "角度カラーリング",
+        "ポテンシャル関数法",
+        "軌道トラップ法"
       ],
       "available_non_diverge_algorithms": [
-          "Solid Color", "Gradient", "Internal Distance", "Orbit Trap Circle", "Phase Symmetry",
-          "Convergence Speed", "Derivative", "Histogram Equalization", "Complex Potential",
-          "Chaotic Orbit", "Fourier Pattern", "Fractal Texture", "Quantum Entanglement",
-          "Parameter C", "Parameter Z"
+        "単色",
+        "グラデーション",
+        "内部距離（Escape Time Distance）",
+        "軌道トラップ(円)（Orbit Trap Coloring）",
+        "位相对称（Phase Angle Symmetry）",
+        "反復収束速度（Convergence Speed）",
+        "微分係数（Derivative Coloring）",
+        "統計分布（Histogram Equalization）",
+        "複素ポテンシャル（Complex Potential Mapping）",
+        "カオス軌道混合（Chaotic Orbit Mixing）",
+        "フーリエ干渉（Fourier Pattern）",
+        "フラクタルテクスチャ（Fractal Texture）",
+        "量子もつれ（Quantum Entanglement）",
+        "パラメータ(C)",
+        "パラメータ(Z)"
       ]
     }
   }

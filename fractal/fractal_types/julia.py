@@ -21,7 +21,7 @@ def compute_julia(
         Dict[str, np.ndarray]: 計算結果を格納した辞書
             - 'iterations': 各グリッド点での反復回数
             - 'mask': 収束判定に使用したマスク配列
-            - 'z_vals': 各グリッド点の最終的な複素数値
+            - 'z_values': 各グリッド点の最終的な複素数値
     Notes:
         ジュリア集合は z = z^2 + C の反復式で定義される
         反復計算において |z| > 2 となる場合、その点は発散するとみなす
@@ -59,5 +59,5 @@ def compute_julia(
     return {
         'iterations': iterations,
         'mask': mask,
-        'z_vals': final_z
+        'z_values': final_z
     }
