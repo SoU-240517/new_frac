@@ -3,7 +3,7 @@
 ui/main_window.py
 
 ## MODULE_PURPOSE
-フラクタル描画アプリケーションのメインウィンドウと、フラクタク描画に必要なUIコンポーネントの初期化、配置、およびフラクタル描画処理を管理するモジュール
+フラクタル描画アプリケーションのメインウィンドウと、フラクタル描画に必要なUIコンポーネントの初期化、配置、およびフラクタル描画処理を管理するモジュール
 
 ## CLASS_DEFINITION:
 名前: MainWindow
@@ -15,6 +15,8 @@ tkinter (tk, ttk): UIフレームワーク
 numpy (np): 数値計算
 threading: 非同期処理
 typing: 型ヒント
+json: 設定ファイル読み込み
+os: ファイルパス操作
 ui.canvas.FractalCanvas: フラクタル描画キャンバス
 ui.parameter_panel.ParameterPanel: パラメータ設定パネル
 fractal.render.render_fractal: フラクタル生成関数
@@ -25,79 +27,93 @@ fractal.render.render_fractal: フラクタル生成関数
 ## CLASS_ATTRIBUTES
 self.logger: DebugLogger - デバッグログ管理インスタンス
 self.root: tk.Tk - Tkinterルートウィンドウ (アプリケーションのメインウィンドウ)
+self.config (dict): config.json から読み込んだ設定データ
+self.ui_settings (dict): config['ui_settings'] のショートカット
 self.canvas_frame: ttk.Frame - キャンバス配置フレーム (フラクタル描画領域を配置)
 self.parameter_frame: ttk.Frame - パラメータパネル配置フレーム (パラメータ設定UIを配置)
 self.fractal_canvas: FractalCanvas - フラクタルを描画するキャンバス
-self.parameter_panel: ParameterPanel - パラメータ管理パネル (フラクタルのパラメータを設定)
+self.parameter_panel: ParameterPanel - パラクトルパラル (フラクタルのパラメータを設定)
 self.status_bar_manager: StatusBarManager - ステータスバー管理 (アプリケーションの状態を表示)
 self.zoom_params: dict - ズーム操作パラメータ {center_x, center_y, width, height, rotation} (現在の表示領域)
-self.prev_zoom_params: dict - 前回のズームパラメータ（キャンセル用）
+self.prev_zoom_params: dict | None - 前回のズームパラメータ（キャンセル用、初期値はNone）
 self.is_drawing: bool - 描画中フラグ (フラクタル描画処理が実行中かどうかを示す)
-self.draw_thread: Thread - フラクタル描画スレッド
+self.draw_thread: Thread | None - フラクタル描画スレッド (初期値はNone)
+self.canvas_width (int): キャンバスの幅 (ピクセル単位) - ※コードにはないため削除または修正が必要
+self.canvas_height (int): キャンバスの高さ (ピクセル単位) - ※コードにはないため削除または修正が必要
 
 ## METHOD_SIGNATURES
 def __init__(self, root: tk.Tk, logger: DebugLogger) -> None
-機能 コンストラクタ。ルートウィンドウとロガーを受け取り、初期設定を行う
+機能: コンストラクタ。ルートウィンドウとロガーを受け取り、初期設定を行う（設定ファイルの読み込み、UIコンポーネントのセットアップ、ズームパラメータの初期化、初期描画開始）
+
+def load_config(logger: DebugLogger, config_path="config.json") -> dict
+機能: 設定ファイル (JSON) を読み込む。ファイルが見つからない場合やエラーが発生した場合は空の辞書を返す
 
 def _setup_root_window(self) -> None
-機能 ルートウィンドウの基本設定を行う
+機能: ルートウィンドウの基本設定を行う（タイトル、初期サイズ設定）
 
 def _setup_components(self) -> None
-機能 UIコンポーネントを初期化する
+機能: UIコンポーネント（ステータスバー、パラメータパネル、キャンバスフレーム）の初期化を行う
 
 def _setup_status_bar(self) -> None
-機能 ステータスバーを初期化し、配置する
+機能: ステータスバーを初期化し、ルートウィンドウの下部に配置する
+
+def _setup_zoom_params(self) -> None
+機能: ズーム操作に関するパラメータを初期化する（初期ズームパラメータを設定ファイルから読み込む）
 
 def _setup_parameter_frame(self) -> None
-機能 パラメータパネルを配置するフレームを初期化し、配置する
+機能: パラメータパネルを配置するフレームを初期化し、ルートウィンドウの右側に配置する
 
 def _setup_canvas_frame(self) -> None
-機能 フラクタル描画領域を配置するキャンバスフレームを初期化し、配置する
+機能: フラクタル描画領域を配置するキャンバスフレームを初期化し、ルートウィンドウの左側に配置する
 
 def _start_initial_drawing(self) -> None
-機能 アプリケーション起動時の初期描画を開始する
+機能: アプリケーション起動時の初期描画を開始する（ステータスバー表示、別スレッドで描画開始）
 
 def update_fractal(self) -> None
-機能 フラクタルを再描画する
+機能: フラクタルを再描画する。描画中の場合は新しい描画要求を無視する
 
 def _update_fractal_thread(self) -> None
-機能 フラクタル更新処理を別スレッドで実行する
+機能: フラクタル更新処理を別スレッドで実行する（パラメータ取得、フラクタル生成、キャンバス更新、ステータスバー更新）
 
-def _merge_zoom_and_panel_params(self, panel_params: dict) -> dict
-機能 ズームパラメータとパラメータパネルのパラメータを結合する
+def _merge_zoom_and_panel_params(self, panel_params: dict) -> Dict[str, Any]
+機能: ズームパラメータとパラメータパネルのパラメータを結合する
 
 def on_zoom_confirm(self, x: float, y: float, w: float, h: float, angle: float) -> None
-機能 ズーム操作確定時のコールバック関数
+機能: ズーム操作確定時のコールバック関数。新しいズームパラメータを計算し、フラクタルを再描画する。ズームファクターに応じて最大イテレーション回数を調整する。
 
 def _calculate_max_iterations(self, current_max_iter: int, zoom_factor: float) -> int
-機能 ズームファクターに基づいて最大イテレーション回数を計算する
+機能: ズームファクターに基づいてフラクタル計算の最大イテレーション回数を計算する。
 
 def on_zoom_cancel(self) -> None
-機能 ズーム操作キャンセル時のコールバック関数
+機能: ズーム操作キャンセル時のコールバック関数。直前のズームパラメータに戻してフラクタルを再描画する。
 
 def reset_zoom(self) -> None
-機能 操作パネルの「描画リセット」ボタン押下時の処理
+機能: 操作パネルの「描画リセット」ボタン押下時の処理。ズームパラメータを初期状態に戻し、フラクタルを再描画する。
 
 def _on_canvas_frame_configure(self, event) -> None
-機能 キャンバスフレームのリサイズ時に、内部の Matplotlib Figure のサイズを調整し、16:9 の縦横比を維持する
+機能: キャンバスフレームのリサイズ時に、内部の Matplotlib Figure のサイズを調整し、16:9 の縦横比を維持する。
 
 ## CORE_EXECUTION_FLOW
-__init__ → 各種セットアップメソッド → _start_initial_drawing → ユーザーによるパラメータ変更やズーム操作 → update_fractal → _update_fractal_thread → render_fractal → キャンバス更新
+__init__ → load_config → _setup_root_window → _setup_components (_setup_status_bar, _setup_parameter_frame, _setup_canvas_frame) → _setup_zoom_params → _start_initial_drawing → _update_fractal_thread → render_fractal → FractalCanvas.update_canvas
+ユーザーによるパラメータ変更やズーム操作 → update_fractal または on_zoom_confirm または reset_zoom → _update_fractal_thread → ...
 イベントループによる各種メソッド呼び出し
+_on_canvas_frame_configure によるキャンバスフレームのリサイズ処理
 
 ## KEY_LOGIC_PATTERNS
-非同期処理: メインスレッドとは別にフラクタル描画
-パラメータ合成: ズームパラメータとパネルパラメータの結合
+非同期処理: メインスレッドとは別にフラクタル描画 (_update_fractal_thread)
+パラメータ合成: ズームパラメータとパネルパラメータの結合 (_merge_zoom_and_panel_params)
 エラーハンドリング: try-except構造でエラーをログ出力
-UI管理: 16:9アスペクト比維持設計
-コールバック関数: ズーム操作などのイベント処理
+アスペクト比維持: `_on_canvas_frame_configure` メソッドで16:9アスペクト比を維持
+コールバック関数: ズーム操作などのイベント処理 (on_zoom_confirm, on_zoom_cancel)
 UIスレッドと描画スレッドの分離
+設定ファイルからの読み込み (load_config)
 
 ## CRITICAL_BEHAVIORS
 スレッド管理: is_drawingフラグによる描画状態管理
 状態保存: prev_zoom_paramsによるズーム状態保存
-ダイナミックパラメータ調整: ズーム率に応じた反復回数の変更
-アスペクト比維持: キャンバスフレームのリサイズ時に、描画領域が常に16:9の縦横比を保つように調整する
+ダイナミックパラメータ調整: ズーム率に応じた反復回数の変更 (_calculate_max_iterations)
+アスペクト比維持: `_on_canvas_frame_configure` メソッドで、キャンバスフレームのリサイズ時に描画領域が常に16:9の縦横比を保つように調整する
+パラメータ取得エラー時の描画中断処理 (_update_fractal_thread)
 
 
 ==============================
@@ -110,9 +126,9 @@ ui/canvas.py
 ## CLASS_DEFINITION:
 名前: FractalCanvas
 役割:
-- フラクタル画像の表示と更新を管理
-- ズーム機能の制御
-- ユーザーインターフェースの描画
+- MatplotlibのFigureとAxesを管理し、フラクタル画像を描画・更新する。
+- ズーム選択機能（ZoomSelector）を初期化・管理し、ズーム操作のコールバックを処理する。
+- キャンバスの背景色を設定する。
 親クラス: なし
 
 ## DEPENDENCIES
@@ -120,65 +136,70 @@ numpy (np): 数値計算
 tkinter (tk): UIフレームワーク
 matplotlib.backends.backend_tkagg.FigureCanvasTkAgg: MatplotlibのFigureをTkinterキャンバスに埋め込む
 matplotlib.figure.Figure: MatplotlibのFigure
-typing: 型ヒント
+typing: 型ヒント (Callable, Optional, Dict, Tuple)
 ui.zoom_function.debug_logger.DebugLogger: デバッグログ管理
 ui.zoom_function.enums.LogLevel: ログレベル定義
 ui.zoom_function.zoom_selector.ZoomSelector: ズーム選択機能 (遅延インポート)
 
 ## CLASS_ATTRIBUTES
-self.fig: matplotlib.figure.Figure - MatplotlibのFigure
-self.ax: matplotlib.axes._subplots.AxesSubplot - MatplotlibのAxes
-self.canvas: matplotlib.backends.backend_tkagg.FigureCanvasTkAgg - Tkinterのキャンバス
-self.zoom_selector: ui.zoom_function.zoom_selector.ZoomSelector - ズーム選択機能を管理するZoomSelector
-self.zoom_confirm_callback: Callable - ズーム確定時のコールバック関数
-self.zoom_cancel_callback: Callable - ズームキャンセル時のコールバック関数
-self.logger: ui.zoom_function.debug_logger.DebugLogger - デバッグログを管理するLogger
-self.parent: tk.Tk - Tkinterの親ウィジェット
+self.fig: matplotlib.figure.Figure - MatplotlibのFigureオブジェクト
+self.ax: matplotlib.axes._subplots.AxesSubplot - MatplotlibのAxesオブジェクト
+self.canvas: matplotlib.backends.backend_tkagg.FigureCanvasTkAgg - Tkinterに埋め込まれたMatplotlibキャンバスウィジェット
+self.zoom_selector: ui.zoom_function.zoom_selector.ZoomSelector - ズーム選択機能を管理するZoomSelectorインスタンス
+self.zoom_confirm_callback: Callable - ズーム確定時に呼び出すコールバック関数
+self.zoom_cancel_callback: Callable - ズームキャンセル時に呼び出すコールバック関数
+self.logger: ui.zoom_function.debug_logger.DebugLogger - デバッグログを管理するLoggerインスタンス
+self.parent: tk.Tk or ttk.Frame - Tkinterの親ウィジェット (コードでは master として受け取り、ttk.Frame も親になりうる)
+self.config: Dict[str, float] - ZoomSelectorに渡すための設定データ (コンストラクタ引数に追加されている)
 
 ## METHOD_SIGNATURES
-def __init__(self, master: tk.Tk, width: int, height: int,  logger: DebugLogger, zoom_confirm_callback: Callable, zoom_cancel_callback: Callable) -> None
-機能 コンストラクタ。FigureとAxesの初期化、ズーム機能の設定、背景色の設定を行う
+def __init__(self, master: tk.Tk, width: int, height: int, logger: DebugLogger, zoom_confirm_callback: Callable, zoom_cancel_callback: Callable, config: Dict[str, float]) -> None
+機能: コンストラクタ。FigureとAxesの初期化、ズーム機能の設定と初期化（ZoomSelectorインスタンス生成）、背景色の設定を行う。設定データを受け取る。
 
 def _setup_figure(self, width: int, height: int) -> None
-機能 MatplotlibのFigureとAxesの設定、Tkinterキャンバスの設定を行う
+機能: MatplotlibのFigureとAxesを設定し、FigureCanvasTkAggを使用してTkinterキャンバスに埋め込む。初期サイズと背景色を設定する。
 
 def set_zoom_callback(self, zoom_confirm_callback: Callable, zoom_cancel_callback: Callable) -> None
-機能 ズーム確定・キャンセル時のコールバックを設定する
+機能: ズーム確定・キャンセル時の外部コールバック関数を設定する。
 
 def _setup_zoom(self) -> None
-機能 ズーム機能の設定と初期化を行う
+機能: ZoomSelectorのインスタンスを作成し、ズームイベントのコールバック（zoom_confirmed, zoom_cancelled）を設定する。
 
 def _set_black_background(self) -> None
-機能 キャンバスの背景を黒に設定する
+機能: AxesとFigureの背景色を黒に設定し、キャンバスを再描画する。
 
 def zoom_confirmed(self, x: float, y: float, w: float, h: float, angle: float) -> None
-機能 ズーム確定時の処理。ズーム選択範囲のパラメータを受け取り、コールバック関数を呼び出す
+機能: ZoomSelectorからのズーム確定通知を受け取り、設定されているズーム確定コールバック関数 (`self.zoom_confirm_callback`) を引数付きで呼び出す。
 
 def zoom_cancelled(self) -> None
-機能 ズームキャンセル時の処理。ズームキャンセル時にコールバック関数を呼び出す
+機能: ZoomSelectorからのズームキャンセル通知を受け取り、設定されているズームキャンセルコールバック関数 (`self.zoom_cancel_callback`) を呼び出す。
 
 def update_canvas(self, fractal_image: np.ndarray, params: Dict[str, float]) -> None
-機能 フラクタル画像の更新を行う。新しいフラクタル画像を描画する
+機能: 新しいフラクタル画像と描画パラメータを受け取り、Axesをクリアして画像を再描画する。描画範囲はパラメータと16:9のアスペクト比に基づいて計算される。
 
 def reset_zoom_selector(self) -> None
-機能 ズームセレクタのリセットを行う。ズーム選択状態を初期状態に戻す
+機能: 管理しているZoomSelectorインスタンスの `reset` メソッドを呼び出し、ズーム選択状態を初期状態に戻す。
 
 ## CORE_EXECUTION_FLOW
-__init__ → _setup_figure, set_zoom_callback, _setup_zoom, _set_black_background
-ユーザー操作（ズーム、更新） → zoom_confirmed, zoom_cancelled, update_canvas
-必要に応じて reset_zoom_selector
+__init__ (config受け取り含む) → _setup_figure, set_zoom_callback, _setup_zoom (ZoomSelector生成), _set_black_background
+外部からの描画更新要求 (例: MainWindowからの update_canvas 呼び出し) → Axesクリア・設定 → 描画範囲計算 → imshow (画像描画) → canvas.draw()
+ZoomSelectorからのイベント通知 (zoom_confirmed, zoom_cancelled) → 対応するコールバック関数呼び出し
+外部からのズームセレクタのリセット要求 (例: MainWindowからの reset_zoom_selector 呼び出し) → zoom_selector.reset() 呼び出し
 
 ## KEY_LOGIC_PATTERNS
-- コールバック関数: ズーム確定・キャンセル時に外部の処理を呼び出す
-- Matplotlibの埋め込み:  FigureCanvasTkAggを使用してMatplotlibのFigureをTkinterに統合
-- 背景色の設定:  一貫したUIのためにキャンバスとFigureの背景色を黒に設定
-- アスペクト比の維持:  フラクタル描画時に16:9のアスペクト比を維持
+- MatplotlibのTkinterへの埋め込み: FigureCanvasTkAggによるMatplotlib描画領域の統合
+- コールバック関数: ズーム確定・キャンセル時の外部処理との連携
+- ズーム機能の委譲: ZoomSelectorクラスへのズーム操作管理の委譲
+- 画像描画と更新: Axesへの画像の描画と描画範囲の設定
+- アスペクト比の維持: update_canvas内での描画範囲計算時のアスペクト比維持
+- 設定データの受け渡し: コンストラクタで受け取ったconfigをZoomSelectorに渡す
 
 ## CRITICAL_BEHAVIORS
-- ズーム機能: 選択範囲に基づくフラクタル画像の再描画
-- コールバック:  ズーム操作とアプリケーションロジックの分離
-- キャンバス更新:  新しいフラクタル画像の描画とパラメータ反映
-- リソース管理:  Matplotlibオブジェクトの適切な初期化と設定
+- フラクタル画像の正確かつ効率的な描画と更新
+- ズーム確定・キャンセル時のコールバックの正確な呼び出し
+- ズーム選択機能（ZoomSelector）の適切な初期化と連携
+- 描画範囲計算におけるアスペクト比の正確な維持
+- Matplotlibオブジェクト（Figure, Axes, Canvas）の適切な管理と設定
 
 
 ==============================
@@ -201,15 +222,17 @@ matplotlib.pyplot (plt): カラーバー生成
 numpy (np): 数値計算
 tkinter (tk, ttk): UIフレームワーク
 PIL.Image, PIL.ImageTk: 画像処理
+typing: 型ヒント
 .zoom_function.debug_logger.DebugLogger: デバッグログ管理
 .zoom_function.enums.LogLevel: ログレベル定義
 
 ## CLASS_ATTRIBUTES
-self.parent: tk.Tk - 親ウィジェット
+self.parent: tk.Tk or ttk.Frame - 親ウィジェット (コードでは ttk.Frame も受け取る可能性がある)
 self.update_callback: Callable - 描画更新コールバック関数
-self.reset_callback: Callable - 描画リセットコールバック関数
+self.reset_callback: Callable | None - 描画リセットコールバック関数 (None の可能性あり)
 self.logger: DebugLogger - デバッグロガーインスタンス
-self.render_mode: str - 描画モード ("quick" or "full")
+self.config (dict): config.json から読み込んだ設定データ
+self.render_mode: str - 描画モード ("quick" or "full", デフォルトは "quick")
 self.fractal_type_var: tk.StringVar - フラクタルタイプの選択
 self.formula_var: tk.StringVar - 数式表示
 self.formula_label: ttk.Label - 数式表示ラベル
@@ -224,84 +247,88 @@ self.diverge_colormap_var: tk.StringVar - 発散部カラーマップ
 self.non_diverge_algo_var: tk.StringVar - 非発散部着色アルゴリズム
 self.non_diverge_colorbar_label: tk.Label - 非発散部カラーバー表示ラベル
 self.non_diverge_colormap_var: tk.StringVar - 非発散部カラーマップ
-self._fractal_type_row: int - フラクタルタイプ選択行
-self._formula_row: int - 数式表示行
-self._param_section_last_row: int - パラメータセクション最終行
-self._diverge_section_last_row: int - 発散部セクション最終行
-self._non_diverge_section_last_row: int - 非発散部セクション最終行
-self.colormaps: list - カラーマップリスト
-self.diverge_algorithms: list - 発散部アルゴリズムリスト
-self.non_diverge_algorithms: list - 非発散部アルゴリズムリスト
-self.COLORBAR_WIDTH: int - カラーバー幅
-self.COLORBAR_HEIGHT: int - カラーバー高さ
+_fractal_type_row: int - フラクタルタイプ選択行のグリッド行番号
+_formula_row: int - 数式表示行のグリッド行番号
+_param_section_last_row: int - パラメータセクション最終行のグリッド行番号
+_diverge_section_last_row: int - 発散部セクション最終行のグリッド行番号
+_non_diverge_section_last_row: int - 非発散部セクション最終行のグリッド行番号
+self.colormaps: list[str] - カラーマップリスト (設定ファイルまたはmatplotlibから取得)
+self.diverge_algorithms: list[str] - 発散部アルゴリズムリスト (設定ファイルから取得)
+self.non_diverge_algorithms: list[str] - 非発散部アルゴリズムリスト (設定ファイルから取得)
+self.COLORBAR_WIDTH: int - カラーバー幅 (設定ファイルから読み込み)
+self.COLORBAR_HEIGHT: int - カラーバー高さ (設定ファイルから読み込み)
 
 ## METHOD_SIGNATURES
-def __init__(self, parent, update_callback, reset_callback, logger: DebugLogger) -> None
-機能 コンストラクタ。パネルのセットアップ、カラーバーの初期化
+def __init__(self, parent, update_callback, reset_callback, logger: DebugLogger, config: Dict[str, Any]) -> None
+機能: コンストラクタ。パネルのセットアップ、カラーバーの初期化を行う。設定データを受け取る。
 
 def _setup_panel(self) -> None
-機能 パネルのセットアップ。各セクションのセットアップ、パネルのレイアウト設定
+機能: パネルのセットアップを行う。各セクションのセットアップ、パネルのレイアウト設定。
 
 def _setup_fractal_type_section(self) -> None
-機能 フラクタルタイプセクションのセットアップ。ラベルとコンボボックスの追加、イベントバインド
+機能: フラクタルタイプセクションのセットアップを行う。ラベルとコンボボックスの追加、イベントバインド、初期値を設定ファイルから読み込む。
 
 def _setup_formula_section(self) -> None
-機能 数式表示セクションのセットアップ。数式表示ラベルの追加、数式の初期表示
+機能: 数式表示セクションのセットアップを行う。数式表示ラベルの追加、数式の初期表示。
 
 def _setup_parameter_section(self) -> None
-機能 パラメータ表示セクションのセットアップ。各パラメータのラベルと入力欄の追加、イベントバインド
+機能: パラメータ表示セクションのセットアップを行う。各パラメータのラベルと入力欄の追加、イベントバインド、初期値を設定ファイルから読み込む。
 
 def _setup_diverge_section(self) -> None
-機能 発散部セクションのセットアップ。各ウィジェットの追加と設定、イベントバインド
+機能: 発散部セクションのセットアップを行う。各ウィジェットの追加と設定、イベントバインド、初期値とリストを設定ファイルから読み込む。カラーバー表示用ラベルも追加。
 
 def _setup_non_diverge_section(self) -> None
-機能 非発散部セクションのセットアップ。各ウィジェットの追加と設定、イベントバインド
+機能: 非発散部セクションのセットアップを行う。各ウィジェットの追加と設定、イベントバインド、初期値とリストを設定ファイルから読み込む。カラーバー表示用ラベルも追加。
 
 def _setup_buttons(self) -> None
-機能 ボタンのセットアップ。描画ボタンと描画リセットボタンの追加、各ボタンのコールバック設定
+機能: ボタンのセットアップを行う。描画ボタンと描画リセットボタンの追加、各ボタンのコールバック設定。
 
-def _add_label(self, text, row, col, columnspan=1, padx=10, pady=2) -> None
-機能 ラベルを追加する
+def _add_label(self, text: str, row: int, col: int, columnspan: int = 1, sticky: str = tk.W, padx: tuple[int, int] = (5, 5), pady: tuple[int, int] = (2, 2)) -> None
+機能: ラベルを追加し、グリッドレイアウトに配置する。
 
-def _add_entry(self, row, col, var, padx=10, pady=2) -> ttk.Entry
-機能 入力欄を追加する
+def _add_entry(self, row: int, col: int, var: tk.StringVar, padx: tuple[int, int] = (10, 10), pady: tuple[int, int] = (2, 2)) -> ttk.Entry
+機能: エントリー（入力欄）を追加し、グリッドレイアウトに配置する。
 
-def _add_combobox(self, row, col, var, values, width=None, padx=10, pady=2) -> ttk.Combobox
-機能 コンボボックスを追加する
+def _add_combobox(self, row: int, col: int, var: tk.StringVar, values: list[str], width: int = 10, padx: tuple[int, int] = (10, 10), pady: tuple[int, int] = (2, 2)) -> ttk.Combobox
+機能: コンボボックス（選択リスト）を追加し、グリッドレイアウトに配置する。
 
-def _add_button(self, text, row, col, colspan, command) -> ttk.Button
-機能 ボタンを追加する
+def _add_button(self, text: str, row: int, col: int, colspan: int, command: Callable) -> ttk.Button
+機能: ボタンを追加し、グリッドレイアウトに配置する。
 
 def _common_callback(self, event=None) -> None
-機能 共通のコールバック関数。描画モードをクイックに設定、描画更新コールバックを呼び出し、カラーバーを更新
+機能: 共通コールバック関数。パラメータ変更時に描画モードをクイックに設定し、描画更新コールバックを呼び出す。カラーバーと数式表示も更新する。
 
 def _create_colorbar_image(self, cmap_name: str) -> ImageTk.PhotoImage
-機能 カラーバー画像を生成する
+機能: 指定されたカラーマップ名でカラーバー画像を生成する。
 
 def _update_colorbars(self, *args) -> None
-機能 カラーバーを更新する。発散部と非発散部のカラーバー画像を生成し、ラベルに設定する
+機能: 発散部と非発散部のカラーバーを更新する。
 
 def _show_formula_display(self) -> None
-機能 数式を表示する。選択されたフラクタルタイプに応じて数式を更新する
+機能: 選択されたフラクタルタイプに応じて数式表示を更新する。
 
-def _get_parameters(self) -> dict
-機能 パラメータを取得する。パネル上のウィジェットから現在のパラメータを取得し、辞書として返す
+def _get_parameters(self) -> dict[str, Any] | None
+機能: パネル上のウィジェットから現在のパラメータを取得し、辞書として返す。数値変換エラーが発生した場合は None を返す。最大反復回数が0以下の場合は補正を行う。
 
 ## CORE_EXECUTION_FLOW
-__init__ → _setup_panel → 各セクションのセットアップ → ボタンのセットアップ
-ユーザー操作（パラメータ変更、ボタンクリック） → 各コールバック関数 → 描画更新/リセット
+__init__ → _setup_panel (_setup_fractal_type_section, _setup_formula_section, _setup_parameter_section, _setup_diverge_section, _setup_non_diverge_section, _setup_buttons) → _update_colorbars (初期表示)
+ユーザー操作 (入力、コンボボックス選択、ボタンクリック) → _common_callback またはボタンの直接コールバック → _get_parameters → update_callback または reset_callback
+_common_callback → _update_colorbars, _show_formula_display
 
 ## KEY_LOGIC_PATTERNS
-- コールバック関数: パラメータ変更時に外部の描画処理を呼び出す
-- UI要素の整理: 各セクションごとにUI要素をグループ化
-- カラーバーの動的生成: 選択されたカラーマップに基づいてカラーバー画像を生成
-- パラメータの辞書化:  現在のパラメータを辞書形式で取得
+UI構築: Tkinterウィジェットの配置と設定 (gridレイアウト)
+コールバック: イベント駆動型のUI更新 (_common_callback, ボタンコールバック)
+パラメータ管理: パラメータの取得と検証 (_get_parameters)
+カラーバー表示: Matplotlibによるカラーバー生成とTkinterへの統合 (_create_colorbar_image, _update_colorbars)
+設定ファイル: config.jsonからの初期値読み込みとリスト取得
+描画モード管理: "quick" と "full" モードの切り替え
 
 ## CRITICAL_BEHAVIORS
-- パラメータ入力とUI:  各種パラメータの入力と選択UIの提供
-- コールバック:  パラメータ変更時の描画更新処理の実行
-- カラーバーの更新:  選択されたカラーマップに応じたカラーバーの表示
-- パラメータの取得:  現在のパラメータを辞書として取得し、外部に提供
+パラメータ入力: 各ウィジェットからのパラメータ取得と検証
+コールバック: パラメータ変更時の描画更新処理のトリガー
+エラーハンドリング: パラメータ変換エラー発生時の対応 (_get_parameters で None を返す)
+リソース管理: Matplotlibオブジェクト（カラーバー画像）の生成
+状態管理: render_mode による描画モードの追跡
 
 
 ==============================
