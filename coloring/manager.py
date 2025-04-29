@@ -157,10 +157,14 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger, c
             if algo_func:
                 try:
                     # アルゴリズムに応じて必要な引数を渡す
-                    if algo_name == 'スムージング': # Smoothing は特別扱い
-                        # smooth_method を params から取得するか、ここで決定する
-                        # ここでは params に含まれている想定（なければ 'standard'）
-                        smooth_method = params.get('smoothing_method', 'standard')
+                    if algo_name in ['スムージング', '高速スムージング', '指数スムージング']:
+                        smooth_method_map = {
+                            'スムージング': 'standard',
+                            '高速スムージング': 'fast',
+                            '指数スムージング': 'exponential'
+                        }
+                        smooth_type = smooth_method_map.get(algo_name, 'standard')
+                        smooth_method = params.get('smoothing_method', smooth_type)
                         logger.log(LogLevel.DEBUG, f"Smoothing method: {smooth_method}")
                         # Smoothing 関数は mask, iterations, z_vals, cmap, params, method, logger を受け取る想定
                         algo_func(colored, divergent_mask, iterations, z_vals, cmap_func, params, smooth_method, logger)
