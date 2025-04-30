@@ -46,6 +46,7 @@ class FractalCanvas:
         self.logger = logger
         self.parent = master
         self.config = config
+        self.facecolor = self.config.get("canvas_settings", {}).get("facecolor", "black")
 
         # FigureとAxesの初期化
         self._setup_figure(width, height)
@@ -67,20 +68,22 @@ class FractalCanvas:
             width: キャンバスの幅 (ピクセル)
             height: キャンバスの高さ (ピクセル)
         """
+        config_dpi = self.config.get("canvas_settings", {}).get("config_dpi", 100)
+
         # Figure の設定
         self.fig = Figure(
-            figsize=(width/100, height/100), # DPI=100のためのサイズ調整
-            dpi=100, # 1インチあたりのドット数
-            facecolor='black'
+            figsize=(width/config_dpi, height/config_dpi), # DPI=100のためのサイズ調整
+            dpi=config_dpi, # 1インチあたりのドット数
+            facecolor=self.facecolor
         )
 
         # Axes の設定
-        self.ax = self.fig.add_subplot(111, facecolor='black')
+        self.ax = self.fig.add_subplot(111, facecolor=self.facecolor)
         self.ax.axis('off')
 
         # Tkinter キャンバスの設定
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.parent)
-        self.canvas.get_tk_widget().configure(bg='black')
+        self.canvas.get_tk_widget().configure(bg=self.facecolor)
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
     def set_zoom_callback(self, zoom_confirm_callback: Callable, zoom_cancel_callback: Callable) -> None:
@@ -117,8 +120,8 @@ class FractalCanvas:
         - Figureの背景色を黒に設定
         - 変更を反映
         """
-        self.ax.set_facecolor('black')
-        self.fig.patch.set_facecolor('black')
+        self.ax.set_facecolor(self.facecolor)
+        self.fig.patch.set_facecolor(self.facecolor)
         self.canvas.draw()
 
     def zoom_confirmed(

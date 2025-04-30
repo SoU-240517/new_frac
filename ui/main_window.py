@@ -29,7 +29,7 @@ def load_config(logger: DebugLogger, config_path="config.json") -> dict:
     try:
         with open(config_path, 'r', encoding='utf-8') as f:
             config = json.load(f)
-            logger.log(LogLevel.SUCCESS, f"設定ファイル読み込み完了: {config_path}")
+            logger.log(LogLevel.DEBUG, f"設定ファイル読み込み完了: {config_path}")
             return config
     except json.JSONDecodeError as e:
         logger.log(LogLevel.ERROR, f"設定ファイルのJSON解析エラー: {e}")
@@ -202,7 +202,6 @@ class MainWindow:
             - ステータスバーにメッセージを表示
             - 別スレッドでフラクタル描画処理を開始
         """
-        self.logger.log(LogLevel.CALL, "ステータスバーテキスト設定要求")
         self.status_bar_manager.set_text("準備中...")
 
         self.logger.log(LogLevel.CALL, "非同期でフラクタル描画開始")

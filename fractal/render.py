@@ -92,8 +92,6 @@ def _create_fractal_grid(params: dict, super_resolution_x: int, super_resolution
     Z = X + 1j * Y
     # complex64 で計算することが多いので型を変換
     Z = Z.astype(np.complex64)
-    logger.log(LogLevel.DEBUG, f"グリッド生成: dtype={Z.dtype}, shape={Z.shape}")
-
 
     rotation_deg = params.get("rotation", 0.0)
     if rotation_deg != 0:
@@ -124,7 +122,7 @@ def _compute_fractal(Z: np.ndarray, params: dict, logger: DebugLogger) -> dict:
             - max_iterations: 最大反復回数
         logger (DebugLogger): デバッグログ出力用
     Returns:
-        dict: 計算結果 (iterations, mask, z_values など)
+        dict: 計算結果 (iterations, mask, z_vals など)
     """
     start_time = time.perf_counter()
     fractal_type = params.get("fractal_type", "Julia")
@@ -151,63 +149,6 @@ def _compute_fractal(Z: np.ndarray, params: dict, logger: DebugLogger) -> dict:
          # mandelbrot モジュールの関数を呼び出し
         results = mandelbrot.compute_mandelbrot(Z, z0_val, max_iter, logger)
         logger.log(LogLevel.SUCCESS, f"マンデルブロ集合計算完了 ({time.perf_counter() - start_time:.3f}秒)")
-
-    # apply_coloring_algorithm が必要とするキーを確認
-    required_keys = ['iterations', 'mask', 'z_vals']
-
-    # 'z_values' が存在し、'z_vals' が存在しない場合はリネームを試みる
-    if 'z_vals' not in results and 'z_values' in results:
-        logger.log(LogLevel.DEBUG, "キー 'z_values' を 'z_vals' にリネームします。")
-        results['z_vals'] = results.pop('z_values')
-
-    # 不足しているキーを特定
-    missing_keys = [key for key in required_keys if key not in results]
-
-    # 不足しているキーがあれば、可能であれば生成を試みる
-    if missing_keys:
-        # 'mask' が不足している場合
-        if 'mask' in missing_keys and 'iterations' in results:
-             logger.log(LogLevel.WARNING, "計算結果に 'mask' が含まれていません。'iterations' から生成します。")
-             results['mask'] = results['iterations'] < max_iter
-             missing_keys.remove('mask') # missing_keys リストから削除
-
-        # 'z_vals' がまだ不足している場合
-        if 'z_vals' in missing_keys:
-             logger.log(LogLevel.WARNING, "計算結果に 'z_vals' が含まれていません。最終値を計算して格納します。")
-             if fractal_type == "Julia":
-                 # julia モジュールに関数が存在するか確認が必要
-                 if hasattr(julia, 'compute_julia_final'):
-                     final_z = julia.compute_julia_final(Z, c_val, max_iter, logger)
-                     results['z_vals'] = final_z
-                     missing_keys.remove('z_vals')
-                 else:
-                      logger.log(LogLevel.ERROR, "julia.compute_julia_final 関数が見つかりません。'z_vals' を生成できません。")
-             else: # Mandelbrot
-                 # mandelbrot モジュールに関数が存在するか確認が必要
-                 if hasattr(mandelbrot, 'compute_mandelbrot_final'):
-                     final_z = mandelbrot.compute_mandelbrot_final(Z, z0_val, max_iter, logger)
-                     results['z_vals'] = final_z
-                     missing_keys.remove('z_vals')
-                 else:
-                     logger.log(LogLevel.ERROR, "mandelbrot.compute_mandelbrot_final 関数が見つかりません。'z_vals' を生成できません。")
-
-    # 最終的に不足しているキーがあればエラーを発生させる
-    final_missing_keys = [key for key in required_keys if key not in results]
-    if final_missing_keys:
-        error_message = f"フラクタル計算結果に必要なキーが不足しています: {', '.join(final_missing_keys)}"
-        logger.log(LogLevel.CRITICAL, error_message)
-        raise KeyError(error_message)
-
-    # 反復回数はメモリ節約のため uint16 に変換 (65535回まで)
-    # max_iter がこれを超える可能性がある場合は uint32 等を検討
-    if 'iterations' in results: # iterations が存在する場合のみ型変換
-        if max_iter < 65536:
-            results['iterations'] = results['iterations'].astype(np.uint16)
-        else:
-            results['iterations'] = results['iterations'].astype(np.uint32)
-        logger.log(LogLevel.DEBUG, f"計算結果 iterations dtype: {results['iterations'].dtype}")
-
-    logger.log(LogLevel.DEBUG, f"計算結果のキー: {list(results.keys())}")
 
     return results
 
@@ -298,7 +239,6 @@ def render_fractal(params: dict, logger: DebugLogger, config: Dict[str, Any]) ->
         resolution = int(resolution * quick_mode_resolution_factor)
         # 最小解像度を下回らないようにする (例: 100ピクセル)
         resolution = max(resolution, 100)
-        logger.log(LogLevel.INFO, f"簡易描画モード: 解像度を調整 -> {resolution}x{resolution}")
 
     # アンチエイリアシング設定 (設定ファイルから読み込む)
     ss_config = config.get("fractal_settings", {}).get("super_sampling", {})

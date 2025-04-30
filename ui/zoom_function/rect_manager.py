@@ -1,3 +1,4 @@
+from matplotlib import style
 import matplotlib.patches as patches
 import matplotlib.transforms as transforms
 import numpy as np
@@ -43,16 +44,16 @@ class RectManager:
         self._last_valid_size_px: Optional[Tuple[float, float]] = None
 
         # 設定ファイルから矩形関連の設定を読み込む
-        ui_settings = config.get("ui_settings", {})
+        self.ui_settings = config.get("ui_settings", {})
         # フォールバック用のデフォルト値を設定
         default_min_width = 5
         default_min_height = 5
         default_aspect_ratio = 16 / 9
 
         # インスタンス変数として設定値を保存
-        self.min_width_px = ui_settings.get("zoom_rect_min_width_px", default_min_width)
-        self.min_height_px = ui_settings.get("zoom_rect_min_height_px", default_min_height)
-        self.aspect_ratio_w_h = ui_settings.get("zoom_rect_aspect_ratio", default_aspect_ratio)
+        self.min_width_px = self.ui_settings.get("zoom_rect_min_width_px", default_min_width)
+        self.min_height_px = self.ui_settings.get("zoom_rect_min_height_px", default_min_height)
+        self.aspect_ratio_w_h = self.ui_settings.get("zoom_rect_aspect_ratio", default_aspect_ratio)
 
         # 読み込んだ値のバリデーション (例: 0以下でないか)
         if self.min_width_px <= 0:
@@ -65,7 +66,7 @@ class RectManager:
              self.logger.log(LogLevel.WARNING, f"設定ファイルの zoom_rect_aspect_ratio ({self.aspect_ratio_w_h}) が無効です。デフォルト値 ({default_aspect_ratio}) を使用します。")
              self.aspect_ratio_w_h = default_aspect_ratio
 
-        self.logger.log(LogLevel.INIT, f"RectManager 初期設定: min_w={self.min_width_px}px, min_h={self.min_height_px}px, aspect={self.aspect_ratio_w_h:.4f}")
+        self.logger.log(LogLevel.DEBUG, f"RectManager 初期設定: min_w={self.min_width_px}px, min_h={self.min_height_px}px, aspect={self.aspect_ratio_w_h:.4f}")
 
     def get_rect(self) -> Optional[patches.Rectangle]:
         """現在のズーム領域の矩形パッチを取得
@@ -170,8 +171,11 @@ class RectManager:
             self.logger.log(LogLevel.ERROR, "ズーム領域なし：エッジ変更不可")
             return
 
-        self.rect.set_edgecolor('gray')
-        self.rect.set_linestyle('--')
+        color = self.ui_settings.get("edit_edge_color", "gray")
+        style = self.ui_settings.get("edit_edge_linestyle", "--")
+
+        self.rect.set_edgecolor(color)
+        self.rect.set_linestyle(style)
 
     def edge_change_finishing(self) -> None:
         """ズーム領域のエッジを変更 (白、実線)"""
@@ -179,8 +183,11 @@ class RectManager:
             self.logger.log(LogLevel.ERROR, "ズーム領域なし：エッジ変更不可")
             return
 
-        self.rect.set_edgecolor('white')
-        self.rect.set_linestyle('-')
+        color = self.ui_settings.get("fix_edge_color", "white")
+        style = self.ui_settings.get("fix_edge_linestyle", "-")
+
+        self.rect.set_edgecolor(color)
+        self.rect.set_linestyle(style)
 
     def resize_rect_from_corners(self,
                                  fixed_x_rotated: float, fixed_y_rotated: float,
@@ -300,14 +307,17 @@ class RectManager:
             # self.delete_rect() # ここで削除しても良いかもしれない
             return False # 失敗を示す
 
+        color = self.ui_settings.get("fix_edge_color", "white")
+        style = self.ui_settings.get("fix_edge_linestyle", "-")
+
         # --- サイズが有効な場合、最終的な矩形プロパティを設定 ---
         self.rect.set_width(width)
         self.rect.set_height(height)
         self.rect.set_xy((x, y))
         self._angle = 0.0
         self.rect.set_transform(self.ax.transData)
-        self.rect.set_edgecolor('white')
-        self.rect.set_linestyle('-')
+        self.rect.set_edgecolor(color)
+        self.rect.set_linestyle(style)
         self.rect.set_visible(True)
         self._last_valid_size_px = (px_width, px_height) # 最終有効サイズ
         self.logger.log(LogLevel.SUCCESS, "ズーム領域作成完了", {"x": x, "y": y, "w": width, "h": height, "px_w": px_width, "px_h": px_height})
@@ -397,6 +407,9 @@ class RectManager:
             self.logger.log(LogLevel.WARNING, "Undo/Redo 不可：状態データなし、削除された状態へ復元")
             self.delete_rect()
             return
+
+        color = self.ui_settings.get("fix_edge_color", "white")
+        style = self.ui_settings.get("fix_edge_linestyle", "-")
 
         x = state.get("x")
         y = state.get("y")

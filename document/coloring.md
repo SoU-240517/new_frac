@@ -155,7 +155,7 @@ DEFAULT_NON_DIVERGENT_ALGO_NAME (str): デフォルトの非発散部アルゴ�
 def _get_algorithm_function(algorithm_name: str, algorithm_type: str, logger: DebugLogger) -> Callable
 機能: 指定されたアルゴリズム名に対応する関数をALGORITHM_MAPSから取得する。見つからない場合はデフォルトアルゴリズムを試みる。
 
-def colorize(iterations: np.ndarray, z_values: np.ndarray, mask: np.ndarray, params: Dict[str, Any], color_params: Dict[str, Any], cache: ColorCache, config: Dict[str, Any], logger: DebugLogger) -> np.ndarray
+def colorize(iterations: np.ndarray, z_vals: np.ndarray, mask: np.ndarray, params: Dict[str, Any], color_params: Dict[str, Any], cache: ColorCache, config: Dict[str, Any], logger: DebugLogger) -> np.ndarray
 機能: フラクタル計算結果を着色するメイン関数。キャッシュを確認し、存在すればキャッシュデータを使用。存在しない場合は、発散部と非発散部それぞれに対して指定されたアルゴリズムとカラーマップを適用して着色し、結果をキャッシュに保存して返す。エラー発生時はエラー画像を生成する。設定データとColorCacheインスタンスを受け取る。
 
 ## CORE_EXECUTION_FLOW

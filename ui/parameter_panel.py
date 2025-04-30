@@ -65,7 +65,7 @@ class ParameterPanel:
         ui_settings = self.config.get("ui_settings", {})
         self.COLORBAR_WIDTH = ui_settings.get("colorbar_width", 150)
         self.COLORBAR_HEIGHT = ui_settings.get("colorbar_height", 15)
-        self.logger.log(LogLevel.SUCCESS, f"カラーバーサイズ設定完了: {self.COLORBAR_WIDTH}x{self.COLORBAR_HEIGHT}")
+        self.logger.log(LogLevel.DEBUG, f"カラーバーサイズ設定完了: {self.COLORBAR_WIDTH}x{self.COLORBAR_HEIGHT}")
 
         self._setup_panel()
         self._update_colorbars() # 初期カラーバー表示
@@ -114,8 +114,13 @@ class ParameterPanel:
         - 数式の初期表示
         """
         row = self._fractal_type_row + 1
+
+        # 設定ファイルからフォント名とサイズを取得
+        Panel_font = self.config.get("fractal_settings", {}).get("parameter_panel", {}).get("panel_font", "Courier")
+        panel_font_size = self.config.get("fractal_settings", {}).get("parameter_panel", {}).get("panel_font_size", 10)
+
         self.formula_var = tk.StringVar()
-        self.formula_label = ttk.Label(self.parent, textvariable=self.formula_var, font=("Courier", 10))
+        self.formula_label = ttk.Label(self.parent, textvariable=self.formula_var, font=(Panel_font, panel_font_size))
         self.formula_label.grid(row=row, column=0, columnspan=2, sticky=tk.W, padx=10, pady=2)
         self._show_formula_display() # 初期表示
         self._formula_row = row
@@ -266,7 +271,6 @@ class ParameterPanel:
         default_non_diverge_cmap = param_defaults.get("non_diverge_colormap", "magma")
         self.non_diverge_colormap_var = tk.StringVar(value=default_non_diverge_cmap)
         # カラーマップリストは発散部と共通なので再利用
-        # self.colormaps = coloring_options.get("available_colormaps", []) # 再取得は不要
         combo = self._add_combobox(row, 1, self.non_diverge_colormap_var, self.colormaps, width=18)
         combo.bind("<<ComboboxSelected>>", self._common_callback)
 
@@ -400,7 +404,7 @@ class ParameterPanel:
             rgba_image = np.uint8(np.tile(colors, (self.COLORBAR_HEIGHT, 1, 1)) * 255)
             pil_image = Image.fromarray(rgba_image, 'RGBA')
             photo_image = ImageTk.PhotoImage(pil_image)
-            # self.logger.log(LogLevel.SUCCESS, f"カラーバー生成完了: {cmap_name}") # ログが多いのでコメントアウトも検討
+            self.logger.log(LogLevel.DEBUG, f"カラーバー生成完了: {cmap_name}")
             return photo_image
         except ValueError:
             self.logger.log(LogLevel.WARNING, f"無効なカラーマップ名: {cmap_name}：ダミー画像を表示する")
@@ -423,19 +427,19 @@ class ParameterPanel:
         """カラーバーを更新する
         - 発散部と非発散部のカラーバー画像を生成し、ラベルに設定する
         """
+        # 発散部のカラーバー画像を生成
         diverge_cmap_name = self.diverge_colormap_var.get()
-        # self.logger.log(LogLevel.CALL, f"カラーバー更新開始: 発散部={diverge_cmap_name}") # ログが多いのでコメントアウトも検討
         diverge_photo = self._create_colorbar_image(diverge_cmap_name)
         self.diverge_colorbar_label.config(image=diverge_photo)
         # self.diverge_colorbar_label.image に参照を保持しないとガベージコレクションされる
         self.diverge_colorbar_label.image = diverge_photo
 
+        # 非発散部のカラーバー画像を生成
         non_diverge_cmap_name = self.non_diverge_colormap_var.get()
-        # self.logger.log(LogLevel.CALL, f"カラーバー更新開始: 非発散部={non_diverge_cmap_name}") # ログが多いのでコメントアウトも検討
         non_diverge_photo = self._create_colorbar_image(non_diverge_cmap_name)
         self.non_diverge_colorbar_label.config(image=non_diverge_photo)
+        # self.diverge_colorbar_label.image に参照を保持しないとガベージコレクションされる
         self.non_diverge_colorbar_label.image = non_diverge_photo
-        # self.logger.log(LogLevel.SUCCESS, "カラーバー更新完了")
 
     def _show_formula_display(self) -> None:
         """数式を表示する
@@ -483,10 +487,6 @@ class ParameterPanel:
             if panel_params["max_iterations"] <= 0:
                 self.logger.log(LogLevel.WARNING, f"最大反復回数({panel_params['max_iterations']})は正の整数が必要なので、100に補正")
                 panel_params["max_iterations"] = 100 # 強制的にデフォルト値に
-
-            # アルゴリズムやカラーマップがリストに含まれているかチェック (任意)
-            # if panel_params["diverge_algorithm"] not in self.diverge_algorithms: ...
-            # if panel_params["diverge_colormap"] not in self.colormaps: ...
 
             self.logger.log(LogLevel.SUCCESS, "パラメータ取得成功", context=panel_params)
             return panel_params

@@ -1,5 +1,44 @@
 {
-    "ui_settings": {
+  "fractal_settings": {
+    "initial_zoom": {
+      "center_x": 0.0,
+      "center_y": 0.0,
+      "width": 4.0,
+      "height_ratio": 0.5625,
+      "rotation": 0.0
+    },
+    "available_fractal_types": [
+      "Julia",
+      "Mandelbrot"
+    ],
+    "parameter_panel": {
+      "panel_font": "Courier",
+      "panel_font_size": 10,
+      "fractal_type": "Julia",
+      "max_iterations": 200,
+      "z_real": 0.0,
+      "z_imag": 0.0,
+      "c_real": -0.8,
+      "c_imag": 0.156,
+      "diverge_algorithm": "スムージング",
+      "non_diverge_algorithm": "単色",
+      "diverge_colormap": "viridis",
+      "non_diverge_colormap": "magma"
+    },
+    "dynamic_resolution": {
+      "base": 600,
+      "min": 300,
+      "max": 1200,
+      "log_factor": 5.0
+    },
+    "super_sampling": {
+      "zoom_threshold": 0.8,
+      "low_samples": 2,
+      "high_samples": 4
+    },
+    "reset_max_iterations": 200
+  },
+  "ui_settings": {
       "app_title": "フラクタル描画アプリケーション",
       "window_width": 1280,
       "window_height": 800,
@@ -13,53 +52,35 @@
       "zoom_rect_aspect_ratio": 1.7777777777777777,
       "rotation_threshold": 2.0,
       "rotation_sensitivity": 1.0,
-      "rotation_throttle_interval": 0.016666
+      "rotation_throttle_interval": 0.016666,
+      "edit_edge_color": "gray",
+      "edit_edge_linestyle": "--",
+      "fix_edge_color": "white",
+      "fix_edge_linestyle": "-"
     },
-    "fractal_settings": {
-      "initial_zoom": {
-        "center_x": 0.0,
-        "center_y": 0.0,
-        "width": 4.0,
-        "height_ratio": 0.5625,
-        "rotation": 0.0
-      },
-      "available_fractal_types": [
-        "Julia",
-        "Mandelbrot"
-      ],
-      "parameter_panel": {
-        "fractal_type": "Julia",
-        "max_iterations": 200,
-        "z_real": 0.0,
-        "z_imag": 0.0,
-        "c_real": -0.8,
-        "c_imag": 0.156,
-        "diverge_algorithm": "スムージング",
-        "non_diverge_algorithm": "単色",
-        "diverge_colormap": "viridis",
-        "non_diverge_colormap": "magma"
-      },
-      "dynamic_resolution": {
-        "base": 600,
-        "min": 300,
-        "max": 1200,
-        "log_factor": 5.0
-      },
-      "super_sampling": {
-        "zoom_threshold": 0.8,
-        "low_samples": 2,
-        "high_samples": 4
-      },
-      "reset_max_iterations": 200
+    "canvas_settings": {
+    "canvas_background_color": "black",
+    "config_dpi": 100
     },
     "coloring_settings": {
       "cache_max_size": 150
     },
-    "logging": {
-    "debug_enabled": true,
-    "min_level": "DEBUG"
-    },
     "coloring_options": {
+      "available_colormaps": [
+        "viridis", "plasma", "inferno", "magma", "cividis",
+        "twilight", "twilight_shifted", "turbo",
+        "Blues", "BrBG", "BuGn", "BuPu", "CMRmap", "GnBu",
+        "Greens", "Greys", "OrRd", "Oranges", "PRGn", "PiYG",
+        "PuBu", "PuBuGn", "PuOr", "PuRd", "Purples", "RdBu",
+        "RdGy", "RdPu", "RdYlBu", "RdYlGn", "Reds", "Spectral",
+        "Wistia", "YlGn", "YlGnBu", "YlOrBr", "YlOrRd", "afmhot",
+        "autumn", "binary", "bone", "brg", "bwr", "cool", "coolwarm",
+        "copper", "cubehelix", "flag", "gist_earth", "gist_gray",
+        "gist_heat", "gist_ncar", "gist_rainbow", "gist_stern",
+        "gist_yarg", "gnuplot", "gnuplot2", "gray", "hot", "hsv",
+        "jet", "nipy_spectral", "ocean", "pink", "prism", "rainbow",
+        "seismic", "spring", "summer", "terrain", "winter"
+      ],
       "available_diverge_algorithms": [
         "スムージング",
         "高速スムージング",
@@ -89,5 +110,9 @@
         "パラメータ(C)",
         "パラメータ(Z)"
       ]
+    },
+    "logging": {
+      "debug_enabled": true,
+      "min_level": "DEBUG"
     }
   }

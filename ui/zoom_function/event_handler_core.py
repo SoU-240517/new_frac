@@ -116,7 +116,7 @@ class EventHandler:
              self.rotation_throttle_interval = default_rotation_throttle_interval
         # threshold は負の値も許容するかもしれないので、バリデーションは緩め
 
-        self.logger.log(LogLevel.INIT, f"回転設定: threshold={self.rotation_threshold}, sensitivity={self.rotation_sensitivity}, interval={self.rotation_throttle_interval:.5f}")
+        self.logger.log(LogLevel.DEBUG, f"回転設定: threshold={self.rotation_threshold}, sensitivity={self.rotation_sensitivity}, interval={self.rotation_throttle_interval:.5f}")
         # --- 設定ファイル読み込みここまで ---
 
         # --- 内部状態 ---
@@ -172,7 +172,7 @@ class EventHandler:
             self._cid_release = self.canvas.mpl_connect('button_release_event', self.on_release)
             self._cid_key_press = self.canvas.mpl_connect('key_press_event', self.on_key_press)
             self._cid_key_release = self.canvas.mpl_connect('key_release_event', self.on_key_release)
-            self.logger.log(LogLevel.INIT, "イベントハンドラ接続完了") # ログ追加
+            self.logger.log(LogLevel.SUCCESS, "イベントハンドラ接続完了")
 
     # --- イベント処理メソッド (ディスパッチャ) ---
     def on_press(self, event: MouseEvent) -> None:
