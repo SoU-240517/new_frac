@@ -2,6 +2,7 @@
 
 Directory structure:
 └── sou-240517-new_frac/
+    ├── config.json
     ├── main.py
     ├── coloring/
     │   ├── __init__.py
