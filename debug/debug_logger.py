@@ -5,7 +5,7 @@ from typing import Optional, Dict, Any, Tuple
 from rich import print as rprint
 from rich.markup import escape
 from enum import Enum
-from .enums import LogLevel
+from .enum_debug import LogLevel
 
 class DebugLogger:
     """デバッグ用のログ出力を管理するクラス

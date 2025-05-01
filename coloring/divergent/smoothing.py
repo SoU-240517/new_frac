@@ -1,8 +1,8 @@
 import numpy as np
 from typing import Dict
 from matplotlib.colors import Colormap
-from ui.zoom_function.debug_logger import DebugLogger
-from ui.zoom_function.enums import LogLevel
+from debug.debug_logger import DebugLogger
+from debug.enum_debug import LogLevel
 from ..utils import _smooth_iterations, _normalize_and_color, fast_smoothing, ColorAlgorithmError
 
 def apply_smoothing(

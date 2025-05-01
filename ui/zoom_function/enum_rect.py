@@ -8,14 +8,3 @@ class ZoomState(Enum):
     ON_MOVE = auto() # 矩形を移動中
     RESIZING = auto() # 矩形をリサイズ中
     ROTATING = auto() # 矩形を回転中
-
-class LogLevel(Enum):
-    """ ログレベル """
-    DEBUG = auto()
-    INIT = auto() # 初期化処理
-    CALL = auto() # メソッド呼出し元
-    SUCCESS = auto()
-    INFO = auto()
-    WARNING = auto()
-    ERROR = auto()
-    CRITICAL = auto()

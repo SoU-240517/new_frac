@@ -2,9 +2,9 @@ import numpy as np
 import tkinter as tk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
-from .zoom_function.debug_logger import DebugLogger
-from .zoom_function.enums import LogLevel
-from typing import Callable, Optional, Dict, Tuple
+from typing import Callable, Dict
+from debug.debug_logger import DebugLogger
+from debug.enum_debug import LogLevel
 
 class FractalCanvas:
     """FractalCanvas クラス

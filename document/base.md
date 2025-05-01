@@ -435,3 +435,70 @@ def reset(self) -> None
 アニメーションの正確な時間管理
 スレッドの安全な開始と停止
 状態の適切なリセット
+
+
+==============================
+# MODULE_INFO:
+render.py
+
+## MODULE_PURPOSE
+フラクタル画像生成エンジン。ズームレベルに応じた動的解像度計算、複素グリッド生成、フラクタル計算の実行（Julia集合、Mandelbrot集合）、スーパーサンプリングによる着色処理、ダウンサンプリングを行うモジュール。
+
+## CLASS_DEFINITION:
+(クラス定義なし)
+
+## DEPENDENCIES
+numpy (np): 数値計算
+time: 時間計測
+coloring.manager: 着色処理管理
+fractal.fractal_types.julia: ジュリア集合計算関数
+fractal.fractal_types.mandelbrot: マンデルブロ集合計算関数
+ui.zoom_function.debug_logger.DebugLogger: デバッグログ管理
+ui.zoom_function.enums.LogLevel: ログレベル定義
+typing: 型ヒント (Dict, Any, Tuple, np.ndarray)
+
+## CLASS_ATTRIBUTES
+(クラス属性なし)
+
+## METHOD_SIGNATURES
+def _calculate_dynamic_resolution(width: float, config: Dict[str, Any], logger: DebugLogger) -> int
+機能: ズームレベルに応じて描画解像度を動的に計算。設定ファイルからパラメータを読み込む。
+
+def _create_fractal_grid(params: Dict[str, Any], super_resolution_x: int, super_resolution_y: int, logger: DebugLogger) -> np.ndarray
+機能: フラクタル計算用の複素グリッドを作成。描画範囲パラメータ、指定された幅、高さに基づいて複素グリッド (np.ndarray) を作成する。回転も考慮する。
+
+def _compute_fractal(Z: np.ndarray, params: Dict[str, Any], logger: DebugLogger) -> Dict[str, np.ndarray]
+機能: フラクタル計算を実行。入力の複素グリッドとパラメータに基づいて、選択されたフラクタルタイプ（JuliaまたはMandelbrot）の計算を実行し、結果を返す。
+
+def _downsample_image(
+    high_res_image: np.ndarray,
+    target_resolution_x: int,
+    target_resolution_y: int,
+    samples_per_pixel_x: int,
+    samples_per_pixel_y: int,
+    logger: DebugLogger
+) -> np.ndarray
+機能: 高解像度の画像データをダウンサンプリングしてアンチエイリアシングを行う。指定されたサンプル数でダウンサンプリングし、エラーハンドリングも含む。
+
+def render_fractal(params: Dict[str, Any], logger: DebugLogger, config: Dict[str, Any]) -> np.ndarray
+機能: フラクタル画像を生成するメイン関数。動的解像度計算、複素グリッド生成、フラクタル計算、着色、ダウンサンプリングを実行し、最終的な画像データを返す。設定データを受け取る。
+
+## CORE_EXECUTION_FLOW
+render_fractal (paramsとconfig受け取り) → _calculate_dynamic_resolution (config渡す) → _create_fractal_grid → _compute_fractal → manager.apply_coloring_algorithm (着色) → _downsample_image (必要であれば) → 最終画像データ
+
+## KEY_LOGIC_PATTERNS
+- 動的解像度制御: ズームレベルと設定に基づいた解像度調整 (_calculate_dynamic_resolution)
+- 複素グリッド生成: 描画範囲パラメータと回転を考慮したグリッド作成 (_create_fractal_grid)
+- フラクタル計算実行: 選択されたフラクタルタイプに応じた計算関数の呼び出し (_compute_fractal)
+- 着色処理: coloring.manager モジュールへの委譲
+- スーパーサンプリングとダウンサンプリング: _downsample_image による画像の平滑化
+- 設定ファイルからの読み込み: _calculate_dynamic_resolution で設定を読み込む
+- エラーハンドリング: 着色処理中のエラーを捕捉し、エラー画像を返す
+
+## CRITICAL_BEHAVIORS
+- 動的解像度計算の正確性
+- 複素グリッド生成における描画範囲と回転の正確なマッピング
+- フラクタル計算関数への正確なパラメータ引き渡し
+- 着色処理とダウンサンプリングの正確性
+- エラー発生時の適切なフォールバック処理（エラー画像の生成）
+- 設定パラメータの読み込みと適用

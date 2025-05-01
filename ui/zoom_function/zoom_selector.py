@@ -1,13 +1,13 @@
-import matplotlib.transforms as transforms
 import matplotlib.patches as patches
 import numpy as np
 from matplotlib.axes import Axes
-from typing import Callable, Optional, Tuple, Dict, Any
+from typing import Callable, Optional, Dict, Any
 from .cursor_manager import CursorManager
-from .debug_logger import DebugLogger
-from .enums import ZoomState, LogLevel
+from debug.debug_logger import DebugLogger
+from debug.enum_debug import LogLevel
+from .enum_rect import ZoomState
 from .event_handler_core import EventHandler
-from .event_validator import EventValidator, ValidationResult
+from validator.event_validator import EventValidator
 from .rect_manager import RectManager
 from .zoom_state_handler import ZoomStateHandler
 

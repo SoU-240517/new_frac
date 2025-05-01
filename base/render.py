@@ -1,9 +1,10 @@
 import numpy as np
 import time
 from coloring import manager
-from fractal.fractal_types import julia, mandelbrot
-from ui.zoom_function.debug_logger import DebugLogger
-from ui.zoom_function.enums import LogLevel
+from plugins.fractal_types.julia import julia
+from plugins.fractal_types.mandelbrot import mandelbrot
+from debug.debug_logger import DebugLogger
+from debug.enum_debug import LogLevel
 from typing import Dict, Any # 型ヒント用
 
 """フラクタル画像生成エンジン

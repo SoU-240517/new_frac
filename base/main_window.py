@@ -1,15 +1,15 @@
-import tkinter as tk
-import numpy as np
-import threading
 import json
+import numpy as np
 import os
+import threading
+import tkinter as tk
 from tkinter import ttk
-from ui.canvas import FractalCanvas
-from ui.parameter_panel import ParameterPanel
-from fractal.render import render_fractal
+from base.render import render_fractal
+from .canvas import FractalCanvas
+from .parameter_panel import ParameterPanel
 from .status_bar import StatusBarManager
-from .zoom_function.debug_logger import DebugLogger
-from .zoom_function.enums import LogLevel
+from debug.debug_logger import DebugLogger
+from debug.enum_debug import LogLevel
 
 def load_config(logger: DebugLogger, config_path="config.json") -> dict:
     """設定ファイル (JSON) を読み込む

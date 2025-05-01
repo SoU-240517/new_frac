@@ -2,8 +2,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import time
 from typing import Dict, Callable, Any
-from ui.zoom_function.debug_logger import DebugLogger
-from ui.zoom_function.enums import LogLevel
+from debug.debug_logger import DebugLogger
+from debug.enum_debug import LogLevel
 from .utils import ColorAlgorithmError
 from . import gradient # gradient モジュール (グラデーション計算用)
 from .cache import ColorCache # キャッシュ管理クラス
@@ -41,24 +41,24 @@ def _load_algorithms_from_config(config: Dict) -> tuple[Dict[str, Callable], Dic
     """
     divergent_algos = {}
     non_divergent_algos = {}
-    
+
     # fractal_settings の下に coloring_algorithms があることを確認
     fractal_settings = config.get('fractal_settings', {})
     if 'coloring_algorithms' not in fractal_settings:
         raise ColorAlgorithmError("'coloring_algorithms' section not found in fractal_settings")
-    
+
     algorithms = fractal_settings['coloring_algorithms']
-    
+
     for algo_name, func_path in algorithms['divergent'].items():
         module_name, func_name = func_path.rsplit('.', 1)
         module = globals()[module_name]
         divergent_algos[algo_name] = getattr(module, func_name)
-        
+
     for algo_name, func_path in algorithms['non_divergent'].items():
         module_name, func_name = func_path.rsplit('.', 1)
         module = globals()[module_name]
         non_divergent_algos[algo_name] = getattr(module, func_name)
-        
+
     return divergent_algos, non_divergent_algos
 
 
@@ -87,19 +87,19 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger, c
     # --- 2. アルゴリズムの動的読み込み ---
     try:
         divergent_algos, non_divergent_algos = _load_algorithms_from_config(config)
-        
+
         # 使用するアルゴリズムの取得
         divergent_algo_name = params.get('diverge_algorithm', DEFAULT_DIVERGENT_ALGO_NAME)
         non_divergent_algo_name = params.get('non_diverge_algorithm', DEFAULT_NON_DIVERGENT_ALGO_NAME)
-        
+
         divergent_algo = divergent_algos.get(divergent_algo_name)
         non_divergent_algo = non_divergent_algos.get(non_divergent_algo_name)
-        
+
         if divergent_algo is None:
             raise ColorAlgorithmError(f"Invalid divergent algorithm: {divergent_algo_name}")
         if non_divergent_algo is None:
             raise ColorAlgorithmError(f"Invalid non-divergent algorithm: {non_divergent_algo_name}")
-            
+
     except Exception as e:
         logger.log(LogLevel.ERROR, f"Failed to load algorithms: {str(e)}")
         raise ColorAlgorithmError(f"Failed to load algorithms: {str(e)}")

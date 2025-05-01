@@ -1,6 +1,7 @@
 from typing import Optional, Dict, Any, Protocol
-from .debug_logger import DebugLogger
-from .enums import ZoomState, LogLevel
+from .enum_rect import ZoomState
+from debug.debug_logger import DebugLogger
+from debug.enum_debug import LogLevel
 
 class CanvasProtocol(Protocol):
     """Canvasのインターフェースを定義

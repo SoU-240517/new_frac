@@ -1,7 +1,7 @@
 import tkinter as tk
-from ui.main_window import MainWindow
-from ui.zoom_function.debug_logger import DebugLogger
-from ui.zoom_function.enums import LogLevel
+from base.main_window import MainWindow
+from debug.debug_logger import DebugLogger
+from debug.enum_debug import LogLevel
 
 if __name__ == "__main__":
     logger = DebugLogger() # DebugLogger クラスのインスタンスを作成

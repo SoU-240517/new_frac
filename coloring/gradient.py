@@ -1,6 +1,6 @@
 import numpy as np
-from ui.zoom_function.debug_logger import DebugLogger
-from ui.zoom_function.enums import LogLevel
+from debug.debug_logger import DebugLogger
+from debug.enum_debug import LogLevel
 
 """グラデーション生成モジュール
 このモジュールは画像処理用のグラデーションパターンを生成する

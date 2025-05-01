@@ -3,8 +3,8 @@ from tkinter import ttk
 import threading
 import time
 from typing import Optional
-from .zoom_function.debug_logger import DebugLogger
-from .zoom_function.enums import LogLevel
+from debug.debug_logger import DebugLogger
+from debug.enum_debug import LogLevel
 
 class StatusBarManager:
     """ステータスバーの表示とアニメーションを管理するクラス

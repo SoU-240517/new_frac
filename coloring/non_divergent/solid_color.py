@@ -1,7 +1,7 @@
 import numpy as np
 from typing import Dict
-from ui.zoom_function.debug_logger import DebugLogger
-from ui.zoom_function.enums import LogLevel
+from debug.debug_logger import DebugLogger
+from debug.enum_debug import LogLevel
 
 def apply_solid_color(
     colored: np.ndarray,

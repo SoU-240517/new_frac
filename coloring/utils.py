@@ -1,8 +1,8 @@
 import numpy as np
 from matplotlib.colors import Normalize, Colormap
 from typing import Optional
-from ui.zoom_function.debug_logger import DebugLogger
-from ui.zoom_function.enums import LogLevel
+from debug.debug_logger import DebugLogger
+from debug.enum_debug import LogLevel
 
 """着色処理のための共通ユーティリティ関数"""
 

@@ -1,13 +1,14 @@
 from matplotlib.backend_bases import MouseEvent, MouseButton, KeyEvent
 from typing import Optional, TYPE_CHECKING, Tuple, List, Dict, Any
-from .enums import LogLevel, ZoomState
+from debug.enum_debug import LogLevel
+from .enum_rect import ZoomState
 from .event_handlers_private import EventHandlersPrivate
 from .event_handlers_utils import EventHandlersUtils
 
 # 型ヒント用インポート (循環参照回避)
 if TYPE_CHECKING:
     from .cursor_manager import CursorManager
-    from .debug_logger import DebugLogger
+    from ...debug.debug_logger import DebugLogger
     from .event_validator import EventValidator
     from .rect_manager import RectManager
     from .zoom_selector import ZoomSelector

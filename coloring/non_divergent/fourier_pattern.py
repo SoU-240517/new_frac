@@ -1,8 +1,8 @@
 import numpy as np
 from typing import Dict, Tuple
 from matplotlib.colors import Colormap
-from ui.zoom_function.debug_logger import DebugLogger
-from ui.zoom_function.enums import LogLevel
+from debug.debug_logger import DebugLogger
+from debug.enum_debug import LogLevel
 
 def apply_fourier_pattern(
     colored: np.ndarray,

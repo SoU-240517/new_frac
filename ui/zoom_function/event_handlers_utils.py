@@ -1,6 +1,7 @@
 import math # 角度計算で使用
 from typing import Optional, TYPE_CHECKING, Dict, Any
-from .enums import LogLevel, ZoomState
+from debug.enum_debug import LogLevel
+from .enum_rect import ZoomState
 
 if TYPE_CHECKING:
     from .event_handler_core import EventHandler
