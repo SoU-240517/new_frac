@@ -3,7 +3,7 @@ from typing import Dict
 from matplotlib.colors import Colormap
 from debug.debug_logger import DebugLogger
 from debug.enum_debug import LogLevel
-from coloring.utils import _normalize_and_color
+from ..utils import _normalize_and_color
 
 def apply_orbit_trap(
     colored: np.ndarray,

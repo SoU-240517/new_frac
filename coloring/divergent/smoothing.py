@@ -3,7 +3,7 @@ from typing import Dict
 from matplotlib.colors import Colormap
 from debug.debug_logger import DebugLogger
 from debug.enum_debug import LogLevel
-from coloring.utils import _smooth_iterations, _normalize_and_color, fast_smoothing, ColorAlgorithmError
+from ..utils import _smooth_iterations, _normalize_and_color, fast_smoothing, ColorAlgorithmError
 
 def apply_smoothing(
     colored: np.ndarray,

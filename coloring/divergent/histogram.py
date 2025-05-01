@@ -4,6 +4,7 @@ from matplotlib.colors import Colormap
 from debug.debug_logger import DebugLogger
 from debug.enum_debug import LogLevel
 
+
 def apply_histogram_flattening(
     colored: np.ndarray,
     divergent_mask: np.ndarray,

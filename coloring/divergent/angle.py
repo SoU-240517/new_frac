@@ -3,7 +3,7 @@ from typing import Dict, Tuple
 from matplotlib.colors import Colormap
 from debug.debug_logger import DebugLogger
 from debug.enum_debug import LogLevel
-from coloring.utils import _normalize_and_color
+from ..utils import _normalize_and_color
 
 def apply_angle_coloring(
     colored: np.ndarray,
