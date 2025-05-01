@@ -3,7 +3,7 @@ from typing import Dict
 from matplotlib.colors import Colormap, Normalize
 from debug.debug_logger import DebugLogger
 from debug.enum_debug import LogLevel
-from ..utils import _normalize_and_color
+from coloring.utils import _normalize_and_color
 
 def apply_logarithmic_mapping(
     colored: np.ndarray,
