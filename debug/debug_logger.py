@@ -1,9 +1,9 @@
 import inspect
 import os
 import time
-from typing import Optional, Dict, Any, Tuple
 from rich import print as rprint
 from rich.markup import escape
+from typing import Optional, Dict, Any, Tuple
 from enum import Enum
 from .enum_debug import LogLevel
 

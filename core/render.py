@@ -1,11 +1,10 @@
 import numpy as np
 import time
 from coloring import manager
+from typing import Dict, Any # 型ヒント用
 from plugins.fractal_types.julia import julia
 from plugins.fractal_types.mandelbrot import mandelbrot
-from debug.debug_logger import DebugLogger
-from debug.enum_debug import LogLevel
-from typing import Dict, Any # 型ヒント用
+from debug import DebugLogger, LogLevel
 
 """フラクタル画像生成エンジン
 このモジュールはフラクタル画像の生成を担当する

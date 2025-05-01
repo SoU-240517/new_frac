@@ -1,10 +1,9 @@
-import tkinter as tk
-from tkinter import ttk
 import threading
 import time
+import tkinter as tk
+from tkinter import ttk
 from typing import Optional
-from debug.debug_logger import DebugLogger
-from debug.enum_debug import LogLevel
+from debug import DebugLogger, LogLevel
 
 class StatusBarManager:
     """ステータスバーの表示とアニメーションを管理するクラス

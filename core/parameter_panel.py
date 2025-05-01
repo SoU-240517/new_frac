@@ -4,8 +4,7 @@ import tkinter as tk
 from PIL import Image, ImageTk
 from tkinter import ttk
 from typing import Dict, Any # 型ヒント用
-from debug.debug_logger import DebugLogger
-from debug.enum_debug import LogLevel
+from debug import DebugLogger, LogLevel
 
 class ParameterPanel:
     """ParameterPanel クラス

@@ -2,8 +2,7 @@ from dataclasses import dataclass
 from matplotlib.axes import Axes
 from matplotlib.backend_bases import MouseEvent, KeyEvent
 from typing import Optional
-from debug.debug_logger import DebugLogger
-from debug.enum_debug import LogLevel
+from debug import DebugLogger, LogLevel
 
 @dataclass
 class ValidationResult:

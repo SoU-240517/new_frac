@@ -1,7 +1,6 @@
 import tkinter as tk
-from base.main_window import MainWindow
-from debug.debug_logger import DebugLogger
-from debug.enum_debug import LogLevel
+from core.main_window import MainWindow
+from debug import DebugLogger, LogLevel
 
 if __name__ == "__main__":
     logger = DebugLogger() # DebugLogger クラスのインスタンスを作成

@@ -1,7 +1,6 @@
 import numpy as np
 from typing import Dict, Optional, Any
-from debug.debug_logger import DebugLogger
-from debug.enum_debug import LogLevel
+from debug import DebugLogger, LogLevel
 
 class ColorCache:
     """フラクタル画像のキャッシュ管理クラス

@@ -1,8 +1,7 @@
 import numpy as np
 from matplotlib.colors import Normalize, Colormap
 from typing import Optional
-from debug.debug_logger import DebugLogger
-from debug.enum_debug import LogLevel
+from debug import DebugLogger, LogLevel
 
 """着色処理のための共通ユーティリティ関数"""
 

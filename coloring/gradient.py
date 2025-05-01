@@ -1,6 +1,5 @@
 import numpy as np
-from debug.debug_logger import DebugLogger
-from debug.enum_debug import LogLevel
+from debug import DebugLogger, LogLevel
 
 """グラデーション生成モジュール
 このモジュールは画像処理用のグラデーションパターンを生成する
