@@ -16,34 +16,41 @@ fractal.fractal_types.julia: ジュリア集合計算関数
 fractal.fractal_types.mandelbrot: マンデルブロ集合計算関数
 ui.zoom_function.debug_logger.DebugLogger: デバッグログ管理
 ui.zoom_function.enums.LogLevel: ログレベル定義
-typing: 型ヒント (Dict, Any, Tuple)
+typing: 型ヒント (Dict, Any, Tuple, np.ndarray)
 
 ## CLASS_ATTRIBUTES
 (クラス属性なし)
 
 ## METHOD_SIGNATURES
 def _calculate_dynamic_resolution(width: float, config: Dict[str, Any], logger: DebugLogger) -> int
-機能: ズームレベルに応じて描画解像度を動的に計算する。設定ファイルからパラメータを読み込む。
+機能: ズームレベルに応じて描画解像度を動的に計算。設定ファイルからパラメータを読み込む。
 
-def _create_complex_grid(params: Dict[str, Any], width: int, height: int, logger: DebugLogger) -> np.ndarray
-機能: 描画範囲パラメータ、指定された幅、高さに基づいて複素グリッド (np.ndarray) を作成する。回転も考慮する。
+def _create_fractal_grid(params: Dict[str, Any], super_resolution_x: int, super_resolution_y: int, logger: DebugLogger) -> np.ndarray
+機能: フラクタル計算用の複素グリッドを作成。描画範囲パラメータ、指定された幅、高さに基づいて複素グリッド (np.ndarray) を作成する。回転も考慮する。
 
-def _create_fractal_grid(params: Dict[str, Any], super_resolution_x: int, super_resolution_y: int, logger: DebugLogger) -> Dict[str, np.ndarray]
-機能: フラクタル計算用の複素グリッドを作成し、選択されたフラクタルタイプ（JuliaまたはMandelbrot）に基づいてフラクタル集合の計算を実行する。計算結果（反復回数、マスク、最終Z値）を返す。
+def _compute_fractal(Z: np.ndarray, params: Dict[str, Any], logger: DebugLogger) -> Dict[str, np.ndarray]
+機能: フラクタル計算を実行。入力の複素グリッドとパラメータに基づいて、選択されたフラクタルタイプ（JuliaまたはMandelbrot）の計算を実行し、結果を返す。
 
-def _downsample_image(high_res_image: np.ndarray, target_width: int, target_height: int, sample_x: int, sample_y: int, logger: DebugLogger) -> np.ndarray
-機能: 高解像度の画像データを指定されたサンプル数でダウンサンプリングする。
+def _downsample_image(
+    high_res_image: np.ndarray,
+    target_resolution_x: int,
+    target_resolution_y: int,
+    samples_per_pixel_x: int,
+    samples_per_pixel_y: int,
+    logger: DebugLogger
+) -> np.ndarray
+機能: 高解像度の画像データをダウンサンプリングしてアンチエイリアシングを行う。指定されたサンプル数でダウンサンプリングし、エラーハンドリングも含む。
 
-def render_fractal(render_mode: str, params: Dict[str, Any], color_params: Dict[str, Any], config: Dict[str, Any], logger: DebugLogger) -> np.ndarray
+def render_fractal(params: Dict[str, Any], logger: DebugLogger, config: Dict[str, Any]) -> np.ndarray
 機能: フラクタル画像を生成するメイン関数。動的解像度計算、複素グリッド生成、フラクタル計算、着色、ダウンサンプリングを実行し、最終的な画像データを返す。設定データを受け取る。
 
 ## CORE_EXECUTION_FLOW
-render_fractal (config受け取り含む) → _calculate_dynamic_resolution (config渡す) → _create_complex_grid → _create_fractal_grid → manager.colorize (着色) → _downsample_image (必要であれば) → 最終画像データ
+render_fractal (paramsとconfig受け取り) → _calculate_dynamic_resolution (config渡す) → _create_fractal_grid → _compute_fractal → manager.apply_coloring_algorithm (着色) → _downsample_image (必要であれば) → 最終画像データ
 
 ## KEY_LOGIC_PATTERNS
 - 動的解像度制御: ズームレベルと設定に基づいた解像度調整 (_calculate_dynamic_resolution)
-- 複素グリッド生成: 描画範囲パラメータと回転を考慮したグリッド作成 (_create_complex_grid)
-- フラクタル計算実行: 選択されたフラクタルタイプに応じた計算関数の呼び出し (_create_fractal_grid)
+- 複素グリッド生成: 描画範囲パラメータと回転を考慮したグリッド作成 (_create_fractal_grid)
+- フラクタル計算実行: 選択されたフラクタルタイプに応じた計算関数の呼び出し (_compute_fractal)
 - 着色処理: coloring.manager モジュールへの委譲
 - スーパーサンプリングとダウンサンプリング: _downsample_image による画像の平滑化
 - 設定ファイルからの読み込み: _calculate_dynamic_resolution で設定を読み込む
@@ -59,6 +66,7 @@ render_fractal (config受け取り含む) → _calculate_dynamic_resolution (con
 
 
 ==============================
+
 # MODULE_INFO:
 julia.py
 
@@ -97,6 +105,7 @@ compute_julia (反復計算ループ)
 
 
 ==============================
+
 # MODULE_INFO:
 mandelbrot.py
 

@@ -1,6 +1,6 @@
 ==============================
 # MODULE_INFO:
-ui/main_window.py
+main_window.py
 
 ## MODULE_PURPOSE
 フラクタル描画アプリケーションのメインウィンドウと、フラクタル描画に必要なUIコンポーネントの初期化、配置、およびフラクタル描画処理を管理するモジュール
@@ -38,8 +38,6 @@ self.zoom_params: dict - ズーム操作パラメータ {center_x, center_y, wid
 self.prev_zoom_params: dict | None - 前回のズームパラメータ（キャンセル用、初期値はNone）
 self.is_drawing: bool - 描画中フラグ (フラクタル描画処理が実行中かどうかを示す)
 self.draw_thread: Thread | None - フラクタル描画スレッド (初期値はNone)
-self.canvas_width (int): キャンバスの幅 (ピクセル単位) - ※コードにはないため削除または修正が必要
-self.canvas_height (int): キャンバスの高さ (ピクセル単位) - ※コードにはないため削除または修正が必要
 
 ## METHOD_SIGNATURES
 def __init__(self, root: tk.Tk, logger: DebugLogger) -> None
@@ -118,7 +116,7 @@ UIスレッドと描画スレッドの分離
 
 ==============================
 # MODULE_INFO:
-ui/canvas.py
+canvas.py
 
 ## MODULE_PURPOSE
 フラクタル画像の表示と更新、ズーム機能の制御、ユーザーインターフェースの描画を行うクラスを定義するモジュール
@@ -145,12 +143,12 @@ ui.zoom_function.zoom_selector.ZoomSelector: ズーム選択機能 (遅延イン
 self.fig: matplotlib.figure.Figure - MatplotlibのFigureオブジェクト
 self.ax: matplotlib.axes._subplots.AxesSubplot - MatplotlibのAxesオブジェクト
 self.canvas: matplotlib.backends.backend_tkagg.FigureCanvasTkAgg - Tkinterに埋め込まれたMatplotlibキャンバスウィジェット
-self.zoom_selector: ui.zoom_function.zoom_selector.ZoomSelector - ズーム選択機能を管理するZoomSelectorインスタンス
 self.zoom_confirm_callback: Callable - ズーム確定時に呼び出すコールバック関数
 self.zoom_cancel_callback: Callable - ズームキャンセル時に呼び出すコールバック関数
-self.logger: ui.zoom_function.debug_logger.DebugLogger - デバッグログを管理するLoggerインスタンス
-self.parent: tk.Tk or ttk.Frame - Tkinterの親ウィジェット (コードでは master として受け取り、ttk.Frame も親になりうる)
-self.config: Dict[str, float] - ZoomSelectorに渡すための設定データ (コンストラクタ引数に追加されている)
+self.logger: DebugLogger - デバッグログを管理するLoggerインスタンス
+self.parent: tk.Tk or ttk.Frame - Tkinterの親ウィジェット
+self.config: Dict[str, float] - ZoomSelectorに渡すための設定データ
+self.facecolor: str - キャンバスの背景色
 
 ## METHOD_SIGNATURES
 def __init__(self, master: tk.Tk, width: int, height: int, logger: DebugLogger, zoom_confirm_callback: Callable, zoom_cancel_callback: Callable, config: Dict[str, float]) -> None
@@ -204,7 +202,7 @@ ZoomSelectorからのイベント通知 (zoom_confirmed, zoom_cancelled) → 対
 
 ==============================
 # MODULE_INFO:
-ui/parameter_panel.py
+parameter_panel.py
 
 ## MODULE_PURPOSE
 フラクタル生成用のパラメータを設定するパネルを定義するモジュール
@@ -223,40 +221,32 @@ numpy (np): 数値計算
 tkinter (tk, ttk): UIフレームワーク
 PIL.Image, PIL.ImageTk: 画像処理
 typing: 型ヒント
-.zoom_function.debug_logger.DebugLogger: デバッグログ管理
-.zoom_function.enums.LogLevel: ログレベル定義
+ui.zoom_function.debug_logger.DebugLogger: デバッグログ管理
+ui.zoom_function.enums.LogLevel: ログレベル定義
 
 ## CLASS_ATTRIBUTES
-self.parent: tk.Tk or ttk.Frame - 親ウィジェット (コードでは ttk.Frame も受け取る可能性がある)
+self.parent: ttk.Frame - 親ウィジェット
 self.update_callback: Callable - 描画更新コールバック関数
-self.reset_callback: Callable | None - 描画リセットコールバック関数 (None の可能性あり)
+self.reset_callback: Callable - 描画リセットコールバック関数
 self.logger: DebugLogger - デバッグロガーインスタンス
-self.config (dict): config.json から読み込んだ設定データ
 self.render_mode: str - 描画モード ("quick" or "full", デフォルトは "quick")
 self.fractal_type_var: tk.StringVar - フラクタルタイプの選択
 self.formula_var: tk.StringVar - 数式表示
-self.formula_label: ttk.Label - 数式表示ラベル
 self.max_iter_var: tk.StringVar - 最大反復回数
 self.z_real_var: tk.StringVar - Z (実部)
 self.z_imag_var: tk.StringVar - Z (虚部)
 self.c_real_var: tk.StringVar - C (実部)
 self.c_imag_var: tk.StringVar - C (虚部)
 self.diverge_algo_var: tk.StringVar - 発散部着色アルゴリズム
-self.diverge_colorbar_label: tk.Label - 発散部カラーバー表示ラベル
 self.diverge_colormap_var: tk.StringVar - 発散部カラーマップ
 self.non_diverge_algo_var: tk.StringVar - 非発散部着色アルゴリズム
-self.non_diverge_colorbar_label: tk.Label - 非発散部カラーバー表示ラベル
 self.non_diverge_colormap_var: tk.StringVar - 非発散部カラーマップ
-_fractal_type_row: int - フラクタルタイプ選択行のグリッド行番号
-_formula_row: int - 数式表示行のグリッド行番号
-_param_section_last_row: int - パラメータセクション最終行のグリッド行番号
-_diverge_section_last_row: int - 発散部セクション最終行のグリッド行番号
-_non_diverge_section_last_row: int - 非発散部セクション最終行のグリッド行番号
-self.colormaps: list[str] - カラーマップリスト (設定ファイルまたはmatplotlibから取得)
-self.diverge_algorithms: list[str] - 発散部アルゴリズムリスト (設定ファイルから取得)
-self.non_diverge_algorithms: list[str] - 非発散部アルゴリズムリスト (設定ファイルから取得)
-self.COLORBAR_WIDTH: int - カラーバー幅 (設定ファイルから読み込み)
-self.COLORBAR_HEIGHT: int - カラーバー高さ (設定ファイルから読み込み)
+self.colormaps: list - カラーマップリスト
+self.diverge_algorithms: list - 発散部アルゴリズムリスト
+self.non_diverge_algorithms: list - 非発散部アルゴリズムリスト
+self.COLORBAR_WIDTH: int - カラーバー幅
+self.COLORBAR_HEIGHT: int - カラーバー高さ
+self.config: Dict[str, Any] - 設定データ
 
 ## METHOD_SIGNATURES
 def __init__(self, parent, update_callback, reset_callback, logger: DebugLogger, config: Dict[str, Any]) -> None
@@ -283,13 +273,13 @@ def _setup_non_diverge_section(self) -> None
 def _setup_buttons(self) -> None
 機能: ボタンのセットアップを行う。描画ボタンと描画リセットボタンの追加、各ボタンのコールバック設定。
 
-def _add_label(self, text: str, row: int, col: int, columnspan: int = 1, sticky: str = tk.W, padx: tuple[int, int] = (5, 5), pady: tuple[int, int] = (2, 2)) -> None
+def _add_label(self, text: str, row: int, col: int, columnspan: int = 1, padx: int = 10, pady: int = 2) -> None
 機能: ラベルを追加し、グリッドレイアウトに配置する。
 
-def _add_entry(self, row: int, col: int, var: tk.StringVar, padx: tuple[int, int] = (10, 10), pady: tuple[int, int] = (2, 2)) -> ttk.Entry
+def _add_entry(self, row: int, col: int, var: tk.StringVar, padx: int = 10, pady: int = 2) -> ttk.Entry
 機能: エントリー（入力欄）を追加し、グリッドレイアウトに配置する。
 
-def _add_combobox(self, row: int, col: int, var: tk.StringVar, values: list[str], width: int = 10, padx: tuple[int, int] = (10, 10), pady: tuple[int, int] = (2, 2)) -> ttk.Combobox
+def _add_combobox(self, row: int, col: int, var: tk.StringVar, values: list[str], width: Optional[int] = None, padx: int = 10, pady: int = 2) -> ttk.Combobox
 機能: コンボボックス（選択リスト）を追加し、グリッドレイアウトに配置する。
 
 def _add_button(self, text: str, row: int, col: int, colspan: int, command: Callable) -> ttk.Button
@@ -333,7 +323,7 @@ UI構築: Tkinterウィジェットの配置と設定 (gridレイアウト)
 
 ==============================
 # MODULE_INFO:
-ui/status_bar.py
+status_bar.py
 
 ## MODULE_PURPOSE
 ステータスバーの表示とアニメーションを管理するクラス
@@ -361,7 +351,7 @@ logger: DebugLogger - デバッグログを管理するLogger
 _draw_start_time: Optional[float] - 描画開始時刻
 _status_timer_id: Optional[str] - 時間更新タイマーID
 status_label: ttk.Label - ステータス表示用のラベル
-_animation_state: AnimationState - アニメーション状態を管理するAnimationState
+_animation_state: AnimationState - アニメーション状態を管理するインスタンス
 
 ## METHOD_SIGNATURES
 def __init__(self, root: tk.Tk, status_frame: ttk.Frame, logger: DebugLogger) -> None
