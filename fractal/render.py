@@ -81,7 +81,7 @@ def _create_fractal_grid(params: dict, super_resolution_x: int, super_resolution
     center_y = params.get("center_y", 0.0)
     width = params.get("width", 4.0)
     # 高さは params に含まれている想定 (MainWindow で width と height_ratio から計算済み)
-    height = params.get("height", width * (9/16)) # フォールバック
+    height = params.get("height", width * (9 / 16)) # フォールバック
 
     # データ型選択ロジック (これも設定ファイル化可能だが一旦維持)
     dtype = np.float16 if width > 1.0 else np.float32
@@ -131,8 +131,8 @@ def _compute_fractal(Z: np.ndarray, params: dict, logger: DebugLogger) -> dict:
 
     if fractal_type == "Julia":
         # Julia 用パラメータ取得 (フォールバック値も設定)
-        c_real = params.get("c_real", -0.7)
-        c_imag = params.get("c_imag", 0.27015)
+        c_real = params.get("c_real", -0.8)
+        c_imag = params.get("c_imag", 0.156)
         c_val = complex(c_real, c_imag)
         logger.log(LogLevel.DEBUG, f"Julia パラメータ C = {c_val}")
         # julia モジュールの関数を呼び出し
@@ -231,14 +231,17 @@ def render_fractal(params: dict, logger: DebugLogger, config: Dict[str, Any]) ->
     render_mode = params.get("render_mode", "quick")  # デフォルトは簡易モード
     current_width = params.get("width", 4.0) # 現在の描画範囲の幅
 
+    dpi = config.get("canvas_settings", {}).get("config_dpi", 100)
+
     # 動的解像度計算 (config を渡す)
     resolution = _calculate_dynamic_resolution(current_width, config, logger)
-    # 簡易モードでは解像度をさらに下げる (係数も設定ファイル化可能)
-    quick_mode_resolution_factor = 0.5 # 例: 半分にする
+
+    # 簡易モードでは解像度をさらに下げる
+    quick_mode_resolution_factor = config.get("fractal_settings", {}).get("quick_mode_resolution_factor", 0.5)
     if render_mode == "quick":
         resolution = int(resolution * quick_mode_resolution_factor)
-        # 最小解像度を下回らないようにする (例: 100ピクセル)
-        resolution = max(resolution, 100)
+        # 最小解像度を下回らないようにする
+        resolution = max(resolution, dpi)
 
     # アンチエイリアシング設定 (設定ファイルから読み込む)
     ss_config = config.get("fractal_settings", {}).get("super_sampling", {})
@@ -250,7 +253,7 @@ def render_fractal(params: dict, logger: DebugLogger, config: Dict[str, Any]) ->
 
     # 簡易モードではアンチエイリアシング無効 (サンプル数=1)
     if render_mode == "quick":
-        samples_per_pixel = 1
+        samples_per_pixel = config.get("canvas_settings", {}).get("samples_per_pixel", 1)
     else:
         # ズームレベルに応じてサンプル数を決定
         samples_per_pixel = high_samples if zoom_level >= zoom_threshold else low_samples
@@ -288,7 +291,7 @@ def render_fractal(params: dict, logger: DebugLogger, config: Dict[str, Any]) ->
 
     # ダウンサンプリング (サンプル数が1より大きい場合のみ)
     if samples_per_pixel > 1:
-        logger.log(LogLevel.INFO, "ダウンサンプリング実行...")
+        logger.log(LogLevel.DEBUG, "ダウンサンプリング実行...")
         # ダウンサンプリング関数呼び出し (解像度とサンプル数を渡す)
         # 正方形を仮定していても X/Y は同じ値
         colored = _downsample_image(
@@ -299,7 +302,7 @@ def render_fractal(params: dict, logger: DebugLogger, config: Dict[str, Any]) ->
         )
     else:
         # サンプル数1の場合はダウンサンプリング不要
-        logger.log(LogLevel.INFO, "サンプル数1のためダウンサンプリングをスキップ")
+        logger.log(LogLevel.DEBUG, "サンプル数1のためダウンサンプリングをスキップ")
         colored = colored_high_res # そのまま使う
 
     # 最終的な結果を uint8 [0, 255] に変換

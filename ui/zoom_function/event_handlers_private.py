@@ -302,11 +302,8 @@ class EventHandlersPrivate:
                event.xdata is not None and event.ydata is not None:
                 if self.core.rect_manager._temporary_creation(
                     self.core.start_x, self.core.start_y, event.xdata, event.ydata):
-
-                    self.core.logger.log(LogLevel.SUCCESS, "作成成功")
                     final_state = ZoomState.EDIT
                 else:
-                    self.core.logger.log(LogLevel.WARNING, "作成失敗: 最終サイズが無効")
                     self.core.rect_manager.delete_rect()
                     self.core.utils._remove_last_history()
             else:

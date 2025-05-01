@@ -171,29 +171,28 @@ class ParameterPanel:
         row = self._param_section_last_row + 1
         self._add_label("--- 発散部 ---", row, 0, columnspan=2, pady=(10, 0))
         param_defaults = self.config.get("fractal_settings", {}).get("parameter_panel", {})
-        coloring_options = self.config.get("coloring_options", {})
+        fractal_settings = self.config.get("fractal_settings", {})
 
         # 着色アルゴリズム
         row += 1
         self._add_label("着色アルゴリズム:", row, 0, pady=(5,0))
-        default_diverge_algo = param_defaults.get("diverge_algorithm", "Smoothing")
+        default_diverge_algo = param_defaults.get("diverge_algorithm", "スムージング")
         self.diverge_algo_var = tk.StringVar(value=default_diverge_algo)
-        # アルゴリズムリストを設定ファイルから取得、なければ空リスト
-        self.diverge_algorithms = coloring_options.get("available_diverge_algorithms", [])
-        # リストが空の場合のフォールバックを追加
+        # アルゴリズムリストを設定ファイルから取得
+        self.diverge_algorithms = list(fractal_settings.get("coloring_algorithms", {}).get("divergent", {}).keys())
         if not self.diverge_algorithms:
             self.logger.log(LogLevel.WARNING, "設定ファイルに発散部アルゴリズムリストが見つからないか空なので、デフォルトリストを使用")
             self.diverge_algorithms = [
-            "スムージング",
-            "高速スムージング",
-            "指数スムージング",
-            "反復回数線形マッピング",
-            "反復回数対数マッピング",
-            "ヒストグラム平坦化法",
-            "距離カラーリング",
-            "角度カラーリング",
-            "ポテンシャル関数法",
-            "軌道トラップ法"
+                "スムージング",
+                "高速スムージング",
+                "指数スムージング",
+                "反復回数線形マッピング",
+                "反復回数対数マッピング",
+                "ヒストグラム平坦化法",
+                "距離カラーリング",
+                "角度カラーリング",
+                "ポテンシャル関数法",
+                "軌道トラップ法"
             ] # フォールバック
         combo = self._add_combobox(row, 1, self.diverge_algo_var, self.diverge_algorithms)
         combo.bind("<<ComboboxSelected>>", self._common_callback)
@@ -209,7 +208,7 @@ class ParameterPanel:
         default_diverge_cmap = param_defaults.get("diverge_colormap", "viridis")
         self.diverge_colormap_var = tk.StringVar(value=default_diverge_cmap)
         # カラーマップリストを設定ファイルから取得
-        self.colormaps = coloring_options.get("available_colormaps", [])
+        self.colormaps = self.config.get("coloring_options", {}).get("available_colormaps", [])
          # リストが空の場合のフォールバック
         if not self.colormaps:
             self.logger.log(LogLevel.WARNING, "設定ファイルにカラーマップリストが見つからないか空なので、matplotlibから取得")
@@ -228,34 +227,33 @@ class ParameterPanel:
         row = self._diverge_section_last_row + 1
         self._add_label("--- 非発散部 ---", row, 0, columnspan=2, pady=(10, 0))
         param_defaults = self.config.get("fractal_settings", {}).get("parameter_panel", {})
-        coloring_options = self.config.get("coloring_options", {})
+        fractal_settings = self.config.get("fractal_settings", {})
 
         # 着色アルゴリズム
         row += 1
         self._add_label("着色アルゴリズム:", row, 0, pady=(5,0))
-        default_non_diverge_algo = param_defaults.get("non_diverge_algorithm", "Solid Color")
+        default_non_diverge_algo = param_defaults.get("non_diverge_algorithm", "単色")
         self.non_diverge_algo_var = tk.StringVar(value=default_non_diverge_algo)
         # アルゴリズムリストを設定ファイルから取得
-        self.non_diverge_algorithms = coloring_options.get("available_non_diverge_algorithms", [])
-        # リストが空の場合のフォールバック
+        self.non_diverge_algorithms = list(fractal_settings.get("coloring_algorithms", {}).get("non_divergent", {}).keys())
         if not self.non_diverge_algorithms:
             self.logger.log(LogLevel.WARNING, "設定ファイルに非発散部アルゴリズムリストが見つからないか空なので、デフォルトリストを使用")
-            self.non_diverge_algorithms = [""
-            "単色",
-            "グラデーション",
-            "内部距離（Escape Time Distance）",
-            "軌道トラップ(円)（Orbit Trap Coloring）",
-            "位相对称（Phase Angle Symmetry）",
-            "反復収束速度（Convergence Speed）",
-            "微分係数（Derivative Coloring）",
-            "統計分布（Histogram Equalization）",
-            "複素ポテンシャル（Complex Potential Mapping）",
-            "カオス軌道混合（Chaotic Orbit Mixing）",
-            "フーリエ干渉（Fourier Pattern）",
-            "フラクタルテクスチャ（Fractal Texture）",
-            "量子もつれ（Quantum Entanglement）",
-            "パラメータ(C)",
-            "パラメータ(Z)"
+            self.non_diverge_algorithms = [
+                "単色",
+                "グラデーション",
+                "内部距離（Escape Time Distance）",
+                "軌道トラップ(円)（Orbit Trap Coloring）",
+                "位相对称（Phase Angle Symmetry）",
+                "反復収束速度（Convergence Speed）",
+                "微分係数（Derivative Coloring）",
+                "統計分布（Histogram Equalization）",
+                "複素ポテンシャル（Complex Potential Mapping）",
+                "カオス軌道混合（Chaotic Orbit Mixing）",
+                "フーリエ干渉（Fourier Pattern）",
+                "フラクタルテクスチャ（Fractal Texture）",
+                "量子もつれ（Quantum Entanglement）",
+                "パラメータ(C)",
+                "パラメータ(Z)"
             ] # フォールバック
         combo = self._add_combobox(row, 1, self.non_diverge_algo_var, self.non_diverge_algorithms)
         combo.bind("<<ComboboxSelected>>", self._common_callback)

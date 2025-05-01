@@ -37,7 +37,7 @@ class ColorCache:
             self.logger.log(LogLevel.WARNING, f"設定ファイルの cache_max_size ({self.max_size}) が無効です。デフォルト値 ({default_max_size}) を使用します。")
             self.max_size = default_max_size
         else:
-             self.logger.log(LogLevel.INIT, f"キャッシュ最大サイズ設定: {self.max_size}")
+             self.logger.log(LogLevel.DEBUG, f"キャッシュ最大サイズ設定: {self.max_size}")
 
     def _create_cache_key(self, params: Dict) -> str:
         """キャッシュキーを生成 (パラメータ辞書をソートして文字列化)
