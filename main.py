@@ -1,5 +1,5 @@
 import tkinter as tk
-from core.main_window import MainWindow
+from core import MainWindow
 from debug import DebugLogger, LogLevel
 
 if __name__ == "__main__":
