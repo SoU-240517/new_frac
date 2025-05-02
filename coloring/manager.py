@@ -2,17 +2,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 import time
 from typing import Dict, Callable, Any
-from debug.debug_logger import DebugLogger
-from debug.enum_debug import LogLevel
+from debug import DebugLogger,LogLevel
 from .utils import ColorAlgorithmError
-from . import gradient # gradient モジュール (グラデーション計算用)
+from .gradient import compute_gradient
 from .cache import ColorCache # キャッシュ管理クラス
+from plugins.coloring.divergent import angle as div_angle
 from plugins.coloring.divergent import linear as div_linear
 from plugins.coloring.divergent import logarithmic as div_logarithmic
 from plugins.coloring.divergent import smoothing as div_smoothing
 from plugins.coloring.divergent import histogram as div_histogram
 from plugins.coloring.divergent import distance as div_distance
-from plugins.coloring.divergent import angle as div_angle
 from plugins.coloring.divergent import potential as div_potential
 from plugins.coloring.divergent import orbit_trap as div_orbit_trap
 from plugins.coloring.non_divergent import solid_color as ndiv_solid
@@ -191,7 +190,7 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger, c
                 if non_divergent_algo_name == 'グラデーション':
                     # グラデーション用の値は事前に計算しておく必要がある
                     logger.log(LogLevel.DEBUG, "グラデーション値を計算します...")
-                    gradient_values = gradient.compute_gradient(image_shape, logger)
+                    gradient_values = compute_gradient(image_shape, logger)
                     logger.log(LogLevel.DEBUG, f"グラデーション値 計算完了: shape={gradient_values.shape}")
                     # Gradient 関数は mask, iterations, gradient_values, cmap, params, logger を受け取る想定
                     non_divergent_algo(colored, non_divergent_mask, iterations, gradient_values, non_cmap_func, params, logger)

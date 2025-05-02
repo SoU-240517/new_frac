@@ -1,13 +1,9 @@
-# パッケージ初期化ファイル
-# このファイルが存在することで、
-# Python は このディレクトリをパッケージとして認識します。
-# 説明不足の部分は base/__init__.py を参照してください。
-
 """
+Divergent モジュールパッケージ
+
 発散する点に対する着色アルゴリズムを提供するパッケージです。
 """
 
-# サブモジュールの一括インポート
 from .angle import apply_angle_coloring
 from .distance import apply_distance_coloring
 from .histogram import apply_histogram_flattening
@@ -17,7 +13,6 @@ from .orbit_trap import apply_orbit_trap
 from .potential import apply_potential
 from .smoothing import apply_smoothing
 
-# 外部からインポート可能な名前
 __all__ = [
     'apply_angle_coloring',
     'apply_distance_coloring',
@@ -29,7 +24,6 @@ __all__ = [
     'apply_smoothing'
 ]
 
-# アルゴリズム名と実装メソッドのマッピング
 DIVERGENT_ALGORITHMS = {
     '角度カラーリング': apply_angle_coloring,
     '距離カラーリング': apply_distance_coloring,
@@ -42,3 +36,5 @@ DIVERGENT_ALGORITHMS = {
     '高速スムージング': apply_smoothing,
     '指数スムージング': apply_smoothing
 }
+
+__version__ = "0.0.0"
