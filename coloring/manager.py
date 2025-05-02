@@ -7,27 +7,27 @@ from .utils import ColorAlgorithmError
 from .gradient import compute_gradient
 from .cache import ColorCache # キャッシュ管理クラス
 from plugins.coloring.divergent import angle as div_angle
+from plugins.coloring.divergent import distance as div_distance
+from plugins.coloring.divergent import histogram as div_histogram
 from plugins.coloring.divergent import linear as div_linear
 from plugins.coloring.divergent import logarithmic as div_logarithmic
-from plugins.coloring.divergent import smoothing as div_smoothing
-from plugins.coloring.divergent import histogram as div_histogram
-from plugins.coloring.divergent import distance as div_distance
-from plugins.coloring.divergent import potential as div_potential
 from plugins.coloring.divergent import orbit_trap as div_orbit_trap
-from plugins.coloring.non_divergent import solid_color as ndiv_solid
-from plugins.coloring.non_divergent import gradient_based as ndiv_gradient
-from plugins.coloring.non_divergent import internal_distance as ndiv_internal_distance
-from plugins.coloring.non_divergent import orbit_trap_circle as ndiv_orbit_trap_circle
-from plugins.coloring.non_divergent import phase_symmetry as ndiv_phase_symmetry
+from plugins.coloring.divergent import potential as div_potential
+from plugins.coloring.divergent import smoothing as div_smoothing
+from plugins.coloring.non_divergent import chaotic_orbit as ndiv_chaotic_orbit
+from plugins.coloring.non_divergent import complex_potential as ndiv_complex_potential
 from plugins.coloring.non_divergent import convergence_speed as ndiv_convergence_speed
 from plugins.coloring.non_divergent import derivative as ndiv_derivative
-from plugins.coloring.non_divergent import histogram_equalization as ndiv_histogram_equalization
-from plugins.coloring.non_divergent import complex_potential as ndiv_complex_potential
-from plugins.coloring.non_divergent import chaotic_orbit as ndiv_chaotic_orbit
 from plugins.coloring.non_divergent import fourier_pattern as ndiv_fourier_pattern
 from plugins.coloring.non_divergent import fractal_texture as ndiv_fractal_texture
-from plugins.coloring.non_divergent import quantum_entanglement as ndiv_quantum_entanglement
+from plugins.coloring.non_divergent import gradient_based as ndiv_gradient
+from plugins.coloring.non_divergent import histogram_equalization as ndiv_histogram_equalization
+from plugins.coloring.non_divergent import internal_distance as ndiv_internal_distance
+from plugins.coloring.non_divergent import orbit_trap_circle as ndiv_orbit_trap_circle
 from plugins.coloring.non_divergent import palam_c_z as ndiv_palam_c_z
+from plugins.coloring.non_divergent import phase_symmetry as ndiv_phase_symmetry
+from plugins.coloring.non_divergent import quantum_entanglement as ndiv_quantum_entanglement
+from plugins.coloring.non_divergent import solid_color as ndiv_solid
 
 # --- アルゴリズム関数をマッピングする辞書 ---
 # Callable[[np.ndarray, np.ndarray, Any, Any, Dict, DebugLogger], None] のような型ヒントも可能だが、簡潔さのため省略

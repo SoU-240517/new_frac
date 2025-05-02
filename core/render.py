@@ -2,8 +2,8 @@ import numpy as np
 import time
 from coloring import manager
 from typing import Dict, Any # 型ヒント用
-from plugins.fractal_types.julia import julia
-from plugins.fractal_types.mandelbrot import mandelbrot
+from plugins.fractal_types.julia import compute_julia
+from plugins.fractal_types.mandelbrot import compute_mandelbrot
 from debug import DebugLogger, LogLevel
 
 """フラクタル画像生成エンジン
@@ -136,7 +136,7 @@ def _compute_fractal(Z: np.ndarray, params: dict, logger: DebugLogger) -> dict:
         c_val = complex(c_real, c_imag)
         logger.log(LogLevel.DEBUG, f"Julia パラメータ C = {c_val}")
         # julia モジュールの関数を呼び出し
-        results = julia.compute_julia(Z, c_val, max_iter, logger)
+        results = compute_julia(Z, c_val, max_iter, logger)
         logger.log(LogLevel.SUCCESS, f"ジュリア集合計算完了 ({time.perf_counter() - start_time:.3f}秒)")
     else:  # Mandelbrot (または未知のタイプの場合もMandelbrotとして扱う)
         if fractal_type != "Mandelbrot":
@@ -147,7 +147,7 @@ def _compute_fractal(Z: np.ndarray, params: dict, logger: DebugLogger) -> dict:
         z0_val = complex(z0_real, z0_imag)
         logger.log(LogLevel.DEBUG, f"Mandelbrot パラメータ Z0 = {z0_val}")
          # mandelbrot モジュールの関数を呼び出し
-        results = mandelbrot.compute_mandelbrot(Z, z0_val, max_iter, logger)
+        results = compute_mandelbrot(Z, z0_val, max_iter, logger)
         logger.log(LogLevel.SUCCESS, f"マンデルブロ集合計算完了 ({time.perf_counter() - start_time:.3f}秒)")
 
     return results

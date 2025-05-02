@@ -1,8 +1,7 @@
 import numpy as np
-from typing import Dict, Tuple
 from matplotlib.colors import Colormap
-from debug.debug_logger import DebugLogger
-from debug.enum_debug import LogLevel
+from typing import Dict, Tuple
+from debug import DebugLogger, LogLevel
 from coloring.utils import _normalize_and_color
 
 def apply_angle_coloring(

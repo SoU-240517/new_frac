@@ -34,22 +34,4 @@ __all__ = [
     'apply_solid_color'
 ]
 
-NON_DIVERGENT_ALGORITHMS = {
-    'カオス軌道混合（Chaotic Orbit Mixing）': apply_chaotic_orbit,
-    '複素ポテンシャル（Complex Potential Mapping）': apply_complex_potential,
-    '反復収束速度（Convergence Speed）': apply_convergence_speed,
-    '微分係数（Derivative Coloring）': apply_derivative_coloring,
-    'フーリエ干渉（Fourier Pattern）': apply_fourier_pattern,
-    'フラクタルテクスチャ（Fractal Texture）': apply_fractal_texture,
-    'グラデーション': apply_gradient_based,
-    '統計分布（Histogram Equalization）': apply_histogram_equalization,
-    '内部距離（Escape Time Distance）': apply_internal_distance,
-    '軌道トラップ(円)（Orbit Trap Coloring）': apply_orbit_trap_circle,
-    'パラメータ(C)': apply_parameter_coloring,
-    'パラメータ(Z)': apply_parameter_coloring,
-    '位相对称（Phase Angle Symmetry）': apply_phase_symmetry,
-    '量子もつれ（Quantum Entanglement）': apply_quantum_entanglement,
-    '単色（Solid Color）': apply_solid_color
-}
-
 __version__ = "0.0.0"

@@ -1,10 +1,9 @@
 import tkinter as tk
 from matplotlib.backend_bases import MouseEvent
 from typing import Optional, TYPE_CHECKING
-from debug.debug_logger import DebugLogger
-from debug.enum_debug import LogLevel
+from debug import DebugLogger, LogLevel
+from validator import EventValidator
 from .enum_rect import ZoomState
-from validator.event_validator import EventValidator
 
 if TYPE_CHECKING:
     from .zoom_selector import ZoomSelector

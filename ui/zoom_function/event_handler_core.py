@@ -1,6 +1,6 @@
 from matplotlib.backend_bases import MouseEvent, MouseButton, KeyEvent
 from typing import Optional, TYPE_CHECKING, Tuple, List, Dict, Any
-from debug.enum_debug import LogLevel
+from debug import LogLevel
 from .enum_rect import ZoomState
 from .event_handlers_private import EventHandlersPrivate
 from .event_handlers_utils import EventHandlersUtils

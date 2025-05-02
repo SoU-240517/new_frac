@@ -1,7 +1,6 @@
 import numpy as np
-from debug.debug_logger import DebugLogger
-from debug.enum_debug import LogLevel
 from typing import Dict
+from debug import DebugLogger, LogLevel
 
 def compute_mandelbrot(
     Z: np.ndarray,  # 複素数のグリッド

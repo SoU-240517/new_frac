@@ -24,17 +24,4 @@ __all__ = [
     'apply_smoothing'
 ]
 
-DIVERGENT_ALGORITHMS = {
-    '角度カラーリング': apply_angle_coloring,
-    '距離カラーリング': apply_distance_coloring,
-    'ヒストグラム平坦化法': apply_histogram_flattening,
-    '反復回数線形マッピング': apply_linear_mapping,
-    '反復回数対数マッピング': apply_logarithmic_mapping,
-    '軌道トラップ法': apply_orbit_trap,
-    'ポテンシャル関数法': apply_potential,
-    'スムージング': apply_smoothing,
-    '高速スムージング': apply_smoothing,
-    '指数スムージング': apply_smoothing
-}
-
 __version__ = "0.0.0"

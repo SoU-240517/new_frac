@@ -5,28 +5,30 @@ Directory structure:
     ├── readme.md
     ├── config.json
     ├── main.py
-    ├── base/
-    │   ├── canvas.py
-    │   ├── main_window.py
-    │   ├── parameter_panel.py
-    │   ├── render.py
-    │   └── status_bar.py
     ├── coloring/
     │   ├── __init__.py
     │   ├── cache.py
     │   ├── gradient.py
     │   ├── manager.py
     │   └── utils.py
+    ├── core/
+    │   ├── __init__.py
+    │   ├── canvas.py
+    │   ├── main_window.py
+    │   ├── parameter_panel.py
+    │   ├── render.py
+    │   └── status_bar.py
     ├── debug/
+    │   ├── __init__.py
     │   ├── debug_logger.py
     │   └── enum_debug.py
     ├── document/
     │   ├── base.md
+    │   ├── coloring-divergent.md
+    │   ├── coloring-non_divergent.md
     │   ├── coloring.md
     │   ├── debug.md
     │   ├── directory_structure.md
-    │   ├── plugins-coloring-divergent.md
-    │   ├── plugins-coloring-non_divergent.md
     │   ├── plugins-fractal_types.md
     │   ├── ui-zoom_function.md
     │   ├── user_ profile.md
@@ -61,13 +63,16 @@ Directory structure:
     │   │       └── solid_color.py
     │   └── fractal_types/
     │       ├── julia/
+    │       │   ├── __init__.py
     │       │   ├── julia.json
     │       │   └── julia.py
     │       └── mandelbrot/
+    │           ├── __init__.py
     │           ├── mandelbrot.json
     │           └── mandelbrot.py
     ├── ui/
     │   └── zoom_function/
+    │       ├── __init__.py
     │       ├── cursor_manager.py
     │       ├── enum_rect.py
     │       ├── event_handler_core.py
@@ -77,4 +82,5 @@ Directory structure:
     │       ├── zoom_selector.py
     │       └── zoom_state_handler.py
     └── validator/
+        ├── __init__.py
         └── event_validator.py

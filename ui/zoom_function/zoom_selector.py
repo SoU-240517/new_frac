@@ -2,12 +2,11 @@ import matplotlib.patches as patches
 import numpy as np
 from matplotlib.axes import Axes
 from typing import Callable, Optional, Dict, Any
+from debug import DebugLogger, LogLevel
+from validator import EventValidator
 from .cursor_manager import CursorManager
-from debug.debug_logger import DebugLogger
-from debug.enum_debug import LogLevel
 from .enum_rect import ZoomState
 from .event_handler_core import EventHandler
-from validator.event_validator import EventValidator
 from .rect_manager import RectManager
 from .zoom_state_handler import ZoomStateHandler
 

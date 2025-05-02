@@ -3,8 +3,7 @@ import matplotlib.transforms as transforms
 import numpy as np
 from matplotlib.axes import Axes
 from typing import Optional, Tuple, Dict, Any
-from debug.debug_logger import DebugLogger
-from debug.enum_debug import LogLevel
+from debug import DebugLogger, LogLevel
 
 class RectManager:
     """ズーム領域の矩形（Rectangle）を管理（作成、移動、リサイズ、回転）するクラス

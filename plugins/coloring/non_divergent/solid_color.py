@@ -1,7 +1,6 @@
 import numpy as np
 from typing import Dict
-from debug.debug_logger import DebugLogger
-from debug.enum_debug import LogLevel
+from debug import DebugLogger, LogLevel
 
 def apply_solid_color(
     colored: np.ndarray,

@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 from matplotlib.backend_bases import MouseEvent, MouseButton, KeyEvent
-from debug.enum_debug import LogLevel
+from debug import LogLevel
 from .enum_rect import ZoomState
 
 if TYPE_CHECKING:

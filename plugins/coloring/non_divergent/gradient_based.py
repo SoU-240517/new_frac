@@ -1,8 +1,7 @@
 import numpy as np
-from typing import Dict
 from matplotlib.colors import Colormap
-from debug.debug_logger import DebugLogger
-from debug.enum_debug import LogLevel
+from typing import Dict
+from debug import DebugLogger, LogLevel
 from coloring.gradient import compute_gradient
 
 def apply_gradient_based(
