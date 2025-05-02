@@ -1,5 +1,130 @@
 ==============================
 # MODULE_INFO:
+__init__.py
+
+## MODULE_PURPOSE
+Core パッケージの初期化と公開インターフェースの定義
+
+## CLASS_DEFINITION:
+(クラス定義なし)
+
+## DEPENDENCIES
+- canvas.py
+- main_window.py
+- parameter_panel.py
+- render.py
+- status_bar.py
+
+## CLASS_ATTRIBUTES
+(クラス属性なし)
+
+## METHOD_SIGNATURES
+(メソッドなし)
+
+## CORE_EXECUTION_FLOW
+- パッケージの公開インターフェースを定義
+- 必要なモジュールから主要な機能をインポート
+
+## KEY_LOGIC_PATTERNS
+- パッケージとしての機能公開
+- モジュール間の依存関係管理
+
+## CRITICAL_BEHAVIORS
+- フラクタル画像の表示と更新
+- メインウィンドウの制御
+- パラメータパネルの管理
+- フラクタル画像のレンダリング
+- ステータスバーの管理
+
+
+==============================
+# MODULE_INFO:
+canvas.py
+
+## MODULE_PURPOSE
+フラクタル画像の表示と更新、ズーム機能の制御、ユーザーインターフェースの描画を行うクラスを定義するモジュール
+
+## CLASS_DEFINITION:
+名前: FractalCanvas
+役割:
+- MatplotlibのFigureとAxesを管理し、フラクタル画像を描画・更新する
+- ズーム選択機能（ZoomSelector）を初期化・管理し、ズーム操作のコールバックを処理する
+- キャンバスの背景色を設定する
+親クラス: なし
+
+## DEPENDENCIES
+numpy (np): 数値計算
+tkinter (tk): UIフレームワーク
+matplotlib.backends.backend_tkagg.FigureCanvasTkAgg: MatplotlibのFigureをTkinterキャンバスに埋め込む
+matplotlib.figure.Figure: MatplotlibのFigure
+typing: 型ヒント (Callable, Dict)
+debug.DebugLogger: デバッグログ管理
+debug.LogLevel: ログレベル定義
+ui.zoom_function.zoom_selector.ZoomSelector: ズーム選択機能 (遅延インポート)
+
+## CLASS_ATTRIBUTES
+self.fig: matplotlib.figure.Figure - MatplotlibのFigureオブジェクト
+self.ax: matplotlib.axes._subplots.AxesSubplot - MatplotlibのAxesオブジェクト
+self.canvas: matplotlib.backends.backend_tkagg.FigureCanvasTkAgg - Tkinterに埋め込まれたMatplotlibキャンバスウィジェット
+self.zoom_confirm_callback: Callable - ズーム確定時に呼び出すコールバック関数
+self.zoom_cancel_callback: Callable - ズームキャンセル時に呼び出すコールバック関数
+self.logger: DebugLogger - デバッグログを管理するLoggerインスタンス
+self.parent: tk.Tk or ttk.Frame - Tkinterの親ウィジェット
+self.config: Dict[str, float] - ZoomSelectorに渡すための設定データ
+self.facecolor: str - キャンバスの背景色
+
+## METHOD_SIGNATURES
+def __init__(self, master: tk.Tk, width: int, height: int, logger: DebugLogger, zoom_confirm_callback: Callable, zoom_cancel_callback: Callable, config: Dict[str, float]) -> None
+機能: コンストラクタ。FigureとAxesの初期化、ズーム機能の設定と初期化（ZoomSelectorインスタンス生成）、背景色の設定を行う。設定データを受け取る。
+
+def _setup_figure(self, width: int, height: int) -> None
+機能: MatplotlibのFigureとAxesを設定し、FigureCanvasTkAggを使用してTkinterキャンバスに埋め込む。初期サイズと背景色を設定する。
+
+def set_zoom_callback(self, zoom_confirm_callback: Callable, zoom_cancel_callback: Callable) -> None
+機能: ズーム確定・キャンセル時の外部コールバック関数を設定する。
+
+def _setup_zoom(self) -> None
+機能: ZoomSelectorのインスタンスを作成し、ズームイベントのコールバック（zoom_confirmed, zoom_cancelled）を設定する。
+
+def _set_black_background(self) -> None
+機能: AxesとFigureの背景色を黒に設定し、キャンバスを再描画する。
+
+def zoom_confirmed(self, x: float, y: float, w: float, h: float, angle: float) -> None
+機能: ZoomSelectorからのズーム確定通知を受け取り、設定されているズーム確定コールバック関数 (`self.zoom_confirm_callback`) を引数付きで呼び出す。
+
+def zoom_cancelled(self) -> None
+機能: ZoomSelectorからのズームキャンセル通知を受け取り、設定されているズームキャンセルコールバック関数 (`self.zoom_cancel_callback`) を呼び出す。
+
+def update_canvas(self, fractal_image: np.ndarray, params: Dict[str, float]) -> None
+機能: 新しいフラクタル画像と描画パラメータを受け取り、Axesをクリアして画像を再描画する。描画範囲はパラメータと16:9のアスペクト比に基づいて計算される。
+
+def reset_zoom_selector(self) -> None
+機能: 管理しているZoomSelectorインスタンスの `reset` メソッドを呼び出し、ズーム選択状態を初期状態に戻す。
+
+## CORE_EXECUTION_FLOW
+__init__ (config受け取り含む) → _setup_figure, set_zoom_callback, _setup_zoom (ZoomSelector生成), _set_black_background
+外部からの描画更新要求 (例: MainWindowからの update_canvas 呼び出し) → Axesクリア・設定 → 描画範囲計算 → imshow (画像描画) → canvas.draw()
+ZoomSelectorからのイベント通知 (zoom_confirmed, zoom_cancelled) → 対応するコールバック関数呼び出し
+外部からのズームセレクタのリセット要求 (例: MainWindowからの reset_zoom_selector 呼び出し) → zoom_selector.reset() 呼び出し
+
+## KEY_LOGIC_PATTERNS
+- MatplotlibのTkinterへの埋め込み: FigureCanvasTkAggによるMatplotlib描画領域の統合
+- コールバック関数: ズーム確定・キャンセル時の外部処理との連携
+- ズーム機能の委譲: ZoomSelectorクラスへのズーム操作管理の委譲
+- 画像描画と更新: Axesへの画像の描画と描画範囲の設定
+- アスペクト比の維持: update_canvas内での描画範囲計算時のアスペクト比維持
+- 設定データの受け渡し: コンストラクタで受け取ったconfigをZoomSelectorに渡す
+
+## CRITICAL_BEHAVIORS
+- フラクタル画像の正確かつ効率的な描画と更新
+- ズーム確定・キャンセル時のコールバックの正確な呼び出し
+- ズーム選択機能（ZoomSelector）の適切な初期化と連携
+- 描画範囲計算におけるアスペクト比の正確な維持
+- Matplotlibオブジェクト（Figure, Axes, Canvas）の適切な管理と設定
+
+
+==============================
+# MODULE_INFO:
 main_window.py
 
 ## MODULE_PURPOSE
@@ -17,12 +142,12 @@ threading: 非同期処理
 typing: 型ヒント
 json: 設定ファイル読み込み
 os: ファイルパス操作
-ui.canvas.FractalCanvas: フラクタル描画キャンバス
-ui.parameter_panel.ParameterPanel: パラメータ設定パネル
-fractal.render.render_fractal: フラクタル生成関数
-.status_bar.StatusBarManager: ステータスバー管理
-.zoom_function.debug_logger.DebugLogger: ログ管理
+.debug.DebugLogger: ログ管理
 .zoom_function.enums.LogLevel: ログレベル定義
+.render.render_fractal: フラクタル生成関数
+.canvas.FractalCanvas: フラクタル描画キャンバス
+.parameter_panel.ParameterPanel: パラメータ設定パネル
+.status_bar.StatusBarManager: ステータスバー管理
 
 ## CLASS_ATTRIBUTES
 self.logger: DebugLogger - デバッグログ管理インスタンス
@@ -30,14 +155,16 @@ self.root: tk.Tk - Tkinterルートウィンドウ (アプリケーションの�
 self.config (dict): config.json から読み込んだ設定データ
 self.ui_settings (dict): config['ui_settings'] のショートカット
 self.canvas_frame: ttk.Frame - キャンバス配置フレーム (フラクタル描画領域を配置)
-self.parameter_frame: ttk.Frame - パラメータパネル配置フレーム (パラメータ設定UIを配置)
 self.fractal_canvas: FractalCanvas - フラクタルを描画するキャンバス
-self.parameter_panel: ParameterPanel - パラクトルパラル (フラクタルのパラメータを設定)
+self.parameter_frame: ttk.Frame - パラメータパネル配置フレーム (パラメータ設定UIを配置)
+self.parameter_panel: ParameterPanel - フラクタルのパラメータを管理するパネル
 self.status_bar_manager: StatusBarManager - ステータスバー管理 (アプリケーションの状態を表示)
 self.zoom_params: dict - ズーム操作パラメータ {center_x, center_y, width, height, rotation} (現在の表示領域)
 self.prev_zoom_params: dict | None - 前回のズームパラメータ（キャンセル用、初期値はNone）
 self.is_drawing: bool - 描画中フラグ (フラクタル描画処理が実行中かどうかを示す)
-self.draw_thread: Thread | None - フラクタル描画スレッド (初期値はNone)
+self.draw_thread: threading.Thread | None - フラクタル描画スレッド (初期値はNone)
+self.canvas_width: int - キャンバスの幅 (ピクセル単位)
+self.canvas_height: int - キャンバスの高さ (ピクセル単位)
 
 ## METHOD_SIGNATURES
 def __init__(self, root: tk.Tk, logger: DebugLogger) -> None
@@ -116,92 +243,6 @@ UIスレッドと描画スレッドの分離
 
 ==============================
 # MODULE_INFO:
-canvas.py
-
-## MODULE_PURPOSE
-フラクタル画像の表示と更新、ズーム機能の制御、ユーザーインターフェースの描画を行うクラスを定義するモジュール
-
-## CLASS_DEFINITION:
-名前: FractalCanvas
-役割:
-- MatplotlibのFigureとAxesを管理し、フラクタル画像を描画・更新する。
-- ズーム選択機能（ZoomSelector）を初期化・管理し、ズーム操作のコールバックを処理する。
-- キャンバスの背景色を設定する。
-親クラス: なし
-
-## DEPENDENCIES
-numpy (np): 数値計算
-tkinter (tk): UIフレームワーク
-matplotlib.backends.backend_tkagg.FigureCanvasTkAgg: MatplotlibのFigureをTkinterキャンバスに埋め込む
-matplotlib.figure.Figure: MatplotlibのFigure
-typing: 型ヒント (Callable, Optional, Dict, Tuple)
-ui.zoom_function.debug_logger.DebugLogger: デバッグログ管理
-ui.zoom_function.enums.LogLevel: ログレベル定義
-ui.zoom_function.zoom_selector.ZoomSelector: ズーム選択機能 (遅延インポート)
-
-## CLASS_ATTRIBUTES
-self.fig: matplotlib.figure.Figure - MatplotlibのFigureオブジェクト
-self.ax: matplotlib.axes._subplots.AxesSubplot - MatplotlibのAxesオブジェクト
-self.canvas: matplotlib.backends.backend_tkagg.FigureCanvasTkAgg - Tkinterに埋め込まれたMatplotlibキャンバスウィジェット
-self.zoom_confirm_callback: Callable - ズーム確定時に呼び出すコールバック関数
-self.zoom_cancel_callback: Callable - ズームキャンセル時に呼び出すコールバック関数
-self.logger: DebugLogger - デバッグログを管理するLoggerインスタンス
-self.parent: tk.Tk or ttk.Frame - Tkinterの親ウィジェット
-self.config: Dict[str, float] - ZoomSelectorに渡すための設定データ
-self.facecolor: str - キャンバスの背景色
-
-## METHOD_SIGNATURES
-def __init__(self, master: tk.Tk, width: int, height: int, logger: DebugLogger, zoom_confirm_callback: Callable, zoom_cancel_callback: Callable, config: Dict[str, float]) -> None
-機能: コンストラクタ。FigureとAxesの初期化、ズーム機能の設定と初期化（ZoomSelectorインスタンス生成）、背景色の設定を行う。設定データを受け取る。
-
-def _setup_figure(self, width: int, height: int) -> None
-機能: MatplotlibのFigureとAxesを設定し、FigureCanvasTkAggを使用してTkinterキャンバスに埋め込む。初期サイズと背景色を設定する。
-
-def set_zoom_callback(self, zoom_confirm_callback: Callable, zoom_cancel_callback: Callable) -> None
-機能: ズーム確定・キャンセル時の外部コールバック関数を設定する。
-
-def _setup_zoom(self) -> None
-機能: ZoomSelectorのインスタンスを作成し、ズームイベントのコールバック（zoom_confirmed, zoom_cancelled）を設定する。
-
-def _set_black_background(self) -> None
-機能: AxesとFigureの背景色を黒に設定し、キャンバスを再描画する。
-
-def zoom_confirmed(self, x: float, y: float, w: float, h: float, angle: float) -> None
-機能: ZoomSelectorからのズーム確定通知を受け取り、設定されているズーム確定コールバック関数 (`self.zoom_confirm_callback`) を引数付きで呼び出す。
-
-def zoom_cancelled(self) -> None
-機能: ZoomSelectorからのズームキャンセル通知を受け取り、設定されているズームキャンセルコールバック関数 (`self.zoom_cancel_callback`) を呼び出す。
-
-def update_canvas(self, fractal_image: np.ndarray, params: Dict[str, float]) -> None
-機能: 新しいフラクタル画像と描画パラメータを受け取り、Axesをクリアして画像を再描画する。描画範囲はパラメータと16:9のアスペクト比に基づいて計算される。
-
-def reset_zoom_selector(self) -> None
-機能: 管理しているZoomSelectorインスタンスの `reset` メソッドを呼び出し、ズーム選択状態を初期状態に戻す。
-
-## CORE_EXECUTION_FLOW
-__init__ (config受け取り含む) → _setup_figure, set_zoom_callback, _setup_zoom (ZoomSelector生成), _set_black_background
-外部からの描画更新要求 (例: MainWindowからの update_canvas 呼び出し) → Axesクリア・設定 → 描画範囲計算 → imshow (画像描画) → canvas.draw()
-ZoomSelectorからのイベント通知 (zoom_confirmed, zoom_cancelled) → 対応するコールバック関数呼び出し
-外部からのズームセレクタのリセット要求 (例: MainWindowからの reset_zoom_selector 呼び出し) → zoom_selector.reset() 呼び出し
-
-## KEY_LOGIC_PATTERNS
-- MatplotlibのTkinterへの埋め込み: FigureCanvasTkAggによるMatplotlib描画領域の統合
-- コールバック関数: ズーム確定・キャンセル時の外部処理との連携
-- ズーム機能の委譲: ZoomSelectorクラスへのズーム操作管理の委譲
-- 画像描画と更新: Axesへの画像の描画と描画範囲の設定
-- アスペクト比の維持: update_canvas内での描画範囲計算時のアスペクト比維持
-- 設定データの受け渡し: コンストラクタで受け取ったconfigをZoomSelectorに渡す
-
-## CRITICAL_BEHAVIORS
-- フラクタル画像の正確かつ効率的な描画と更新
-- ズーム確定・キャンセル時のコールバックの正確な呼び出し
-- ズーム選択機能（ZoomSelector）の適切な初期化と連携
-- 描画範囲計算におけるアスペクト比の正確な維持
-- Matplotlibオブジェクト（Figure, Axes, Canvas）の適切な管理と設定
-
-
-==============================
-# MODULE_INFO:
 parameter_panel.py
 
 ## MODULE_PURPOSE
@@ -221,8 +262,8 @@ numpy (np): 数値計算
 tkinter (tk, ttk): UIフレームワーク
 PIL.Image, PIL.ImageTk: 画像処理
 typing: 型ヒント
-ui.zoom_function.debug_logger.DebugLogger: デバッグログ管理
-ui.zoom_function.enums.LogLevel: ログレベル定義
+.debug.DebugLogger: デバッグログ管理
+.zoom_function.enums.LogLevel: ログレベル定義
 
 ## CLASS_ATTRIBUTES
 self.parent: ttk.Frame - 親ウィジェット
@@ -232,21 +273,29 @@ self.logger: DebugLogger - デバッグロガーインスタンス
 self.render_mode: str - 描画モード ("quick" or "full", デフォルトは "quick")
 self.fractal_type_var: tk.StringVar - フラクタルタイプの選択
 self.formula_var: tk.StringVar - 数式表示
+self.formula_label: ttk.Label - 数式表示ラベル
 self.max_iter_var: tk.StringVar - 最大反復回数
 self.z_real_var: tk.StringVar - Z (実部)
 self.z_imag_var: tk.StringVar - Z (虚部)
 self.c_real_var: tk.StringVar - C (実部)
 self.c_imag_var: tk.StringVar - C (虚部)
 self.diverge_algo_var: tk.StringVar - 発散部着色アルゴリズム
+self.diverge_colorbar_label: tk.Label - 発散部カラーバー表示ラベル
 self.diverge_colormap_var: tk.StringVar - 発散部カラーマップ
 self.non_diverge_algo_var: tk.StringVar - 非発散部着色アルゴリズム
+self.non_diverge_colorbar_label: tk.Label - 非発散部カラーバー表示ラベル
 self.non_diverge_colormap_var: tk.StringVar - 非発散部カラーマップ
+self._fractal_type_row: int - フラクタルタイプ選択行
+self._formula_row: int - 数式表示行
+self._param_section_last_row: int - パラメータセクション最終行
+self._diverge_section_last_row: int - 発散部セクション最終行
+self._non_diverge_section_last_row: int - 非発散部セクション最終行
 self.colormaps: list - カラーマップリスト
 self.diverge_algorithms: list - 発散部アルゴリズムリスト
 self.non_diverge_algorithms: list - 非発散部アルゴリズムリスト
 self.COLORBAR_WIDTH: int - カラーバー幅
 self.COLORBAR_HEIGHT: int - カラーバー高さ
-self.config: Dict[str, Any] - 設定データ
+self.config: Dict[str, Any] - config.json から読み込んだ設定データ
 
 ## METHOD_SIGNATURES
 def __init__(self, parent, update_callback, reset_callback, logger: DebugLogger, config: Dict[str, Any]) -> None
@@ -320,123 +369,6 @@ UI構築: Tkinterウィジェットの配置と設定 (gridレイアウト)
 リソース管理: Matplotlibオブジェクト（カラーバー画像）の生成
 状態管理: render_mode による描画モードの追跡
 
-
-==============================
-# MODULE_INFO:
-status_bar.py
-
-## MODULE_PURPOSE
-ステータスバーの表示とアニメーションを管理するクラス
-
-## CLASS_DEFINITION:
-名前: StatusBarManager
-役割: ステータスバーの表示とアニメーション、描画時間の計測と表示、アニメーション状態の管理を行うクラス
-親クラス: なし
-
-## DEPENDENCIES
-tkinter (tk, ttk): UIフレームワーク
-threading: 非同期処理
-time: 時間計測
-typing: 型ヒント
-.zoom_function.debug_logger.DebugLogger: ログ管理
-.zoom_function.enums.LogLevel: ログレベル定義
-
-## CLASS_ATTRIBUTES
-_TIME_FORMAT: str - 時間表示のフォーマット文字列
-_ANIMATION_INTERVAL: float - アニメーションの間隔 (秒)
-_TIME_UPDATE_INTERVAL: int - 時間更新の間隔 (ミリ秒)
-root: tk.Tk - Tkinterのルートウィンドウ
-status_frame: ttk.Frame - ステータスバーを配置するフレーム
-logger: DebugLogger - デバッグログを管理するLogger
-_draw_start_time: Optional[float] - 描画開始時刻
-_status_timer_id: Optional[str] - 時間更新タイマーID
-status_label: ttk.Label - ステータス表示用のラベル
-_animation_state: AnimationState - アニメーション状態を管理するインスタンス
-
-## METHOD_SIGNATURES
-def __init__(self, root: tk.Tk, status_frame: ttk.Frame, logger: DebugLogger) -> None
-機能: コンストラクタ。ステータスバーの初期化とアニメーション状態の設定を行う
-
-def start_animation(self) -> None
-機能: ステータスバーの描画中アニメーションを開始する
-
-def _start_animation_thread(self) -> None
-機能: アニメーション用スレッドを開始する
-
-def _run_animation(self) -> None
-機能: アニメーションスレッドのメインループ。アニメーション状態が続く限り、ドットアニメーションを更新し続ける
-
-def _update_label_text(self, animation_text: str) -> None
-機能: ステータスラベルのテキストを更新する
-
-def _calculate_elapsed_time(self) -> tuple[int, int, int]
-機能: 経過時間を分、秒、ミリ秒に変換する
-
-def _format_time(self, minutes: int, seconds: int, milliseconds: int) -> str
-機能: 時間表示をフォーマットする
-
-def _schedule_time_update(self) -> None
-機能: 時間更新をスケジュールする
-
-def _update_time(self) -> None
-機能: 時間表示を更新し、次の更新をスケジュールする
-
-def _cancel_time_update(self) -> None
-機能: 時間更新タイマーをキャンセルする
-
-def stop_animation(self, final_message: str = "完了") -> None
-機能: アニメーションを停止し、最終メッセージを表示する
-
-def _wait_for_thread(self) -> None
-機能: アニメーションスレッドの終了を待機する
-
-def _show_final_message(self, message: str) -> None
-機能: 最終メッセージを表示する
-
-def _reset_state(self) -> None
-機能: 状態をリセットする
-
-def set_text(self, text: str) -> None
-機能: ステータスバーに任意のテキストを設定する
-
-## CLASS_DEFINITION:
-名前: AnimationState
-役割: アニメーションの状態を管理するクラス
-親クラス: なし
-
-## CLASS_ATTRIBUTES
-thread: Optional[threading.Thread] - アニメーションを実行するスレッド
-is_running: bool - アニメーションが実行中かどうかを示すフラグ
-dots: int - アニメーションのドット数
-max_dots: int - アニメーションの最大ドット数
-
-## METHOD_SIGNATURES
-def __init__(self) -> None
-機能: コンストラクタ。アニメーションの状態を初期化する
-
-def start(self) -> None
-機能: アニメーションを開始する
-
-def stop(self) -> None
-機能: アニメーションを停止する
-
-def reset(self) -> None
-機能: 状態をリセットする
-
-## CORE_EXECUTION_FLOW
-ステータスバーの初期化 → アニメーション開始/停止 → 時間更新 → テキスト更新
-
-## KEY_LOGIC_PATTERNS
-時間管理: 経過時間の計測とフォーマット
-非同期処理: アニメーションのスレッド実行
-状態管理: アニメーションの状態遷移
-
-## CRITICAL_BEHAVIORS
-アニメーションの正確な時間管理
-スレッドの安全な開始と停止
-状態の適切なリセット
-
-
 ==============================
 # MODULE_INFO:
 render.py
@@ -451,10 +383,10 @@ render.py
 numpy (np): 数値計算
 time: 時間計測
 coloring.manager: 着色処理管理
-fractal.fractal_types.julia: ジュリア集合計算関数
-fractal.fractal_types.mandelbrot: マンデルブロ集合計算関数
-ui.zoom_function.debug_logger.DebugLogger: デバッグログ管理
-ui.zoom_function.enums.LogLevel: ログレベル定義
+plugins.fractal_types.julia: ジュリア集合計算関数
+plugins.fractal_types.mandelbrot: マンデルブロ集合計算関数
+.debug.DebugLogger: デバッグログ管理
+.zoom_function.enums.LogLevel: ログレベル定義
 typing: 型ヒント (Dict, Any, Tuple, np.ndarray)
 
 ## CLASS_ATTRIBUTES
@@ -462,13 +394,13 @@ typing: 型ヒント (Dict, Any, Tuple, np.ndarray)
 
 ## METHOD_SIGNATURES
 def _calculate_dynamic_resolution(width: float, config: Dict[str, Any], logger: DebugLogger) -> int
-機能: ズームレベルに応じて描画解像度を動的に計算。設定ファイルからパラメータを読み込む。
+機能: ズームレベルに応じて描画解像度を動的に計算。対数スケールでズームファクターを計算し、設定ファイルからパラメータを読み込む。
 
-def _create_fractal_grid(params: Dict[str, Any], super_resolution_x: int, super_resolution_y: int, logger: DebugLogger) -> np.ndarray
-機能: フラクタル計算用の複素グリッドを作成。描画範囲パラメータ、指定された幅、高さに基づいて複素グリッド (np.ndarray) を作成する。回転も考慮する。
+def _create_fractal_grid(params: dict, super_resolution_x: int, super_resolution_y: int, logger: DebugLogger) -> np.ndarray
+機能: フラクタル計算用の複素数グリッドを生成。描画範囲パラメータ、指定された幅・高さ、回転角度に基づいて複素グリッド (np.ndarray) を作成する。
 
-def _compute_fractal(Z: np.ndarray, params: Dict[str, Any], logger: DebugLogger) -> Dict[str, np.ndarray]
-機能: フラクタル計算を実行。入力の複素グリッドとパラメータに基づいて、選択されたフラクタルタイプ（JuliaまたはMandelbrot）の計算を実行し、結果を返す。
+def _compute_fractal(Z: np.ndarray, params: dict, logger: DebugLogger) -> dict
+機能: フラクタル計算を実行。入力の複素数グリッドとパラメータに基づいて、選択されたフラクタルタイプ（JuliaまたはMandelbrot）の計算を実行し、結果を返す。
 
 def _downsample_image(
     high_res_image: np.ndarray,
@@ -478,9 +410,9 @@ def _downsample_image(
     samples_per_pixel_y: int,
     logger: DebugLogger
 ) -> np.ndarray
-機能: 高解像度の画像データをダウンサンプリングしてアンチエイリアシングを行う。指定されたサンプル数でダウンサンプリングし、エラーハンドリングも含む。
+機能: 高解像度画像をダウンサンプリングしてアンチエイリアシングを行う。指定されたサンプル数でダウンサンプリングし、エラーハンドリングも含む。
 
-def render_fractal(params: Dict[str, Any], logger: DebugLogger, config: Dict[str, Any]) -> np.ndarray
+def render_fractal(params: dict, logger: DebugLogger, config: Dict[str, Any]) -> np.ndarray
 機能: フラクタル画像を生成するメイン関数。動的解像度計算、複素グリッド生成、フラクタル計算、着色、ダウンサンプリングを実行し、最終的な画像データを返す。設定データを受け取る。
 
 ## CORE_EXECUTION_FLOW
@@ -502,3 +434,119 @@ render_fractal (paramsとconfig受け取り) → _calculate_dynamic_resolution (
 - 着色処理とダウンサンプリングの正確性
 - エラー発生時の適切なフォールバック処理（エラー画像の生成）
 - 設定パラメータの読み込みと適用
+
+
+==============================
+# MODULE_INFO:
+status_bar.py
+
+## MODULE_PURPOSE
+ステータスバーの表示とアニメーションを管理するクラス
+
+## CLASS_DEFINITION:
+名前: StatusBarManager
+役割: ステータスバーの表示とアニメーション、描画時間の計測と表示、アニメーション状態の管理を行うクラス
+親クラス: なし
+
+## DEPENDENCIES
+tkinter (tk, ttk): UIフレームワーク
+threading: 非同期処理
+time: 時間計測
+typing: 型ヒント
+.debug.DebugLogger: デバッグログ管理
+.zoom_function.enums.LogLevel: ログレベル定義
+
+## CLASS_ATTRIBUTES
+_TIME_FORMAT: str - 時間表示のフォーマット文字列 ("[{:>3}分 {:02}秒 {:03}ms] ")
+_ANIMATION_INTERVAL: float - アニメーションの間隔 (0.1秒)
+_TIME_UPDATE_INTERVAL: int - 時間更新の間隔 (1000ミリ秒)
+root: tk.Tk - Tkinterのルートウィンドウ
+status_frame: ttk.Frame - ステータスバーを配置するフレーム
+logger: DebugLogger - デバッグログを管理するLogger
+_draw_start_time: Optional[float] - 描画開始時刻
+_status_timer_id: Optional[str] - 時間更新タイマーID
+status_label: ttk.Label - ステータス表示用のラベル
+_animation_state: AnimationState - アニメーション状態を管理するインスタンス
+
+## METHOD_SIGNATURES
+def __init__(self, root: tk.Tk, status_frame: ttk.Frame, logger: DebugLogger) -> None
+機能: コンストラクタ。ステータスバーの初期化とアニメーション状態の設定を行う
+
+def start_animation(self) -> None
+機能: ステータスバーの描画中アニメーションを開始。アニメーション状態を開始し、描画開始時刻を記録し、時間更新とアニメーションスレッドを開始する
+
+def _start_animation_thread(self) -> None
+機能: アニメーション用スレッドを開始。アニメーションスレッドを作成し、開始する
+
+def _run_animation(self) -> None
+機能: アニメーションスレッドのメインループ。アニメーション状態が続く限り、ドットアニメーションを更新し続ける
+
+def _update_label_text(self, animation_text: str) -> None
+機能: ステータスラベルのテキストを更新。時間経過とアニメーションテキストを組み合わせて表示を更新する
+
+def _calculate_elapsed_time(self) -> tuple[int, int, int]
+機能: 経過時間を分、秒、ミリ秒に変換。描画開始時刻から現在までの経過時間を計算し、分・秒・ミリ秒に変換
+
+def _format_time(self, minutes: int, seconds: int, milliseconds: int) -> str
+機能: 時間表示をフォーマット。分・秒・ミリ秒を指定されたフォーマットに変換
+
+def _schedule_time_update(self) -> None
+機能: 時間更新をスケジュール。アニメーションが実行中であれば、時間更新をスケジュールする
+
+def _update_time(self) -> None
+機能: 時間表示を更新し、次の更新をスケジュール。アニメーションが実行中で、描画開始時刻が設定されていれば、時間表示を更新し、次の更新をスケジュールする
+
+def _cancel_time_update(self) -> None
+機能: 時間更新タイマーをキャンセル。時間更新タイマーが設定されていれば、キャンセルする
+
+def stop_animation(self, final_message: str = "完了") -> None
+機能: アニメーションを停止し、最終メッセージを表示。アニメーションを停止し、スレッドの終了を待機し、時間更新をキャンセルし、最終メッセージを表示し、状態をリセットする
+
+def _wait_for_thread(self) -> None
+機能: アニメーションスレッドの終了を待機。アニメーションスレッドが実行中であれば、終了を待機する
+
+def _show_final_message(self, message: str) -> None
+機能: 最終メッセージを表示。描画開始時刻が設定されていれば、経過時間を含めたメッセージを表示する
+
+def _reset_state(self) -> None
+機能: 状態をリセット。アニメーションの状態を初期状態に戻す
+
+def set_text(self, text: str) -> None
+機能: ステータスバーに任意のテキストを設定する
+
+## CLASS_DEFINITION:
+名前: AnimationState
+役割: アニメーションの状態を管理するクラス
+親クラス: なし
+
+## CLASS_ATTRIBUTES
+thread: Optional[threading.Thread] - アニメーションを実行するスレッド
+is_running: bool - アニメーションが実行中かどうかを示すフラグ
+dots: int - アニメーションのドット数 (0-10)
+max_dots: int - アニメーションの最大ドット数 (10)
+
+## METHOD_SIGNATURES
+def __init__(self) -> None
+機能: コンストラクタ。アニメーションの状態を初期化する
+
+def start(self) -> None
+機能: アニメーションを開始。アニメーション実行中フラグをTrueにし、ドット数をリセットする
+
+def stop(self) -> None
+機能: アニメーションを停止。アニメーション実行中フラグをFalseにする
+
+def reset(self) -> None
+機能: 状態をリセット。アニメーションの状態を初期状態に戻す
+
+## CORE_EXECUTION_FLOW
+ステータスバーの初期化 → アニメーション開始/停止 → 時間更新 → テキスト更新
+
+## KEY_LOGIC_PATTERNS
+時間管理: 経過時間の計測とフォーマット
+非同期処理: アニメーションのスレッド実行
+状態管理: アニメーションの状態遷移
+
+## CRITICAL_BEHAVIORS
+アニメーションの正確な時間管理
+スレッドの安全な開始と停止
+状態の適切なリセット

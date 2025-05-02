@@ -1,5 +1,48 @@
 ==============================
 # MODULE_INFO:
+__init__.py
+
+## MODULE_PURPOSE
+ズーム機能を実装するためのモジュール群の初期化と公開インターフェースの定義。ズーム領域の描画、カーソル管理、ズーム状態管理、イベント処理などの機能を提供する。
+
+## CLASS_DEFINITION:
+(クラス定義なし)
+
+## DEPENDENCIES
+- cursor_manager.py: カーソル管理
+- enum_rect.py: ズーム状態定義
+- event_handler_core.py: イベント処理のコア機能
+- event_handlers_private.py: プライベートイベントハンドラ
+- event_handlers_utils.py: イベントハンドラユーティリティ
+- rect_manager.py: ズーム領域管理
+- zoom_selector.py: ズーム選択機能
+- zoom_state_handler.py: ズーム状態管理
+
+## CLASS_ATTRIBUTES
+(クラス属性なし)
+
+## METHOD_SIGNATURES
+(メソッドなし)
+
+## CORE_EXECUTION_FLOW
+1. パッケージの初期化
+2. 必要なモジュールのインポート
+3. 公開インターフェースの定義
+4. パッケージバージョンの設定
+
+## KEY_LOGIC_PATTERNS
+- パッケージの公開インターフェース定義
+- モジュールのインポート管理
+- ズーム機能のモジュール間連携
+
+## CRITICAL_BEHAVIORS
+- ズーム機能の正しく公開
+- モジュール間の依存関係の管理
+- インターフェースの一貫性維持
+
+
+==============================
+# MODULE_INFO:
 cursor_manager.py
 
 ## MODULE_PURPOSE
@@ -15,25 +58,24 @@ cursor_manager.py
 ## DEPENDENCIES
 tkinter (tk): UIフレームワーク
 matplotlib.backend_bases.MouseEvent: MatplotlibのMouseEvent
-matplotlib.backend_bases.Event: MatplotlibのEvent
 typing: 型ヒント
-ui.zoom_function.debug_logger.DebugLogger: デバッグログ管理
-ui.zoom_function.enums.LogLevel: ログレベル定義
-ui.zoom_function.enums.ZoomState: ズーム状態のEnum
-ui.zoom_function.event_validator.EventValidator: イベント検証
-ui.zoom_function.zoom_selector.ZoomSelector: ズーム選択 (遅延インポート)
+debug.DebugLogger: デバッグログ管理
+validator.EventValidator: イベント検証
+enum_rect.ZoomState: ズーム状態のEnum
+zoom_selector.ZoomSelector: ズーム選択 (遅延インポート)
 
 ## CLASS_ATTRIBUTES
-self.zoom_selector: ZoomSelector - ZoomSelectorインスタンス
-self.logger: DebugLogger - ログ出力用DebugLoggerインスタンス
-self.validator: EventValidator - イベント検証用EventValidatorインスタンス
-self._current_cursor: str - 現在のカーソル
-self._canvas_widget: tk.Widget - カーソル操作対象のキャンバスウィジェット
-CURSORS: dict - カーソル定義
+- zoom_selector: ZoomSelector - ZoomSelectorインスタンス
+- logger: DebugLogger - ログ出力用DebugLoggerインスタンス
+- validator: EventValidator - イベント検証用EventValidatorインスタンス
+- _current_cursor: str - 現在のカーソル
+- _canvas_widget: tk.Widget - カーソル操作対象のキャンバスウィジェット
+- CURSORS: dict - カーソル定義（default, crosshair, resize_nw_se, resize_ne_sw, move, rotate）
 
 ## METHOD_SIGNATURES
 def __init__(self, zoom_selector: 'ZoomSelector', logger: DebugLogger) -> None
 機能: コンストラクタ。ZoomSelectorとロガーの設定、イベントバリデーターの初期化、キャンバスウィジェットの取得
+例外: ValueError - Tkinterウィジェットが取得できない場合
 
 def cursor_update(self, event: Optional[MouseEvent], state: ZoomState, near_corner_index: Optional[int] = None, is_rotating: bool = False) -> None
 機能: イベントと状態に基づいてカーソル形状を更新
@@ -57,50 +99,56 @@ __init__ -> cursor_update -> _should_update_cursor, _determine_cursor, _update_c
 - カーソル管理: 状態に応じたカーソル変更
 - イベント処理: イベントに基づいたカーソル更新
 - エラーハンドリング: Tkinterウィジェット取得失敗時のエラー処理
+- カーソル状態管理: 現在のカーソル状態の追跡
+- イベント検証: イベントの有効性チェック
 
 ## CRITICAL_BEHAVIORS
 - カーソル更新の正確性
 - 状態とカーソルの整合性
 - エラー発生時の適切なログ出力
-
+- イベント検証の正確性
+- カーソル状態の一貫性維持
 
 ==============================
 # MODULE_INFO:
 enum_rect.py
 
 ## MODULE_PURPOSE
-Enum (列挙型) の定義
+ズームセレクタの状態を定義するEnumクラスの実装
 
 ## CLASS_DEFINITION:
 名前: ZoomState
-役割: ズームセレクタの状態を定義するEnum
+役割: ズームセレクタの操作状態を定義するEnumクラス
 親クラス: enum.Enum
 
 ## DEPENDENCIES
-enum.Enum: Enum型
-enum.auto: 自動値割り当て
+- enum.Enum: Enum型の基底クラス
+- enum.auto: 自動値割り当て機能
 
 ## CLASS_ATTRIBUTES
 ZoomState:
-- NO_RECT: 矩形がない、または確定済み
-- CREATE: 矩形を作成中 (ドラッグ中)
-- EDIT: 矩形を編集中
-- ON_MOVE: 矩形を移動中
-- RESIZING: 矩形をリサイズ中
-- ROTATING: 矩形を回転中
+- NO_RECT: 矩形がない、または確定済みの状態
+- CREATE: 矩形を作成中（ドラッグ中）の状態
+- EDIT: 矩形を編集中の状態
+- ON_MOVE: 矩形を移動中の状態
+- RESIZING: 矩形をリサイズ中の状態
+- ROTATING: 矩形を回転中の状態
 
 ## METHOD_SIGNATURES
-(Enum クラスのため、特筆すべきメソッドはない)
+- クラスメソッド: なし
+- インスタンスメソッド: なし
 
 ## CORE_EXECUTION_FLOW
-Enum定義のみ
+- Enum定義のみ
+- 各状態はauto()を使用して自動的に値が割り当てられる
 
 ## KEY_LOGIC_PATTERNS
-- Enumによる状態の定義
+- Enumによる状態管理
+- auto()による自動値割り当て
 
 ## CRITICAL_BEHAVIORS
-- 状態の正確な表現
-
+- ズームセレクタの操作状態を正確に表現
+- 各状態の明確な定義と区分
 
 ==============================
 # MODULE_INFO:
@@ -117,94 +165,106 @@ event_handler_core.py
 親クラス: なし
 
 ## DEPENDENCIES
-matplotlib.backend_bases.MouseEvent: マウスイベント
-matplotlib.backend_bases.MouseButton: マウスボタン
-matplotlib.backend_bases.KeyEvent: キーボードイベント
-typing: 型ヒント (Optional, TYPE_CHECKING, Tuple, List, Dict, Any)
-ui.zoom_function.enums.LogLevel: ログレベル定義
-ui.zoom_function.enums.ZoomState: ズーム状態のEnum
-ui.zoom_function.event_handlers_private.EventHandlersPrivate: イベント処理の実装詳細
-ui.zoom_function.event_handlers_utils.EventHandlersUtils: ユーティリティ関数群
-ui.zoom_function.cursor_manager.CursorManager: カーソル管理 (遅延インポート)
-ui.zoom_function.debug_logger.DebugLogger: デバッグログ (遅延インポート)
-ui.zoom_function.event_validator.EventValidator: イベント検証 (遅延インポート)
-ui.zoom_function.rect_manager.RectManager: 矩形描画 (遅延インポート)
-ui.zoom_function.zoom_selector.ZoomSelector: 矩形選択 (遅延インポート)
-ui.zoom_function.zoom_state_handler.ZoomStateHandler: ズーム状態管理 (遅延インポート)
+- matplotlib.backend_bases.MouseEvent: マウスイベント
+- matplotlib.backend_bases.MouseButton: マウスボタン
+- matplotlib.backend_bases.KeyEvent: キーボードイベント
+- typing: 型ヒント (Optional, TYPE_CHECKING, Tuple, List, Dict, Any)
+- debug.LogLevel: ログレベル定義
+- .enum_rect.ZoomState: ズーム状態のEnum
+- .event_handlers_private.EventHandlersPrivate: イベント処理の実装詳細
+- .event_handlers_utils.EventHandlersUtils: ユーティリティ関数群
+- .cursor_manager.CursorManager: カーソル管理 (遅延インポート)
+- .debug.debug_logger.DebugLogger: デバッグログ (遅延インポート)
+- .event_validator.EventValidator: イベント検証 (遅延インポート)
+- .rect_manager.RectManager: 矩形描画 (遅延インポート)
+- .zoom_selector.ZoomSelector: 矩形選択 (遅延インポート)
+- .zoom_state_handler.ZoomStateHandler: ズーム状態管理 (遅延インポート)
 
 ## CLASS_ATTRIBUTES
-self.logger: DebugLogger - デバッグログ出力用ロガー
-self.config: Dict[str, Any] - config.json から読み込んだ設定データ
-self.zoom_selector: ZoomSelector - ZoomSelectorインスタンス
-self.state_handler: ZoomStateHandler - ZoomStateHandlerインスタンス
-self.rect_manager: RectManager - RectManagerインスタンス
-self.cursor_manager: CursorManager - CursorManagerインスタンス
-self.validator: EventValidator - EventValidatorインスタンス
-self.canvas: FigureCanvasTkAgg - matplotlibの描画領域
-self.private_handlers: EventHandlersPrivate - イベント処理の実装詳細
-self.utils: EventHandlersUtils - ユーティリティ関数群
-self._create_logged: bool - 矩形作成ログ出力フラグ
-self._move_logged: bool - 矩形移動ログ出力フラグ
-self._resize_logged: bool - 矩形リサイズログ出力フラグ
-self._rotate_logged: bool - 矩形回転ログ出力フラグ
-self._cid_press: Optional[int] - マウスボタン押下イベント接続ID
-self._cid_release: Optional[int] - マウスボタン解放イベント接続ID
-self._cid_motion: Optional[int] - マウス移動イベント接続ID
-self._cid_key_press: Optional[int] - キー押下イベント接続ID
-self._cid_key_release: Optional[int] - キー解放イベント接続ID
-self.start_x: Optional[float] - 矩形作成開始時のX座標 (データ座標)
-self.start_y: Optional[float] - 矩形作成開始時のY座標 (データ座標)
-self.move_start_x: Optional[float] - 矩形移動開始時のマウスX座標 (データ座標)
-self.move_start_y: Optional[float] - 矩形移動開始時のマウスY座標 (データ座標)
-self.rect_start_pos: Optional[Tuple[float, float]] - 矩形移動開始時の矩形左下座標 (データ座標)
-self.resize_corner_index: Optional[int] - リサイズ中の角のインデックス (0-3)
-self.fixed_corner_pos: Optional[Tuple[float, float]] - リサイズ中の固定された対角の座標 (データ座標)
-self._alt_pressed: bool - Altキーが押されているか
-self.rotate_start_mouse_pos: Optional[Tuple[float, float]] - 回転開始時のマウス座標 (データ座標)
-self.rotate_center: Optional[Tuple[float, float]] - 回転中心座標 (データ座標)
-self.previous_vector_angle: Optional[float] - 前回のベクトル角度 (度単位)
-self.edit_history: List[Optional[Dict[str, Any]]] - Undo用編集履歴
-self.rotation_threshold: float - 回転更新の閾値 (度、設定ファイルから読み込み)
-self.rotation_sensitivity: float - 回転感度係数 (設定ファイルから読み込み)
-self.rotation_throttle_interval: float - 回転処理のスロットリング間隔 (秒、設定ファイルから読み込み)
-self._last_rotation_update_time: float - 最後に回転処理を実行した時刻 (タイムスタンプ)
+- logger: DebugLogger - デバッグログ出力用ロガー
+- config: Dict[str, Any] - config.json から読み込んだ設定データ
+- zoom_selector: ZoomSelector - ZoomSelectorインスタンス
+- state_handler: ZoomStateHandler - ZoomStateHandlerインスタンス
+- rect_manager: RectManager - RectManagerインスタンス
+- cursor_manager: CursorManager - CursorManagerインスタンス
+- validator: EventValidator - EventValidatorインスタンス
+- canvas: FigureCanvasTkAgg - matplotlibの描画領域
+- private_handlers: EventHandlersPrivate - イベント処理の実装詳細
+- utils: EventHandlersUtils - ユーティリティ関数群
+- _create_logged: bool - 矩形作成ログ出力フラグ
+- _move_logged: bool - 矩形移動ログ出力フラグ
+- _resize_logged: bool - 矩形リサイズログ出力フラグ
+- _rotate_logged: bool - 矩形回転ログ出力フラグ
+- _cid_press: Optional[int] - マウスボタン押下イベント接続ID
+- _cid_release: Optional[int] - マウスボタン解放イベント接続ID
+- _cid_motion: Optional[int] - マウス移動イベント接続ID
+- _cid_key_press: Optional[int] - キー押下イベント接続ID
+- _cid_key_release: Optional[int] - キー解放イベント接続ID
+- start_x: Optional[float] - 矩形作成開始時のX座標 (データ座標)
+- start_y: Optional[float] - 矩形作成開始時のY座標 (データ座標)
+- move_start_x: Optional[float] - 矩形移動開始時のマウスX座標 (データ座標)
+- move_start_y: Optional[float] - 矩形移動開始時のマウスY座標 (データ座標)
+- rect_start_pos: Optional[Tuple[float, float]] - 矩形移動開始時の矩形左下座標 (データ座標)
+- resize_corner_index: Optional[int] - リサイズ中の角のインデックス (0-3)
+- fixed_corner_pos: Optional[Tuple[float, float]] - リサイズ中の固定された対角の座標 (データ座標)
+- _alt_pressed: bool - Altキーが押されているか
+- rotate_start_mouse_pos: Optional[Tuple[float, float]] - 回転開始時のマウス座標 (データ座標)
+- rotate_center: Optional[Tuple[float, float]] - 回転中心座標 (データ座標)
+- previous_vector_angle: Optional[float] - 前回のベクトル角度 (度単位)
+- edit_history: List[Optional[Dict[str, Any]]] - Undo用編集履歴
+- rotation_threshold: float - 回転更新の閾値 (度、設定ファイルから読み込み)
+- rotation_sensitivity: float - 回転感度係数 (設定ファイルから読み込み)
+- rotation_throttle_interval: float - 回転処理のスロットリング間隔 (秒、設定ファイルから読み込み)
+- _last_rotation_update_time: float - 最後に回転処理を実行した時刻 (タイムスタンプ)
 
 ## METHOD_SIGNATURES
-def __init__(self, zoom_selector: 'ZoomSelector', state_handler: 'ZoomStateHandler', rect_manager: 'RectManager', cursor_manager: 'CursorManager', validator: 'EventValidator', logger: 'DebugLogger', canvas, config: Dict[str, Any]) -> None
-機能: コンストラクタ。各コンポーネントのインスタンス化と初期化、設定データの読み込みとバリデーションを行う。
+- __init__(self, zoom_selector: 'ZoomSelector', state_handler: 'ZoomStateHandler', rect_manager: 'RectManager', cursor_manager: 'CursorManager', validator: 'EventValidator', logger: 'DebugLogger', canvas, config: Dict[str, Any]) -> None
+  機能: コンストラクタ。各コンポーネントのインスタンス化と初期化、設定データの読み込みとバリデーションを行う。
 
-def connect(self) -> None
-機能: 全イベントハンドラをmatplotlibのキャンバスイベントと接続する。
+- connect(self) -> None
+  機能: 全イベントハンドラをmatplotlibのキャンバスイベントと接続する。
 
-def on_press(self, event: MouseEvent) -> None
-機能: マウスボタン押下イベントのディスパッチャ。イベント検証後、現在の状態とボタンに応じて適切なハンドラメソッドを呼び出す。
+- on_press(self, event: MouseEvent) -> None
+  機能: マウスボタン押下イベントのディスパッチャ。イベント検証後、現在の状態とボタンに応じて適切なハンドラメソッドを呼び出す。
 
-def on_motion(self, event: MouseEvent) -> None
-機能: マウス移動イベントのディスパッチャ。イベント検証後、現在の状態に応じて適切なハンドラメソッドを呼び出す。
+- on_motion(self, event: MouseEvent) -> None
+  機能: マウス移動イベントのディスパッチャ。イベント検証後、現在の状態に応じて適切なハンドラメソッドを呼び出す。
 
-def on_release(self, event: MouseEvent) -> None
-機能: マウスボタン解放イベントのディスパッチャ。イベント検証後、現在の状態に応じて適切なハンドラメソッドを呼び出す。操作終了後の状態遷移、キャッシュ無効化、カーソル更新、キャンバス再描画を行う。
+- on_release(self, event: MouseEvent) -> None
+  機能: マウスボタン解放イベントのディスパッチャ。イベント検証後、現在の状態に応じて適切なハンドラメソッドを呼び出す。操作終了後の状態遷移、キャッシュ無効化、カーソル更新、キャンバス再描画を行う。
 
-def on_key_press(self, event: KeyEvent) -> None
-機能: キーボード押下イベントのディスパッチャ。キーに応じて適切なハンドラメソッドを呼び出す。Altキー押下時はカーソルを更新する。
+- on_key_press(self, event: KeyEvent) -> None
+  機能: キーボード押下イベントのディスパッチャ。キーに応じて適切なハンドラメソッドを呼び出す。Altキー押下時はカーソルを更新する。
 
-def on_key_release(self, event: KeyEvent) -> None
-機能: キーボード解放イベントのディスパッチャ。キーに応じて適切なハンドラメソッドを呼び出す。Altキー解放時はカーソルを更新する。
+- on_key_release(self, event: KeyEvent) -> None
+  機能: キーボード解放イベントのディスパッチャ。キーに応じて適切なハンドラメソッドを呼び出す。Altキー解放時はカーソルを更新する。
 
-def reset_internal_state(self) -> None
-機能: 全ての内部状態と編集履歴をリセットする。Utilsクラスに処理を委譲する。
+- reset_internal_state(self) -> None
+  機能: 全ての内部状態と編集履歴をリセットする。Utilsクラスに処理を委譲する。
 
-def clear_edit_history(self) -> None
-機能: 編集履歴をクリアする。Utilsクラスに処理を委譲する。
+- clear_edit_history(self) -> None
+  機能: 編集履歴をクリアする。Utilsクラスに処理を委譲する。
 
 ## CORE_EXECUTION_FLOW
-__init__ (config読み込み, バリデーション含む) -> connect (イベント接続)
-イベント発生 (on_press, on_motion, on_release, on_key_press, on_key_release) -> validator.validate_event (検証) -> 状態に応じた private_handlers のメソッド呼び出し
-操作終了 (on_releaseなど) -> state_handler.update_state (状態更新) -> zoom_selector.invalidate_rect_cache (キャッシュ無効化) -> cursor_manager.cursor_update (カーソル更新) -> canvas.draw_idle (再描画)
-Escキー押下 -> private_handlers._handle_key_escape (Undoまたはキャンセル)
-Altキー押下/解放 -> private_handlers.handle_key_alt_press/release, cursor_manager.cursor_update, canvas.draw_idle
-reset_internal_state -> utils.reset_internal_state
-clear_edit_history -> utils.clear_edit_history
+1. __init__ (コンストラクタ):
+   - 各コンポーネントのインスタンス化
+   - 設定データの読み込みとバリデーション
+   - イベント処理用の内部状態の初期化
+
+2. connect (イベント接続):
+   - マウス/キーボードイベントのハンドラ接続
+   - イベント処理の準備
+
+3. イベント処理フロー:
+   - イベント発生 (on_press, on_motion, on_release, on_key_press, on_key_release)
+   - validator.validate_event (イベント検証)
+   - 状態に応じた private_handlers のメソッド呼び出し
+
+4. 操作終了処理:
+   - state_handler.update_state (状態更新)
+   - zoom_selector.invalidate_rect_cache (キャッシュ無効化)
+   - cursor_manager.cursor_update (カーソル更新)
+   - canvas.draw_idle (再描画)
 
 ## KEY_LOGIC_PATTERNS
 - イベント駆動: マウス/キーボードイベントに基づく処理
@@ -213,6 +273,7 @@ clear_edit_history -> utils.clear_edit_history
 - Undo/Redo: 編集履歴によるUndo/Redo (Utilsが管理)
 - 設定ファイルからの読み込み: 回転関連パラメータをconfigから読み込み
 - イベント検証: EventValidatorによるイベントの事前検証
+- スロットリング: 回転処理のスロットリングによるパフォーマンス最適化
 
 ## CRITICAL_BEHAVIORS
 - イベント処理の正確性と応答性
@@ -242,8 +303,8 @@ matplotlib.backend_bases.MouseEvent: マウスイベント
 matplotlib.backend_bases.MouseButton: マウスボタン
 matplotlib.backend_bases.KeyEvent: キーボードイベント
 typing: 型ヒント (Optional, TYPE_CHECKING, Tuple, List, Dict, Any)
-ui.zoom_function.enums.LogLevel: ログレベル定義
-ui.zoom_function.enums.ZoomState: ズーム状態のEnum
+debug: LogLevel - ログレベル定義
+ui.zoom_function.enum_rect.ZoomState: ズーム状態のEnum
 ui.zoom_function.event_handler_core.EventHandler: 親クラス (遅延インポート、型ヒント用)
 
 ## CLASS_ATTRIBUTES
@@ -316,6 +377,9 @@ __init__ -> EventHandlerからのイベントハンドラ呼び出し (handle_pr
 - 矩形操作: 矩形の作成、移動、リサイズ、回転の各ロジック実装
 - 親クラスへのアクセス: `self.core` を通じた他のコンポーネントの状態やメソッドへのアクセス
 - 編集履歴の連携: 操作開始時に履歴を保存、操作終了時やキャンセル時に履歴を操作
+- 回転制御: 回転角度の閾値と感度の制御
+- サイズ検証: リサイズ操作時の有効なサイズの検証
+- 一時矩形管理: 作成時の一時矩形の作成と削除
 
 ## CRITICAL_BEHAVIORS
 - 各ズーム操作（作成、移動、リサイズ、回転）の正確な実行ロジック
@@ -323,6 +387,9 @@ __init__ -> EventHandlerからのイベントハンドラ呼び出し (handle_pr
 - 無効な操作やキャンセル時の正確な状態復帰またはリセット
 - 編集履歴への操作の正確な記録とUndo/Redoへの対応
 - Altキーとマウス操作の組み合わせによる回転処理のハンドリング
+- 回転角度の計算と正規化
+- リサイズ時のサイズ検証と無効なサイズの処理
+- 一時矩形の作成と削除の処理
 
 
 ==============================
@@ -343,7 +410,7 @@ EventHandler から呼び出され、補助的な機能を提供するクラス
 ## DEPENDENCIES
 math: 角度計算
 typing: 型ヒント
-ui.zoom_function.enums.LogLevel: ログレベル定義
+debug: LogLevel定義
 ui.zoom_function.enums.ZoomState: ズーム状態のEnum
 ui.zoom_function.event_handler_core.EventHandler: 親クラス (遅延インポート)
 
@@ -365,6 +432,9 @@ def _add_history(self, state: Optional[Dict[str, Any]]) -> None
 
 def _remove_last_history(self) -> Optional[Dict[str, Any]]
 機能: 最後の履歴を削除し、削除された状態情報を返す
+
+def _undo_last_edit(self) -> None
+機能: 最後の編集操作をUndo
 
 def _undo_or_cancel_edit(self) -> None
 機能: 編集操作をUndoまたはキャンセル
@@ -388,18 +458,20 @@ def clear_edit_history(self) -> None
 機能: 編集履歴をクリア
 
 ## CORE_EXECUTION_FLOW
-__init__ -> 各種ユーティリティメソッド (_calculate_angle, _normalize_angle_diff, _add_history, _remove_last_history, _undo_or_cancel_edit)
+__init__ -> 各種ユーティリティメソッド (_calculate_angle, _normalize_angle_diff, _add_history, _remove_last_history, _undo_last_edit, _undo_or_cancel_edit)
 必要に応じて reset_internal_state とその関連メソッド
 
 ## KEY_LOGIC_PATTERNS
 - 角度計算: ベクトル角度の計算と正規化
-- 編集履歴: Undo/Redoのための編集履歴管理
+- 編集履歴: Undo/Redoのための編集履歴管理 (メモリリーク対策含む)
 - 状態リセット: 各操作状態のリセット
+- Undo処理: ESCキーによるUndoまたは編集キャンセルの処理
 
 ## CRITICAL_BEHAVIORS
 - 角度計算の正確性
 - 編集履歴の整合性と効率的な管理
 - 内部状態のリセットの完全性
+- メモリリーク防止 (履歴数の上限管理)
 
 
 ==============================
@@ -408,7 +480,9 @@ rect_manager.py
 
 ## MODULE_PURPOSE
 ズーム領域の矩形（Rectangle）を管理するクラス
-- ズーム領域を作成、移動、リサイズ、回転を実装
+- ズーム領域の作成、移動、リサイズ、回転機能を実装
+- アスペクト比維持、最小サイズチェック、ピクセルサイズ計算などのジオメトリ制御
+- Undo/Redo機能のサポート
 
 ## CLASS_DEFINITION:
 名前: RectManager
@@ -416,80 +490,81 @@ rect_manager.py
 - ズーム領域の矩形パッチを作成、更新、削除
 - 矩形のジオメトリ計算（アスペクト比維持、ピクセルサイズチェック）
 - 矩形の回転変換処理
+- Undo/Redo機能のサポート
 親クラス: なし
 
 ## DEPENDENCIES
-matplotlib.patches: 図形描画
-matplotlib.transforms: 座標変換
-matplotlib.axes.Axes: Axesオブジェクト
-numpy: 数値計算
-typing: 型ヒント
-ui.zoom_function.debug_logger.DebugLogger: デバッグログ管理
-ui.zoom_function.enums.LogLevel: ログレベル定義
+- matplotlib.patches: 図形描画
+- matplotlib.transforms: 座標変換
+- matplotlib.axes.Axes: Axesオブジェクト
+- numpy: 数値計算
+- typing: 型ヒント
+- config.json: 設定値（最小サイズ、アスペクト比など）
 
 ## CLASS_ATTRIBUTES
-self.ax: Axes - 矩形を描画するAxesオブジェクト
-self.rect: Optional[patches.Rectangle] - ズーム領域の矩形パッチ
-self._angle: float - 矩形の回転角度（度数法）
-self.min_width_px: float - 最小幅（ピクセル）
-self.min_height_px: float - 最小高さ（ピクセル）
-self.aspect_ratio_w_h: float - アスペクト比（幅/高さ）
-self._last_valid_size_px: Optional[Tuple[float, float]] - 最後に有効だったサイズ
+- self.ax: Axes - 矩形を描画するAxesオブジェクト
+- self.rect: Optional[patches.Rectangle] - ズーム領域の矩形パッチ
+- self._angle: float - 矩形の回転角度（度数法）
+- self._last_valid_size_px: Optional[Tuple[float, float]] - 最後に有効だったピクセルサイズ
+- self.min_width_px: int - 矩形の最小許容幅（ピクセル単位）
+- self.min_height_px: int - 矩形の最小許容高さ（ピクセル単位）
+- self.aspect_ratio_w_h: float - 矩形の目標アスペクト比（幅/高さ）
+- self.ui_settings: Dict[str, Any] - UI関連の設定値
 
 ## METHOD_SIGNATURES
-def __init__(self, ax: Axes, logger: DebugLogger, config: Dict[str, Any]) -> None
-機能: コンストラクタ。設定値の初期化、ログ設定
+- __init__(self, ax: Axes, logger: DebugLogger, config: Dict[str, Any]) -> None
+  機能: コンストラクタ。設定値の初期化、ログ設定
 
-def setup_rect(self, x: float, y: float) -> None
-機能: 初期のズーム領域を作成
+- setup_rect(self, x: float, y: float) -> None
+  機能: 初期のズーム領域を作成（サイズ0、回転なし）
 
-def _calculate_rect_geometry(self, ref_x: float, ref_y: float, target_x: float, target_y: float) -> Tuple[float, float, float, float]
-機能: 基準点と目標点から矩形のジオメトリを計算
+- _calculate_rect_geometry(self, ref_x: float, ref_y: float, target_x: float, target_y: float) -> Tuple[float, float, float, float]
+  機能: 基準点と目標点から矩形のジオメトリを計算（アスペクト比維持）
 
-def setting_rect_size(self, start_x: float, start_y: float, current_x: float, current_y: float) -> None
-機能: ズーム領域のサイズと位置を更新（作成中）
+- setting_rect_size(self, start_x: float, start_y: float, current_x: float, current_y: float) -> None
+  機能: ズーム領域のサイズと位置を更新（作成中、回転なし、ピクセルサイズチェックあり）
 
-def resize_rect_from_corners(self, fixed_x_rotated: float, fixed_y_rotated: float, current_x: float, current_y: float) -> None
-機能: 固定された回転後の角と現在のマウス位置から矩形をリサイズ
+- resize_rect_from_corners(self, fixed_x_rotated: float, fixed_y_rotated: float, current_x: float, current_y: float) -> None
+  機能: 固定された回転後の角と現在のマウス位置から矩形をリサイズ（回転考慮）
 
-def move_rect_to(self, new_x: float, new_y: float) -> None
-機能: 矩形を指定された座標に移動
+- move_rect_to(self, new_x: float, new_y: float) -> None
+  機能: 矩形を指定された座標に移動
 
-def set_rotation(self, angle: float) -> None
-機能: 矩形を指定された角度で回転
+- set_rotation(self, angle: float) -> None
+  機能: 矩形を指定された角度で回転
 
-def is_valid_size_in_pixels(self, width_px: float, height_px: float) -> bool
-機能: 矩形のピクセルサイズが有効かを検証
+- is_valid_size_in_pixels(self, width_px: float, height_px: float) -> bool
+  機能: 矩形のピクセルサイズが有効かを検証
 
-def _check_pixel_size(self, x: float, y: float, width: float, height: float) -> Tuple[bool, float, float]
-機能: 矩形のピクセルサイズを計算し、有効性を判定
+- _check_pixel_size(self, x: float, y: float, width: float, height: float) -> Tuple[bool, float, float]
+  機能: 矩形のピクセルサイズを計算し、有効性を判定
 
-def _temporary_creation(self, start_x: float, start_y: float, end_x: float, end_y: float) -> bool
-機能: ズーム領域作成完了時の処理（ピクセルサイズチェックあり）
+- _temporary_creation(self, start_x: float, start_y: float, end_x: float, end_y: float) -> bool
+  機能: ズーム領域作成完了時の処理（ピクセルサイズチェックあり）
 
-def delete_rect(self) -> None
-機能: ズーム領域を削除
+- delete_rect(self) -> None
+  機能: ズーム領域を削除
 
-def get_properties(self) -> Optional[Tuple[float, float, float, float]]
-機能: ズーム領域のプロパティ（x, y, width, height）を取得
+- get_properties(self) -> Optional[Tuple[float, float, float, float]]
+  機能: ズーム領域のプロパティ（x, y, width, height）を取得
 
-def get_state(self) -> Optional[Dict[str, Any]]
-機能: 現在の状態（Undo用）を取得
+- get_state(self) -> Optional[Dict[str, Any]]
+  機能: 現在の状態（Undo用）を取得
 
-def set_state(self, state: Optional[Dict[str, Any]]) -> None
-機能: 指定された状態に矩形を復元（Undo/Redo用）
+- set_state(self, state: Optional[Dict[str, Any]]) -> None
+  機能: 指定された状態に矩形を復元（Undo/Redo用）
 
-def get_center(self) -> Optional[Tuple[float, float]]
-機能: ズーム領域の中心座標を取得
+- get_center(self) -> Optional[Tuple[float, float]]
+  機能: ズーム領域の中心座標を取得
 
-def get_rotated_corners(self) -> Optional[list[Tuple[float, float]]]
-機能: 回転後の四隅の絶対座標を取得
+- get_rotated_corners(self) -> Optional[list[Tuple[float, float]]]
+  機能: 回転後の四隅の絶対座標を取得
 
-def get_rotation(self) -> float
-機能: 現在の回転角度を取得
+- get_rotation(self) -> float
+  機能: 現在の回転角度を取得
 
-def get_patch(self) -> Optional[patches.Rectangle]
-機能: ズーム領域パッチオブジェクトを取得
+- get_patch(self) -> Optional[patches.Rectangle]
+  機能: ズーム領域パッチオブジェクトを取得
 
 ## CORE_EXECUTION_FLOW
 __init__ -> setup_rect -> _calculate_rect_geometry -> setting_rect_size, resize_rect_from_corners, move_rect_to, set_rotation -> _check_pixel_size, is_valid_size_in_pixels
@@ -524,17 +599,15 @@ zoom_selector.py
 親クラス: なし
 
 ## DEPENDENCIES
-matplotlib.transforms: 座標変換
 matplotlib.patches: 図形描画
 matplotlib.axes: Axesオブジェクト
 numpy: 数値計算
-typing: 型ヒント (Callable, Optional, Tuple, Dict, Any)
+typing: 型ヒント (Callable, Optional, Dict, Any)
+debug: DebugLogger, LogLevel
+validator: EventValidator
 ui.zoom_function.cursor_manager.CursorManager: カーソル管理
-ui.zoom_function.debug_logger.DebugLogger: デバッグログ
-ui.zoom_function.enums.LogLevel: ログレベル定義
-ui.zoom_function.enums.ZoomState: ズーム状態のEnum
+ui.zoom_function.enum_rect.ZoomState: ズーム状態のEnum
 ui.zoom_function.event_handler_core.EventHandler: イベント処理
-ui.zoom_function.event_validator.EventValidator: イベント検証
 ui.zoom_function.rect_manager.RectManager: 矩形管理
 ui.zoom_function.zoom_state_handler.ZoomStateHandler: ズーム状態管理
 
@@ -629,11 +702,12 @@ cursor_inside_rect -> _has_valid_rect_cache -> _update_rect_cache -> rect_manage
 ## KEY_LOGIC_PATTERNS
 - コンポーネント統合: ズーム操作関連の複数のクラス（State, Rect, Cursor, Event）をまとめて管理・連携させる
 - イベント駆動処理の委譲: イベント処理の詳細はEventHandlerに任せる
+- イベント検証: EventValidatorを使用したイベントの基本情報の検証
 - コールバック管理: 外部（MainWindowなど）からのズーム確定・キャンセルコールバックの管理と呼び出し
 - 状態管理の連携: StateHandlerを通じたズーム状態の更新と追跡
 - 矩形管理の連携: RectManagerを通じた矩形の描画、更新、プロパティ取得
 - カーソル管理の連携: CursorManagerを通じたカーソル形状の制御
-- 座標計算と判定: 矩形に対するマウス位置の判定（角に近いか、内部か）
+- 座標計算と判定: ピクセル座標系での矩形に対するマウス位置の判定（角に近いか、内部か）
 - キャッシュ管理: 矩形パッチの参照をキャッシュし、必要に応じて更新/無効化する
 - クリーンアップ処理: ズーム操作終了後やリセット時の状態とリソースの後処理
 - 設定データの受け渡し: コンストラクタで受け取ったconfigを子コンポーネントに渡す
@@ -641,6 +715,7 @@ cursor_inside_rect -> _has_valid_rect_cache -> _update_rect_cache -> rect_manage
 ## CRITICAL_BEHAVIORS
 - 各コンポーネントが正しく初期化され、相互に連携すること
 - マウス操作（作成、移動、リサイズ、回転）がイベントハンドラを通じて正確に実行されること
+- イベント検証が正しく行われ、無効なイベントが適切に処理されること
 - ズーム確定/キャンセル時に適切な外部コールバック関数が正確なパラメータで呼び出されること
 - 矩形パッチのキャッシュが正確に管理され、常に最新の状態を反映していること
 - マウス位置に対する角判定および内部判定がピクセル座標系で正確に行われること
@@ -663,14 +738,13 @@ zoom_state_handler.py
 親クラス: なし
 
 ## DEPENDENCIES
-typing: 型ヒント
-ui.zoom_function.debug_logger.DebugLogger: デバッグログ
-ui.zoom_function.enums.LogLevel: ログレベル定義
-ui.zoom_function.enums.ZoomState: ズーム状態のEnum
+typing: 型ヒント (Protocol含む)
+debug: DebugLogger, LogLevel
+ui.zoom_function.enum_rect.ZoomState: ズーム状態のEnum
 
 ## CLASS_ATTRIBUTES
 self._state: ZoomState - 現在のズーム状態
-self.logger: DebugLogger - デバッグログ
+self.logger: DebugLogger - デバッグログ出力用のインスタンス
 self._event_handler: Optional[EventHandlerProtocol] - 状態変更イベントを処理するハンドラー
 self._canvas: Optional[CanvasProtocol] - 画面描画を行うキャンバス
 
@@ -683,18 +757,23 @@ def state(self) -> ZoomState
 機能: 現在の状態を取得
 
 def update_state(self, new_state: ZoomState, context: Optional[Dict[str, Any]] = None) -> None
-機能: 状態を更新する
+機能: 現在の状態と異なる場合に状態を更新し、状態変更を通知する
 
 def _notify_state_change(self, old_state: ZoomState, new_state: ZoomState, context: Optional[Dict[str, Any]] = None) -> None
-機能: 状態変更を通知する
+機能: 状態変更をログに出力し、イベントハンドラーとキャンバスに通知する
 
 ## CORE_EXECUTION_FLOW
-__init__ -> update_state -> _notify_state_change
+__init__ -> update_state -> _notify_state_change -> event_handler.on_state_changed, canvas.draw_idle
 
 ## KEY_LOGIC_PATTERNS
+- インターフェース定義: Protocolを使用したCanvasProtocolとEventHandlerProtocolの定義
 - 状態管理: ズーム操作の状態遷移管理
 - イベント通知: 状態変更を関係するコンポーネントに通知
+- キャンバス描画調整: 状態変更時にキャンバスの再描画を調整
+- コンテキスト管理: 状態変更の理由や追加情報を保持
 
 ## CRITICAL_BEHAVIORS
 - 状態遷移の正確性と整合性
 - 状態変更通知の正確性
+- キャンバス描画の適切なタイミング
+- コンテキスト情報の適切な伝播

@@ -1,5 +1,39 @@
 ==============================
 # MODULE_INFO:
+__init__.py
+
+## MODULE_PURPOSE
+Debugパッケージの初期化と公開インターフェースの定義
+
+## CLASS_DEFINITION:
+- DebugLogger: デバッグログを出力するためのクラス
+- LogLevel: デバッグログのレベルを定義する列挙型
+
+## DEPENDENCIES
+- debug_logger.py
+- enum_debug.py
+
+## CLASS_ATTRIBUTES
+(クラス属性なし)
+
+## METHOD_SIGNATURES
+(メソッドなし)
+
+## CORE_EXECUTION_FLOW
+- パッケージの公開インターフェースを定義
+- DebugLoggerとLogLevelをインポート
+
+## KEY_LOGIC_PATTERNS
+- デバッグ機能の公開
+- ログレベルの管理
+
+## CRITICAL_BEHAVIORS
+- デバッグログの出力
+- ログレベルの管理
+
+
+==============================
+# MODULE_INFO:
 debug_logger.py
 
 ## MODULE_PURPOSE
@@ -20,7 +54,7 @@ typing: 型ヒント
 rich.print: リッチテキスト出力
 rich.markup.escape: エスケープ処理
 enum.Enum: Enum型
-ui.zoom_function.enums.LogLevel: ログレベル定義
+.debug.enum_debug.LogLevel: ログレベル定義
 
 ## CLASS_ATTRIBUTES
 self.debug_enabled: bool - デバッグ関連の機能を有効にするフラグ (設定ファイルから)
@@ -33,7 +67,7 @@ def __init__(self, debug_enabled: bool = True, min_level_str: Optional[str] = "D
 機能: コンストラクタ。クラスの初期化、ログ出力開始時刻の記録、プロジェクトルートディレクトリのパスを取得、表示する最小ログレベルを設定する。
 
 def log(self, level: LogLevel, message: str, context: Optional[Dict[str, Any]] = None, force: bool = False) -> None
-機能: ログを出力する（外部呼び出し用）。デバッグが無効、またはログレベルが設定された最小レベルより低い場合は出力しない（force=True の場合は除く）。
+機能: ログを出力する（外部呼び出し用）。ログレベルが設定された最小レベルより低い場合は出力しない（force=True の場合は除く）。
 
 def _log_internal(self, level: LogLevel, message: str, context: Optional[Dict[str, Any]] = None, force: bool = False, stacklevel: int = 3) -> None
 機能: ログ出力の内部実装。ログの出力形式を整形し、`rprint` で出力する。エラー発生時は標準出力する。
@@ -55,17 +89,18 @@ __init__ -> log (フィルタリング) -> _log_internal -> _get_caller_info, _g
 
 ## KEY_LOGIC_PATTERNS
 - ログ出力: レベルと設定に基づいたログ出力
-- ログレベルフィルタリング: 設定された最小レベルによるログ表示の制御
+- ログレベルフィルタリング: LogLevel Enumの値に基づく最小レベルによるログ表示の制御
 - コンテキスト管理: ログにコンテキスト情報を付加
 - エラーハンドリング: ログ出力失敗時のエラー処理
 - 呼び出し元情報取得: inspectによる関数名、ファイル名、行番号の取得
+- パス解決: プロジェクトルートからの相対パスの取得
 
 ## CRITICAL_BEHAVIORS
-- ログの正確性と詳細さ
-- ログレベルフィルターの正確な適用
+- ログレベルの正確な比較とフィルタリング
 - パス解決（プロジェクトルート相対パス）の正確性
 - コンテキスト情報の適切な整形
 - ロガー自体で発生したエラーのフォールバック処理
+- ログ出力のフォーマットと色付けの正確性
 
 
 ==============================
@@ -85,8 +120,6 @@ enum.Enum: Enum型
 enum.auto: 自動値割り当て
 
 ## CLASS_ATTRIBUTES
-ZoomState:
-
 LogLevel:
 - DEBUG: デバッグ
 - INIT: 初期化処理
@@ -105,6 +138,8 @@ Enum定義のみ
 
 ## KEY_LOGIC_PATTERNS
 - Enumによるレベルの定義
+- auto()による自動値の割り当て
 
 ## CRITICAL_BEHAVIORS
 - レベルの正確な表現
+- エンコード値の一貫性

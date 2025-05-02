@@ -8,8 +8,8 @@ from .event_handlers_utils import EventHandlersUtils
 # 型ヒント用インポート (循環参照回避)
 if TYPE_CHECKING:
     from .cursor_manager import CursorManager
-    from ...debug.debug_logger import DebugLogger
-    from .event_validator import EventValidator
+    from debug import DebugLogger
+    from validator import EventValidator
     from .rect_manager import RectManager
     from .zoom_selector import ZoomSelector
     from .zoom_state_handler import ZoomStateHandler
