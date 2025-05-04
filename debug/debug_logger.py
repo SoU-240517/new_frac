@@ -190,7 +190,7 @@ class DebugLogger:
         # 現在のファイル (__file__) の場所に基づいてルートを決定
         logger_dir = os.path.dirname(__file__)
         # このファイルが ui/zoom_function/ にあると仮定して2階層上がる
-        project_root = os.path.abspath(os.path.join(logger_dir, '..', '..'))
+        project_root = os.path.abspath(os.path.join(logger_dir, '.', '.'))
         # print(f"[DebugLogger] Project root detected: {project_root}") # 初期化時に確認用
         return project_root
 

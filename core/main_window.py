@@ -4,11 +4,14 @@ import os
 import threading
 import tkinter as tk
 from tkinter import ttk
-from .render import render_fractal
+from debug import DebugLogger, LogLevel
+# --- 追加: -------------------------------
+from plugins.fractal_types.loader import FractalTypeLoader
+# -----------------------------------------
 from .canvas import FractalCanvas
 from .parameter_panel import ParameterPanel
+from .render import render_fractal
 from .status_bar import StatusBarManager
-from debug import DebugLogger, LogLevel
 
 def load_config(logger: DebugLogger, config_path="config.json") -> dict:
     """設定ファイル (JSON) を読み込む
@@ -73,17 +76,23 @@ class MainWindow:
 
         self.logger = logger
         self.root = root
+        self.is_drawing = False
+        self.draw_thread = None
 
         self.config = load_config(self.logger)  # 設定ファイルを読み込む準備
         self.ui_settings = self.config.get("ui_settings", {}) # ui_settings 分を設定ファイルから読み込む
 
+        # --- 追加: フラクタルローダーの初期化と読み込み ---
+        self.logger.log(LogLevel.INIT, "FractalTypeLoader の初期化とプラグイン読み込み開始")
+        # plugin_dir のパスは環境に合わせて調整してください
+        self.fractal_loader = FractalTypeLoader(plugin_dir="plugins/fractal_types", logger=self.logger)
+        self.fractal_loader.scan_and_load_plugins()
+        self.logger.log(LogLevel.SUCCESS, "FractalTypeLoader 初期化・読み込み完了")
+        # -----------------------------------------
+
         self._setup_root_window()
         self._setup_components()
         self._setup_zoom_params()
-
-        self.is_drawing = False
-        self.draw_thread = None
-
         self._start_initial_drawing()
 
     def _setup_root_window(self) -> None:
@@ -161,13 +170,24 @@ class MainWindow:
         self.parameter_frame.pack_propagate(False)
 
         self.logger.log(LogLevel.INIT, "ParameterPanel クラスのインスタンス作成開始")
+#        self.parameter_panel = ParameterPanel(
+#            self.parameter_frame,
+#            self.update_fractal,
+#            reset_callback=self.reset_zoom,
+#            logger=self.logger,
+#            config=self.config # 設定データを渡す
+#        )
+
+        # --- 変更: fractal_loader を ParameterPanel に渡す ---
         self.parameter_panel = ParameterPanel(
             self.parameter_frame,
             self.update_fractal,
             reset_callback=self.reset_zoom,
             logger=self.logger,
-            config=self.config # 設定データを渡す
+            config=self.config,
+            fractal_loader=self.fractal_loader # ローダーインスタンスを渡す
         )
+        # --------------------------------------------------
 
     def _setup_canvas_frame(self) -> None:
         """フラクタル描画領域を配置するキャンバスフレームを初期化し、ルートウィンドウの左側に配置する"""
@@ -237,10 +257,21 @@ class MainWindow:
             - 生成された画像をメインスレッドでキャンバスに描画
             - エラー発生時はログ出力とステータスバーにエラーメッセージを表示
         """
+#        try:
+#            self.logger.log(LogLevel.CALL, "描画パラメータ：取得開始（スレッド内）")
+#            panel_params = self.parameter_panel._get_parameters()
+#            # 描画パラメータが取得できなかった場合（数値変換エラーなど）は処理中断
+#            if not panel_params:
+#                 self.logger.log(LogLevel.ERROR, "パラメータ取得に失敗したため描画を中止します。")
+#                 self.status_bar_manager.stop_animation("エラー: パラメータ無効")
+#                 self.is_drawing = False
+#                 return
+
         try:
             self.logger.log(LogLevel.CALL, "描画パラメータ：取得開始（スレッド内）")
-            panel_params = self.parameter_panel._get_parameters()
-            # 描画パラメータが取得できなかった場合（数値変換エラーなど）は処理中断
+            # ParameterPanel から現在選択されているフラクタルタイプ名も含めて取得する必要がある
+            # panel_params = self.parameter_panel._get_parameters()
+            panel_params = self.parameter_panel.get_parameters() # 新しいメソッド名 (後で ParameterPanel に実装)
             if not panel_params:
                  self.logger.log(LogLevel.ERROR, "パラメータ取得に失敗したため描画を中止します。")
                  self.status_bar_manager.stop_animation("エラー: パラメータ無効")
@@ -249,8 +280,24 @@ class MainWindow:
 
             current_params = self._merge_zoom_and_panel_params(panel_params)
 
-            self.logger.log(LogLevel.CALL, "フラクタル計算と着色処理を開始（スレッド内）")
-            fractal_image = render_fractal(current_params, self.logger, config=self.config)
+            # --- 変更: 選択されたフラクタルタイプの計算関数を取得 ---
+            selected_fractal_type_name = panel_params.get("fractal_type_name") # ParameterPanel が返す辞書に含める
+            compute_function = self.fractal_loader.get_compute_function(selected_fractal_type_name)
+
+            if compute_function is None:
+                self.logger.log(LogLevel.CRITICAL, f"選択されたフラクタルタイプ '{selected_fractal_type_name}' の計算関数が見つかりません！")
+                self.status_bar_manager.stop_animation("エラー: 計算関数不明")
+                self.is_drawing = False
+                return
+            # ------------------------------------------------------
+
+#            self.logger.log(LogLevel.CALL, "フラクタル計算と着色処理を開始（スレッド内）")
+#            fractal_image = render_fractal(current_params, self.logger, config=self.config)
+
+            self.logger.log(LogLevel.CALL, f"フラクタル計算 ({selected_fractal_type_name}) と着色処理を開始（スレッド内）")
+            # --- 変更: render_fractal に計算関数を渡す ---
+            fractal_image = render_fractal(current_params, compute_function, self.logger, config=self.config)
+            # -------------------------------------------
 
             self.logger.log(LogLevel.CALL, "メインスレッドでキャンバス更新要求（スレッド内）")
             # メインスレッドでキャンバス更新をスケジュール
@@ -284,6 +331,7 @@ class MainWindow:
         current_params.update(panel_params)
         # panel_params に render_mode は含まれていないので、parameter_panel から直接取得
         current_params["render_mode"] = self.parameter_panel.render_mode
+        # 'fractal_type_name' は panel_params に含まれているはずなのでここでは不要
         return current_params
 
     def on_zoom_confirm(self, x: float, y: float, w: float, h: float, angle: float) -> None:
@@ -394,12 +442,29 @@ class MainWindow:
         """
         self._setup_zoom_params()
 
-        reset_iter = self.config.get("fractal_settings", {}).get("reset_max_iterations", 200)
-        self.parameter_panel.max_iter_var.set(str(reset_iter))
-        self.logger.log(LogLevel.CALL, f"最大反復回数をリセット: {reset_iter}")
+#        reset_iter = self.config.get("fractal_settings", {}).get("reset_max_iterations", 200)
+#        self.parameter_panel.max_iter_var.set(str(reset_iter))
+#        self.logger.log(LogLevel.CALL, f"最大反復回数をリセット: {reset_iter}")
+
+        # --- 変更: パラメータパネルの状態も初期化（推奨） ---
+        # 初期表示のフラクタルタイプを取得
+        default_fractal_type = self.config.get("fractal_settings", {}).get("parameter_panel", {}).get("fractal_type", None)
+        if default_fractal_type is None and self.fractal_loader.get_available_types():
+             default_fractal_type = self.fractal_loader.get_available_types()[0] # ローダーから最初のタイプを取得
+
+        if default_fractal_type:
+             # ParameterPanel に初期状態に戻すメソッドを追加する (推奨)
+             self.parameter_panel.reset_to_defaults(default_fractal_type)
+             self.logger.log(LogLevel.CALL, f"パラメータパネルをデフォルト ({default_fractal_type}) にリセット")
+        else:
+             self.logger.log(LogLevel.WARNING, "デフォルトのフラクタルタイプが見つからないため、パラメータパネルのリセットをスキップ")
+             # 必要であれば、最大反復回数だけでもリセットする
+             reset_iter = self.config.get("fractal_settings", {}).get("reset_max_iterations", 200)
+             self.parameter_panel.max_iter_var.set(str(reset_iter)) # max_iter_var がまだ存在する場合
+             self.logger.log(LogLevel.CALL, f"最大反復回数のみリセット: {reset_iter}")
+        # -------------------------------------------------
 
         self.logger.log(LogLevel.CALL, "ZoomSelector の状態リセット開始")
-
         # FractalCanvas が初期化されているか確認
         if hasattr(self, 'fractal_canvas') and self.fractal_canvas:
             self.fractal_canvas.reset_zoom_selector() # ズーム選択領域をリセット

@@ -1,9 +1,9 @@
 import numpy as np
 import time
 from coloring import manager
-from typing import Dict, Any # 型ヒント用
-from plugins.fractal_types.julia import compute_julia
-from plugins.fractal_types.mandelbrot import compute_mandelbrot
+from typing import Dict, Any, Callable, Optional
+#from plugins.fractal_types.julia import compute_julia
+#from plugins.fractal_types.mandelbrot import compute_mandelbrot
 from debug import DebugLogger, LogLevel
 
 """フラクタル画像生成エンジン
@@ -111,7 +111,13 @@ def _create_fractal_grid(params: dict, super_resolution_x: int, super_resolution
 
     return Z
 
-def _compute_fractal(Z: np.ndarray, params: dict, logger: DebugLogger) -> dict:
+def _compute_fractal(
+    Z: np.ndarray,
+    params: dict,
+    compute_function: Callable, # 計算関数を引数で受け取る
+    logger: DebugLogger
+) -> Optional[Dict[str, np.ndarray]]: # 戻り値を Optional に変更
+
     """フラクタル計算を実行
     Args:
         Z (np.ndarray): 複素数グリッド
@@ -125,32 +131,76 @@ def _compute_fractal(Z: np.ndarray, params: dict, logger: DebugLogger) -> dict:
         dict: 計算結果 (iterations, mask, z_vals など)
     """
     start_time = time.perf_counter()
-    fractal_type = params.get("fractal_type", "Julia")
+#    fractal_type = params.get("fractal_type", "Julia")
+#    max_iter = params.get("max_iterations", 100)
+#    logger.log(LogLevel.INFO, f"フラクタル計算開始: タイプ={fractal_type}, 最大反復={max_iter}")
+
+    fractal_type_name = params.get("fractal_type_name", "Unknown") # ParameterPanel から渡される名前
     max_iter = params.get("max_iterations", 100)
-    logger.log(LogLevel.INFO, f"フラクタル計算開始: タイプ={fractal_type}, 最大反復={max_iter}")
+    logger.log(LogLevel.INFO, f"フラクタル計算開始: タイプ={fractal_type_name}, 最大反復={max_iter}")
 
-    if fractal_type == "Julia":
-        # Julia 用パラメータ取得 (フォールバック値も設定)
-        c_real = params.get("c_real", -0.8)
-        c_imag = params.get("c_imag", 0.156)
-        c_val = complex(c_real, c_imag)
-        logger.log(LogLevel.DEBUG, f"Julia パラメータ C = {c_val}")
-        # julia モジュールの関数を呼び出し
-        results = compute_julia(Z, c_val, max_iter, logger)
-        logger.log(LogLevel.SUCCESS, f"ジュリア集合計算完了 ({time.perf_counter() - start_time:.3f}秒)")
-    else:  # Mandelbrot (または未知のタイプの場合もMandelbrotとして扱う)
-        if fractal_type != "Mandelbrot":
-             logger.log(LogLevel.WARNING, f"未知のフラクタルタイプ '{fractal_type}' が指定されました。Mandelbrotとして計算します。")
-        # Mandelbrot 用パラメータ取得 (通常 z0=0)
-        z0_real = params.get("z_real", 0.0)
-        z0_imag = params.get("z_imag", 0.0)
-        z0_val = complex(z0_real, z0_imag)
-        logger.log(LogLevel.DEBUG, f"Mandelbrot パラメータ Z0 = {z0_val}")
-         # mandelbrot モジュールの関数を呼び出し
-        results = compute_mandelbrot(Z, z0_val, max_iter, logger)
-        logger.log(LogLevel.SUCCESS, f"マンデルブロ集合計算完了 ({time.perf_counter() - start_time:.3f}秒)")
+    # パラメータから計算関数に必要な引数を抽出する
+    # ここは少し工夫が必要。現状の compute_julia と compute_mandelbrot の引数シグネチャが異なるため。
+    # 案1: 各計算関数が必要な引数を params 辞書から **kwargs のように受け取るように修正する
+    # 案2: タイプに応じて必要な引数をここで組み立てる (あまり良くない)
+    # 案3: 計算関数に渡す引数を標準化する (例: compute(Z, max_iter, specific_params: dict, logger))
 
-    return results
+    # --- 案1 or 案3 を想定した実装例 (関数側が **params で受け取る or 標準化されている場合) ---
+    try:
+        # 計算関数が必要とするパラメータを params から抽出
+        # inspect を使って関数の引数を調べることもできるが、複雑になる
+        # ここでは params 全体を渡すか、必要なキーだけ渡すことを想定
+        # 例: Julia なら C を、Mandelbrot なら Z0 を params から取り出して渡す必要がある
+
+        # シンプルに、計算関数が必要なものを params から取り出すと仮定
+        # (計算関数側で params.get("c_real", default) のようにアクセスする)
+        # Mandelbrot の Z0 は params["z0_real"], params["z0_imag"] として渡ってくる想定
+        # Julia の C は params["c_real"], params["c_imag"] として渡ってくる想定
+
+        # compute_julia(Z, C, max_iter, logger)
+        # compute_mandelbrot(Z, Z0, max_iter, logger)
+        # に合わせるための引数準備
+
+        func_args = [Z] # 最初の引数は Z グリッド
+
+        # Julia の場合
+        if fractal_type_name == "Julia": # プラグイン名で判定するのは良くないかも？ 関数オブジェクトで判定？
+             c_real = params.get("c_real", -0.8) # ParameterPanel で取得した値
+             c_imag = params.get("c_imag", 0.156)
+             func_args.append(complex(c_real, c_imag)) # 第2引数 C
+        # Mandelbrot の場合
+        elif fractal_type_name == "Mandelbrot":
+             z0_real = params.get("z0_real", 0.0) # ParameterPanel で取得した値
+             z0_imag = params.get("z0_imag", 0.0)
+             func_args.append(complex(z0_real, z0_imag)) # 第2引数 Z0
+        # 他のプラグインの場合は、引数をどう渡すかルールを決める必要がある
+        # else:
+        #    logger.log(LogLevel.WARNING, f"未知のフラクタルタイプ '{fractal_type_name}' のための引数準備ロジックがありません。")
+            # プラグイン固有パラメータを辞書で渡す？
+            # specific_params = {k: v for k, v in params.items() if k not in [...共通パラメータ...]}
+            # func_args.append(specific_params) # 第2引数として辞書を渡すルール？
+
+        func_args.append(max_iter) # 第3引数 max_iter
+        func_args.append(logger)   # 第4引数 logger
+
+        # 計算関数を呼び出し
+        results = compute_function(*func_args) # 引数を展開して渡す
+
+        # results が辞書であることを確認 (より厳密なチェックが望ましい)
+        if not isinstance(results, dict):
+             logger.log(LogLevel.ERROR, f"フラクタル計算関数 '{compute_function.__name__}' が辞書を返しませんでした。")
+             return None
+
+        logger.log(LogLevel.SUCCESS, f"{fractal_type_name} 計算完了 ({time.perf_counter() - start_time:.3f}秒)")
+        return results
+
+    except TypeError as e:
+         logger.log(LogLevel.CRITICAL, f"フラクタル計算関数の呼び出しで TypeError: {e}。引数を確認してください。")
+         return None
+    except Exception as e:
+         logger.log(LogLevel.CRITICAL, f"フラクタル計算中に予期せぬエラー ({fractal_type_name}): {e}")
+         return None
+    # ---------------------------------------------------------------------------------------
 
 def _downsample_image(
     high_res_image: np.ndarray,
@@ -215,8 +265,13 @@ def _downsample_image(
 
     return downsampled
 
-def render_fractal(params: dict, logger: DebugLogger, config: Dict[str, Any]) -> np.ndarray:
-    """フラクタル画像を生成
+def render_fractal(
+    params: dict,
+    compute_function: Callable, # 計算関数を受け取る
+    logger: DebugLogger,
+    config: Dict[str, Any]
+) -> np.ndarray:
+    """フラクタル画像を生成 (計算関数を引数で受け取る)
     Args:
         params (dict): フラクタルのパラメータ (UIから渡される)
             - fractal_type, c_real, c_imag, z_real, z_imag, max_iterations
@@ -261,33 +316,80 @@ def render_fractal(params: dict, logger: DebugLogger, config: Dict[str, Any]) ->
     logger.log(LogLevel.SUCCESS, f"描画モード: {render_mode}, 解像度: {resolution}x{resolution}, サンプル数: {samples_per_pixel} (ズームレベル={zoom_level:.2f}, 閾値={zoom_threshold})")
 
     # 高解像度グリッドサイズ (サンプル数が1でも resolution x 1 になる)
+#    super_resolution_x = resolution * samples_per_pixel
+#    super_resolution_y = resolution * samples_per_pixel # 正方形を仮定、必要ならX/Yで分ける
+
+    # 高解像度グリッドサイズ
+    resolution = _calculate_dynamic_resolution(current_width, config, logger) # 解像度再計算 (上とかぶる？要確認)
+    if render_mode == "quick":
+        resolution = int(resolution * config.get("fractal_settings", {}).get("quick_mode_resolution_factor", 0.5))
+        resolution = max(resolution, config.get("canvas_settings", {}).get("config_dpi", 100))
+    samples_per_pixel = 1 if render_mode == "quick" else \
+                        (config.get("fractal_settings",{}).get("super_sampling",{}).get("high_samples", 4) \
+                         if (4.0 / current_width) >= config.get("fractal_settings",{}).get("super_sampling",{}).get("zoom_threshold", 0.8) \
+                         else config.get("fractal_settings",{}).get("super_sampling",{}).get("low_samples", 2))
+
     super_resolution_x = resolution * samples_per_pixel
-    super_resolution_y = resolution * samples_per_pixel # 正方形を仮定、必要ならX/Yで分ける
+    super_resolution_y = resolution * samples_per_pixel
 
     # グリッド作成 (params には height も含まれている想定)
+#    Z = _create_fractal_grid(params, super_resolution_x, super_resolution_y, logger)
+#    logger.log(LogLevel.SUCCESS, f"グリッド作成完了: shape={Z.shape}")
+
+    # フラクタル計算
+#    results = _compute_fractal(Z, params, logger)
+
+    # グリッド作成
     Z = _create_fractal_grid(params, super_resolution_x, super_resolution_y, logger)
     logger.log(LogLevel.SUCCESS, f"グリッド作成完了: shape={Z.shape}")
 
-    # フラクタル計算
-    results = _compute_fractal(Z, params, logger)
+    # フラクタル計算 (計算関数を渡す)
+    results = _compute_fractal(Z, params, compute_function, logger)
+
+    # --- 追加: 計算失敗時の処理 ---
+    if results is None:
+        logger.log(LogLevel.ERROR, "フラクタル計算に失敗したため、エラー画像を表示します。")
+        # エラー画像 (例: 赤色) を返す
+        error_color = [255, 0, 0, 255] # 赤色
+        # 最終的な解像度で作成
+        final_image = np.full((resolution, resolution, 4), error_color, dtype=np.uint8)
+        del Z # メモリ解放
+        return final_image
+    # ---------------------------
 
     try:
         # apply_coloring_algorithm に config を渡す
-        colored_high_res = manager.apply_coloring_algorithm(results, params, logger, config)
-        logger.log(LogLevel.SUCCESS, f"着色処理完了: shape={colored_high_res.shape}, dtype={colored_high_res.dtype}")
+#        colored_high_res = manager.apply_coloring_algorithm(results, params, logger, config)
+#        logger.log(LogLevel.SUCCESS, f"着色処理完了: shape={colored_high_res.shape}, dtype={colored_high_res.dtype}")
         # manager がRGBA (uint8) を返すか、float (0-1 or 0-255) を返すか要確認
         # ここでは float (0-255) を想定
+#        if not isinstance(colored_high_res, np.ndarray):
+#             raise TypeError(f"着色処理がndarrayを返しませんでした: {type(colored_high_res)}")
+#        if colored_high_res.ndim != 3 or colored_high_res.shape[2] != 4:
+#             raise ValueError(f"着色処理が期待されるRGBA形状を返しませんでした: {colored_high_res.shape}")
+
+        # 着色処理 (変更なし)
+        colored_high_res = manager.apply_coloring_algorithm(results, params, logger, config)
+        # ... (着色エラーハンドリング) ...
         if not isinstance(colored_high_res, np.ndarray):
              raise TypeError(f"着色処理がndarrayを返しませんでした: {type(colored_high_res)}")
         if colored_high_res.ndim != 3 or colored_high_res.shape[2] != 4:
              raise ValueError(f"着色処理が期待されるRGBA形状を返しませんでした: {colored_high_res.shape}")
 
+#    except Exception as e:
+#        logger.log(LogLevel.CRITICAL, f"着色処理中にエラーが発生しました: {e}")
+#        # エラー発生時はエラー画像 (例: 紫色) を返す
+#        error_color = [128, 0, 128, 255] # 紫色
+#        # ダウンサンプリング前の解像度で作成
+#        colored_high_res = np.full((super_resolution_y, super_resolution_x, 4), error_color, dtype=np.float32)
+
     except Exception as e:
         logger.log(LogLevel.CRITICAL, f"着色処理中にエラーが発生しました: {e}")
-        # エラー発生時はエラー画像 (例: 紫色) を返す
+        # エラー画像 (例: 紫色) を返す
         error_color = [128, 0, 128, 255] # 紫色
-        # ダウンサンプリング前の解像度で作成
-        colored_high_res = np.full((super_resolution_y, super_resolution_x, 4), error_color, dtype=np.float32)
+        final_image = np.full((resolution, resolution, 4), error_color, dtype=np.uint8)
+        del Z, results # メモリ解放
+        return final_image
 
     # ダウンサンプリング (サンプル数が1より大きい場合のみ)
     if samples_per_pixel > 1:
