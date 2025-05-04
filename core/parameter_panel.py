@@ -91,7 +91,7 @@ class ParameterPanel:
             except Exception as e:
                 self.logger.log(LogLevel.ERROR, f"matplotlibからカラーマップ取得中にエラー: {e}")
                 self.colormaps = [] # その他のエラーでも空リスト
-        self.logger.log(LogLevel.DEBUG, f"{len(self.colormaps)} 個のカラーマップをロードしました。")
+        self.logger.log(LogLevel.DEBUG, f"カラーマップロード数: {len(self.colormaps)} 個")
         # -----------------------------------------
 
         self._setup_panel()
@@ -108,14 +108,10 @@ class ParameterPanel:
 
         # --- 変更: セクションの構成を変更 ---
         current_row = 0
-        print("current_row", current_row)
         current_row = self._setup_fractal_type_section(current_row)
-        print("current_row", current_row)
         current_row = self._setup_formula_section(current_row)
-        print("current_row", current_row)
         # --- 追加: 動的パラメータ用フレーム ---
         current_row = self._setup_dynamic_parameter_frame(current_row)
-        print("current_row", current_row)
         # ------------------------------------
 
         current_row = self._setup_diverge_section(current_row)
@@ -340,7 +336,7 @@ class ParameterPanel:
         self.param_vars.clear()
         self.param_widgets.clear()
         # max_iter_var はクリアしない（クラス変数として保持）
-        self.logger.log(LogLevel.DEBUG, "動的パラメータウィジェットをクリアしました")
+        self.logger.log(LogLevel.DEBUG, "動的パラメータウィジェットをクリア完了")
 
     # --- 変更: 各セクションのセットアップは row を返すように ---
     def _setup_diverge_section(self, start_row: int) -> int:
@@ -585,7 +581,6 @@ class ParameterPanel:
         - 数式表示を更新
         """
         self.render_mode = "quick"  # 簡易描画モードに設定
-        self.logger.log(LogLevel.INFO, f"UI操作イベント: クイック描画モード設定 ({event})")
         self.update_callback()      # 描画更新をトリガー
         self._update_colorbars()    # カラーバーを更新
 

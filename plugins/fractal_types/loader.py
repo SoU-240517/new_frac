@@ -35,14 +35,13 @@ class FractalTypeLoader:
             plugin_dir (str): プラグインが格納されているディレクトリのパス
             logger (Optional[DebugLogger]): ロギング用インスタンス
         """
-        self.logger = DebugLogger()
+        self.logger = logger
 
         self.plugin_dir = plugin_dir
         self.loaded_plugins: Dict[str, Dict[str, Any]] = {} # プラグイン名 -> プラグイン情報の辞書
 
     def scan_and_load_plugins(self) -> None:
         """プラグインディレクトリをスキャンし、有効なプラグインをロードする"""
-        self.logger.log(LogLevel.INFO, f"プラグインディレクトリをスキャン開始: {self.plugin_dir}")
         self.loaded_plugins = {} # ロード前にクリア
 
         if not os.path.isdir(self.plugin_dir):
@@ -52,10 +51,10 @@ class FractalTypeLoader:
         for item in os.scandir(self.plugin_dir):
             if item.is_dir():
                 plugin_name = item.name
-                self.logger.log(LogLevel.DEBUG, f"検出されたプラグイン候補ディレクトリ: {plugin_name}")
+                self.logger.log(LogLevel.INFO, f"検出されたプラグイン候補ディレクトリ: {plugin_name}")
                 self._load_single_plugin(plugin_name, item.path)
 
-        self.logger.log(LogLevel.SUCCESS, f"{len(self.loaded_plugins)} 個のプラグインをロード完了")
+        self.logger.log(LogLevel.INFO, f"{len(self.loaded_plugins)} 個のプラグインをロード完了")
 
     def _load_single_plugin(self, plugin_name: str, plugin_path: str) -> None:
         """個別のプラグインをロードする試み"""
@@ -64,15 +63,15 @@ class FractalTypeLoader:
         init_path = os.path.join(plugin_path, "__init__.py") # __init__.py も確認
 
         if not os.path.exists(init_path):
-             self.logger.log(LogLevel.WARNING, f"プラグイン '{plugin_name}' に __init__.py が見つかりません。スキップします。")
+             self.logger.log(LogLevel.WARNING, f"プラグイン '{plugin_name}' に __init__.py 未検出によりスキップ")
              return
 
         if not os.path.exists(json_path):
-            self.logger.log(LogLevel.WARNING, f"プラグイン '{plugin_name}' に {plugin_name}.json が見つかりません。スキップします。")
+            self.logger.log(LogLevel.WARNING, f"プラグイン '{plugin_name}' に {plugin_name}.json 未検出によりスキップ")
             return
 
         if not os.path.exists(py_path):
-            self.logger.log(LogLevel.WARNING, f"プラグイン '{plugin_name}' に {plugin_name}.py が見つかりません。スキップします。")
+            self.logger.log(LogLevel.WARNING, f"プラグイン '{plugin_name}' に {plugin_name}.py 未検出によりスキップ")
             return
 
         # 1. JSON設定ファイルの読み込み
@@ -113,7 +112,7 @@ class FractalTypeLoader:
                 self.logger.log(LogLevel.ERROR, f"プラグイン '{plugin_name}' のモジュールに関数 '{function_name}' が見つからないか、呼び出し可能ではありません。スキップします。")
                 return
 
-            self.logger.log(LogLevel.SUCCESS, f"プラグイン '{plugin_name}' の関数 '{function_name}' 取得成功")
+            self.logger.log(LogLevel.DEBUG, f"プラグイン '{plugin_name}' の関数 '{function_name}' 取得成功")
 
         except ImportError as e:
             self.logger.log(LogLevel.ERROR, f"プラグイン '{plugin_name}' のモジュールインポートエラー: {e}。パスを確認してください: {module_spec_path}。スキップします。")
@@ -132,7 +131,7 @@ class FractalTypeLoader:
             "compute_function": compute_function,
             "plugin_dir_name": plugin_name # 必要であればディレクトリ名も保持
         }
-        self.logger.log(LogLevel.SUCCESS, f"プラグイン '{plugin_display_name}' (from '{plugin_name}') のロード成功")
+        self.logger.log(LogLevel.DEBUG, f"プラグイン '{plugin_display_name}' (from '{plugin_name}') のロード成功")
 
     def get_available_types(self) -> List[str]:
         """ロードされたフラクタルタイプの表示名のリストを返す"""

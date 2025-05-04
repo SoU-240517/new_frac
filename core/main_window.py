@@ -31,7 +31,7 @@ def load_config(logger: DebugLogger, config_path="config.json") -> dict:
     try:
         with open(config_path, 'r', encoding='utf-8') as f:
             config = json.load(f)
-            logger.log(LogLevel.DEBUG, f"設定ファイル読み込み完了: {config_path}")
+            logger.log(LogLevel.INFO, f"設定ファイル読み込み完了: {config_path}")
             return config
     except json.JSONDecodeError as e:
         logger.log(LogLevel.ERROR, f"設定ファイルのJSON解析エラー: {e}")
@@ -83,7 +83,7 @@ class MainWindow:
         self.ui_settings = self.config.get("ui_settings", {}) # ui_settings 分を設定ファイルから読み込む
 
         # --- 追加: フラクタルローダーの初期化と読み込み ---
-        self.logger.log(LogLevel.INIT, "FractalTypeLoader の初期化とプラグイン読み込み開始")
+        self.logger.log(LogLevel.CALL, "FractalTypeLoader の初期化とプラグイン読み込み開始")
         # plugin_dir のパスは環境に合わせて調整してください
         self.fractal_loader = FractalTypeLoader(plugin_dir="plugins/fractal_types", logger=self.logger)
         self.fractal_loader.scan_and_load_plugins()
@@ -91,7 +91,9 @@ class MainWindow:
         # -----------------------------------------
 
         self._setup_root_window()
-        self._setup_components()
+        self._setup_status_bar()
+        self._setup_parameter_frame()
+        self._setup_canvas_frame()
         self._setup_zoom_params()
         self._start_initial_drawing()
 
@@ -106,16 +108,6 @@ class MainWindow:
 
         self.root.title(app_title)
         self.root.geometry(f"{window_width}x{window_height}")
-
-    def _setup_components(self) -> None:
-        """UIコンポーネントの初期化を行う
-            - ステータスバー
-            - パラメータパネル
-            - キャンバスフレーム
-        """
-        self._setup_status_bar()
-        self._setup_parameter_frame()
-        self._setup_canvas_frame()
 
     def _setup_status_bar(self) -> None:
         """ステータスバーを初期化し、ルートウィンドウの下部に配置する"""

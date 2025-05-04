@@ -24,7 +24,7 @@ class ColorCache:
         self.cache = {}
         # logger が None の場合、デフォルトの DebugLogger を作成
         # logger の初期化を先に行う
-        self.logger = logger if logger is not None else DebugLogger()
+        self.logger = logger
 
         # 設定ファイルからキャッシュ最大サイズを取得
         coloring_settings = config.get("coloring_settings", {})
