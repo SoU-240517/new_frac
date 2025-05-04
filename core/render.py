@@ -59,7 +59,7 @@ def _calculate_dynamic_resolution(width: float, config: Dict[str, Any], logger: 
 
     # 最小解像度と最大解像度でクリップ
     final_resolution = np.clip(resolution, min_res, max_res)
-    logger.log(LogLevel.SUCCESS, f"最終動的解像度: {final_resolution} (min={min_res}, max={max_res} でクリップ)")
+    logger.log(LogLevel.DEBUG, f"最終動的解像度: {final_resolution} (min={min_res}, max={max_res} でクリップ)")
     return final_resolution
 
 def _create_fractal_grid(params: dict, super_resolution_x: int, super_resolution_y: int, logger: DebugLogger) -> np.ndarray:
@@ -313,7 +313,7 @@ def render_fractal(
         # ズームレベルに応じてサンプル数を決定
         samples_per_pixel = high_samples if zoom_level >= zoom_threshold else low_samples
 
-    logger.log(LogLevel.SUCCESS, f"描画モード: {render_mode}, 解像度: {resolution}x{resolution}, サンプル数: {samples_per_pixel} (ズームレベル={zoom_level:.2f}, 閾値={zoom_threshold})")
+    logger.log(LogLevel.DEBUG, f"描画モード: {render_mode}, 解像度: {resolution}x{resolution}, サンプル数: {samples_per_pixel} (ズームレベル={zoom_level:.2f}, 閾値={zoom_threshold})")
 
     # 高解像度グリッドサイズ (サンプル数が1でも resolution x 1 になる)
 #    super_resolution_x = resolution * samples_per_pixel

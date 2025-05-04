@@ -73,7 +73,6 @@ class MainWindow:
             root (tk.Tk): Tkinter のルートウィンドウ
             logger (DebugLogger): デバッグログを管理するロガーインスタンス
         """
-
         self.logger = logger
         self.root = root
         self.is_drawing = False

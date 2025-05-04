@@ -322,10 +322,10 @@ class ParameterPanel:
                  self.non_diverge_algo_var.set(recommended["non_divergent_algorithm"])
              if recommended.get("non_divergent_colormap"):
                  self.non_diverge_colormap_var.set(recommended["non_divergent_colormap"])
-             self._update_colorbars() # カラーバーも更新
+#             self._update_colorbars() # カラーバーも更新
 
-        # 6. (重要) 変更を即時描画（クイックモードで）
-        self._common_callback()
+#        # 6. (重要) 変更を即時描画（クイックモードで）
+#        self._common_callback()
 
     # --- 追加: 動的パラメータウィジェットのクリア ---
     def _clear_dynamic_parameters(self) -> None:
