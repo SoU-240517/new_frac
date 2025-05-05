@@ -7,20 +7,20 @@ from debug import DebugLogger, LogLevel
 
 class StatusBarManager:
     """ステータスバーの表示とアニメーションを管理するクラス
-    - ステータスバーの表示とアニメーションを管理
-    - 描画時間の計測と表示
-    - アニメーション状態の管理
+    
+    ステータスバーの表示とアニメーションを管理し、描画時間の計測と表示を行います。
+    
     Attributes:
-        _TIME_FORMAT: 時間表示のフォーマット文字列
-        _ANIMATION_INTERVAL: アニメーションの間隔 (秒)
-        _TIME_UPDATE_INTERVAL: 時間更新の間隔 (ミリ秒)
-        root: Tkinterのルートウィンドウ
-        status_frame: ステータスバーを配置するフレーム
-        logger: デバッグログを管理するLogger
-        _draw_start_time: 描画開始時刻
-        _status_timer_id: 時間更新タイマーID
-        status_label: ステータス表示用のラベル
-        _animation_state: アニメーション状態を管理するAnimationState
+        _TIME_FORMAT (str): 時間表示のフォーマット文字列（分:秒:ミリ秒）
+        _ANIMATION_INTERVAL (float): アニメーションの間隔（秒）
+        _TIME_UPDATE_INTERVAL (int): 時間更新の間隔（ミリ秒）
+        root (tk.Tk): Tkinterのルートウィンドウ
+        status_frame (ttk.Frame): ステータスバーを配置するフレーム
+        logger (DebugLogger): デバッグログを管理するLogger
+        _draw_start_time (Optional[float]): 描画開始時刻
+        _status_timer_id (Optional[str]): 時間更新タイマーID
+        status_label (ttk.Label): ステータス表示用のラベル
+        _animation_state (AnimationState): アニメーション状態を管理するAnimationState
     """
     _TIME_FORMAT = "[{:>3}分 {:02}秒 {:03}ms] " # 時間表示のフォーマット（分:秒:ミリ秒）
     _ANIMATION_INTERVAL = 0.1 # アニメーションの間隔（秒）
@@ -28,12 +28,11 @@ class StatusBarManager:
 
     def __init__(self, root: tk.Tk, status_frame: ttk.Frame, logger: DebugLogger):
         """StatusBarManager クラスのコンストラクタ
-        - ステータスバーの初期化とアニメーション状態の設定を行う
-
+        
         Args:
-            root: Tkinterのルートウィンドウ
-            status_frame: ステータスバーを配置するフレーム
-            logger: デバッグログを管理するLogger
+            root (tk.Tk): Tkinterのルートウィンドウ
+            status_frame (ttk.Frame): ステータスバーを配置するフレーム
+            logger (DebugLogger): デバッグログを管理するLogger
         """
         self.root = root
         self.status_frame = status_frame
@@ -61,9 +60,13 @@ class StatusBarManager:
 
     def start_animation(self) -> None:
         """ステータスバーの描画中アニメーションを開始
+        
         - アニメーション状態を開始
         - 描画開始時刻を記録
         - 時間更新とアニメーションスレッドを開始
+        
+        Raises:
+            ログ出力: アニメーションが既に実行中の場合
         """
         if self._animation_state.is_running:
             self.logger.log(LogLevel.ERROR, "アニメーションは既に実行中")
@@ -174,8 +177,13 @@ class StatusBarManager:
 
     def stop_animation(self, final_message: str = "完了") -> None:
         """アニメーションを停止し、最終メッセージを表示
-        - アニメーションを停止し、スレッドの終了を待機し、時間更新をキャンセルし、最終メッセージを表示し、状態をリセットする
-
+        
+        - アニメーションを停止
+        - スレッドの終了を待機
+        - 時間更新をキャンセル
+        - 最終メッセージを表示
+        - 状態をリセット
+        
         Args:
             final_message (str, optional): 最終メッセージ. Defaults to "完了"
         """

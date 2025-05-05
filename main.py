@@ -1,3 +1,15 @@
+"""
+main.py
+
+このファイルはアプリケーションのエントリーポイントです。
+Tkinterを使用したGUIアプリケーションの起動と初期化を行います。
+
+主な機能:
+- 設定ファイルの読み込み
+- デバッグロガーの初期化
+- メインウィンドウの作成と起動
+"""
+
 import tkinter as tk
 from core import MainWindow, load_config
 from debug import DebugLogger, LogLevel
@@ -12,19 +24,20 @@ if __name__ == "__main__":
     temp_logger = DebugLogger(True, "DEBUG")  # デフォルト値使用
     temp_logger.log(LogLevel.INIT, "DebugLogger(仮) クラスのインスタンス作成成功")
 
+    # 設定ファイルの読み込み
     temp_logger.log(LogLevel.INIT, "設定ファイル読込開始 (DebugLogger(仮)を使用)")
     config = load_config(temp_logger, "config.json")
     # -------------------------------------------------------------------------------
 
-    # 設定ファイルからログ設定を取得
+    # 正式なデバッグロガーの初期化
     logging_config = config.get("logging", {})
-
     temp_logger.log(LogLevel.INIT, "DebugLogger クラスのインスタンス作成開始")
     logger = DebugLogger(
         debug_enabled=logging_config.get("debug_enabled", True),
         min_level_str=logging_config.get("min_level", "DEBUG")
     )
 
+    # アプリケーションの起動
     logger.log(LogLevel.INFO, "App START: Tkinter ルートウィンドウを作成")
     root = tk.Tk()
 

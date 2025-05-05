@@ -6,7 +6,16 @@ from typing import Dict, Any, Optional, Callable, List
 from debug import DebugLogger, LogLevel
 
 class FractalTypeLoader:
-    """フラクタルタイププラグインをロードし、管理するクラス"""
+    """
+    フラクタルタイププラグインをロードし、管理するクラス。
+    プラグインはJSON設定ファイルとPythonモジュールから構成され、
+    フラクタルの計算関数とそのパラメータ設定を提供します。
+    
+    Attributes:
+        plugin_dir (str): プラグインが格納されているディレクトリのパス
+        loaded_plugins (Dict[str, Dict[str, Any]]): ロードされたプラグインの情報
+        logger (Optional[DebugLogger]): ロギング用インスタンス
+    """
 
     def __init__(self, plugin_dir, logger: Optional[DebugLogger] = None):
         """
@@ -22,7 +31,14 @@ class FractalTypeLoader:
         self.logger.log(LogLevel.INIT, "FractalTypeLoader クラスのインスタンス作成成功")
 
     def scan_and_load_plugins(self) -> None:
-        """プラグインディレクトリをスキャンし、有効なプラグインをロードする"""
+        """
+        プラグインディレクトリをスキャンし、有効なプラグインをロードします。
+        各プラグインディレクトリからJSON設定ファイルとPythonモジュールを読み込み、
+        フラクタル計算関数を初期化します。
+        
+        Raises:
+            なし（エラーはログとして記録され、該当プラグインのロードがスキップされます）
+        """
         self.loaded_plugins = {} # ロード前にクリア
 
         if not os.path.isdir(self.plugin_dir):
@@ -38,7 +54,18 @@ class FractalTypeLoader:
         self.logger.log(LogLevel.SUCCESS, f"{len(self.loaded_plugins)} 個のプラグインをロード成功")
 
     def _load_single_plugin(self, plugin_name: str, plugin_path: str) -> None:
-        """個別のプラグインをロードする試み"""
+        """
+        個別のプラグインをロードします。
+        JSON設定ファイルとPythonモジュールの存在を確認し、
+        必要な要件を満たしている場合にのみロードを実行します。
+        
+        Args:
+            plugin_name (str): プラグインのディレクトリ名
+            plugin_path (str): プラグインディレクトリの絶対パス
+        
+        Raises:
+            なし（エラーはログとして記録され、該当プラグインのロードがスキップされます）
+        """
         json_path = os.path.join(plugin_path, f"{plugin_name}.json")
         py_path = os.path.join(plugin_path, f"{plugin_name}.py")
         init_path = os.path.join(plugin_path, "__init__.py") # __init__.py も確認
@@ -115,29 +142,74 @@ class FractalTypeLoader:
         self.logger.log(LogLevel.DEBUG, f"プラグイン '{plugin_display_name}' (from '{plugin_name}') のロード成功")
 
     def get_available_types(self) -> List[str]:
-        """ロードされたフラクタルタイプの表示名のリストを返す"""
+        """
+        ロードされたフラクタルタイプの表示名のリストを返します。
+        
+        Returns:
+            List[str]: ロードされたフラクタルタイプの表示名のリスト
+        """
         return list(self.loaded_plugins.keys())
 
     def get_plugin(self, name: str) -> Optional[Dict[str, Any]]:
-        """指定された表示名に対応するプラグイン情報を返す"""
+        """
+        指定された表示名に対応するプラグイン情報を返します。
+        
+        Args:
+            name (str): プラグタルタイプの表示名
+        
+        Returns:
+            Optional[Dict[str, Any]]: プラグイン情報の辞書（存在しない場合はNone）
+        """
         return self.loaded_plugins.get(name)
 
     def get_compute_function(self, name: str) -> Optional[Callable]:
-        """指定された表示名に対応するフラクタル計算関数を返す"""
+        """
+        指定された表示名に対応するフラクタル計算関数を返します。
+        
+        Args:
+            name (str): プラグタルタイプの表示名
+        
+        Returns:
+            Optional[Callable]: フラクタル計算関数（存在しない場合はNone）
+        """
         plugin = self.get_plugin(name)
         return plugin.get("compute_function") if plugin else None
 
     def get_parameters_config(self, name: str) -> Optional[List[Dict[str, Any]]]:
-        """指定された表示名に対応するパラメータ設定リストを返す"""
+        """
+        指定された表示名に対応するパラメータ設定リストを返します。
+        
+        Args:
+            name (str): プラグタルタイプの表示名
+        
+        Returns:
+            Optional[List[Dict[str, Any]]]: パラメータ設定リスト（存在しない場合はNone）
+        """
         plugin = self.get_plugin(name)
         return plugin.get("config", {}).get("parameters") if plugin else None
 
     def get_description(self, name: str) -> Optional[str]:
-        """指定された表示名に対応する説明文を返す"""
+        """
+        指定された表示名に対応する説明文を返します。
+        
+        Args:
+            name (str): プラグタルタイプの表示名
+        
+        Returns:
+            Optional[str]: プラグインの説明文（存在しない場合はNone）
+        """
         plugin = self.get_plugin(name)
         return plugin.get("config", {}).get("description") if plugin else None
 
     def get_recommended_coloring(self, name: str) -> Optional[Dict[str, str]]:
-         """指定された表示名に対応する推奨カラーリング設定を返す"""
-         plugin = self.get_plugin(name)
-         return plugin.get("config", {}).get("recommended_coloring") if plugin else None
+        """
+        指定された表示名に対応する推奨カラーリング設定を返します。
+        
+        Args:
+            name (str): プラグタルタイプの表示名
+        
+        Returns:
+            Optional[Dict[str, str]]: 推奨カラーリング設定（存在しない場合はNone）
+        """
+        plugin = self.get_plugin(name)
+        return plugin.get("config", {}).get("recommended_coloring") if plugin else None

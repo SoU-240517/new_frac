@@ -8,52 +8,65 @@ from debug import DebugLogger, LogLevel
 from plugins.fractal_types.loader import FractalTypeLoader
 
 class ParameterPanel:
-    """ParameterPanel クラス
-    - フラクタル生成用のパラメータを設定するパネル
+    """フラクタル生成用パラメータ設定パネルクラス
+    
+    このクラスは、フラクタル生成に必要なパラメータを設定・管理するGUIパネルを提供します。
+    ユーザーはこのパネルを通じて、フラクタルタイプの選択、数式の表示、
+    パラメータの設定、カラーマッピングの設定等を行うことができます。
+    
     Attributes:
-        parent: 親ウィジェット
-        update_callback: 描画更新コールバック関数
-        reset_callback: 描画リセットコールバック関数
-        logger: デバッグロガーインスタンス
-        render_mode: 描画モード ("quick" or "full")
-        fractal_type_var: フラクタルタイプの選択 (tk.StringVar)
-        formula_var: 数式表示 (tk.StringVar)
-        formula_label: 数式表示ラベル (ttk.Label)
-        max_iter_var: 最大反復回数 (tk.StringVar)
-        z_real_var: Z (実部) (tk.StringVar)
-        z_imag_var: Z (虚部) (tk.StringVar)
-        c_real_var: C (実部) (tk.StringVar)
-        c_imag_var: C (虚部) (tk.StringVar)
-        diverge_algo_var: 発散部着色アルゴリズム (tk.StringVar)
-        diverge_colorbar_label: 発散部カラーバー表示ラベル (tk.Label)
-        diverge_colormap_var: 発散部カラーマップ (tk.StringVar)
-        non_diverge_algo_var: 非発散部着色アルゴリズム (tk.StringVar)
-        non_diverge_colorbar_label: 非発散部カラーバー表示ラベル (tk.Label)
-        non_diverge_colormap_var: 非発散部カラーマップ (tk.StringVar)
-        _fractal_type_row: フラクタルタイプ選択行
-        _formula_row: 数式表示行
-        _param_section_last_row: パラメータセクション最終行
-        _diverge_section_last_row: 発散部セクション最終行
-        _non_diverge_section_last_row: 非発散部セクション最終行
-        colormaps: カラーマップリスト
-        diverge_algorithms: 発散部アルゴリズムリスト
-        non_diverge_algorithms: 非発散部アルゴリズムリスト
-        COLORBAR_WIDTH: カラーバー幅
-        COLORBAR_HEIGHT: カラーバー高さ
-        config (dict): config.json から読み込んだ設定データ
+        parent (tk.Widget): 親ウィジェット
+        update_callback (Callable): 描画更新コールバック関数
+        reset_callback (Callable): 描画リセットコールバック関数
+        logger (DebugLogger): デバッグロガーインスタンス
+        render_mode (str): 描画モード ("quick" or "full")
+        fractal_type_var (tk.StringVar): フラクタルタイプの選択
+        formula_var (tk.StringVar): 数式表示
+        formula_label (ttk.Label): 数式表示ラベル
+        max_iter_var (tk.StringVar): 最大反復回数
+        z_real_var (tk.StringVar): Z (実部)
+        z_imag_var (tk.StringVar): Z (虚部)
+        c_real_var (tk.StringVar): C (実部)
+        c_imag_var (tk.StringVar): C (虚部)
+        diverge_algo_var (tk.StringVar): 発散部着色アルゴリズム
+        diverge_colorbar_label (tk.Label): 発散部カラーバー表示ラベル
+        diverge_colormap_var (tk.StringVar): 発散部カラーマップ
+        non_diverge_algo_var (tk.StringVar): 非発散部着色アルゴリズム
+        non_diverge_colorbar_label (tk.Label): 非発散部カラーバー表示ラベル
+        non_diverge_colormap_var (tk.StringVar): 非発散部カラーマップ
+        _fractal_type_row (int): フラクタルタイプ選択行
+        _formula_row (int): 数式表示行
+        _param_section_last_row (int): パラメータセクション最終行
+        _diverge_section_last_row (int): 発散部セクション最終行
+        _non_diverge_section_last_row (int): 非発散部セクション最終行
+        colormaps (List[str]): 利用可能なカラーマップリスト
+        diverge_algorithms (List[str]): 発散部着色アルゴリズムリスト
+        non_diverge_algorithms (List[str]): 非発散部着色アルゴリズムリスト
+        COLORBAR_WIDTH (int): カラーバーの幅
+        COLORBAR_HEIGHT (int): カラーバーの高さ
+        config (Dict[str, Any]): 設定データ
+        current_plugin_params (List[Dict[str, Any]]): 現在表示中のプラグインパラメータ設定
+        param_vars (Dict[str, tk.StringVar]): パラメータID -> StringVar の辞書
+        param_widgets (Dict[str, tk.Widget]): パラメータID -> Widget の辞書
+        param_frame (Optional[ttk.Frame]): パラメータウィジェットを配置するフレーム
     """
 
-    def __init__(self, parent, update_callback, reset_callback, logger: DebugLogger, config: Dict[str, Any], fractal_loader: FractalTypeLoader):
+    def __init__(self, 
+                 parent: tk.Widget, 
+                 update_callback: Callable, 
+                 reset_callback: Callable, 
+                 logger: DebugLogger, 
+                 config: Dict[str, Any], 
+                 fractal_loader: FractalTypeLoader):
         """ParameterPanel クラスのコンストラクタ
-        - パネルのセットアップ
-        - カラーバーの初期化
-
+        
         Args:
-            parent: 親ウィジェット
-            update_callback: 描画更新コールバック関数
-            reset_callback: 描画リセットコールバック関数
-            logger: デバッグロガーインスタンス
-            config (Dict[str, Any]): config.json から読み込んだ設定データ
+            parent (tk.Widget): 親ウィジェット
+            update_callback (Callable): 描画更新コールバック関数
+            reset_callback (Callable): 描画リセットコールバック関数
+            logger (DebugLogger): デバッグロガーインスタンス
+            config (Dict[str, Any]): 設定データ
+            fractal_loader (FractalTypeLoader): フラクタルタイプローダー
         """
         self.logger = logger
         self.parent = parent
@@ -101,8 +114,9 @@ class ParameterPanel:
 
     def _setup_panel(self) -> None:
         """パネルのセットアップ
-        - 各セクションのセットアップ
-        - パネルのレイアウト設定
+        
+        フラクタルタイプセクション、数式表示セクション、パラメータセクション、
+        発散部セクション、非発散部セクション、ボタンセクションを順にセットアップします。
         """
         current_row = 0
         self.logger.log(LogLevel.CALL, "フラクタルタイプセクションのセットアップ開始")
@@ -128,9 +142,15 @@ class ParameterPanel:
 
     def _setup_fractal_type_section(self, start_row: int) -> int:
         """フラクタルタイプセクションのセットアップ
-        - ラベルとコンボボックスの追加
-        - イベントバインド
-        - 初期値を設定ファイルから読み込む
+        
+        フラクタルタイプの選択用コンボボックスを設定し、
+        イベントハンドラをバインドします。
+        
+        Args:
+            start_row (int): セクションの開始行
+            
+        Returns:
+            int: 次のセクションの開始行
         """
         row = start_row
         self._add_label("フラクタルタイプ:", row, 0, pady=(5,0))
@@ -157,8 +177,14 @@ class ParameterPanel:
 
     def _setup_formula_section(self, start_row: int) -> int:
         """数式表示セクションのセットアップ
-        - 数式表示ラベルの追加
-        - 数式の初期表示
+        
+        数式を表示するラベルを設定します。
+        
+        Args:
+            start_row (int): セクションの開始行
+            
+        Returns:
+            int: 次のセクションの開始行
         """
         row = start_row
 
@@ -176,7 +202,17 @@ class ParameterPanel:
         return row + 1
 
     def _setup_dynamic_parameter_frame(self, start_row: int) -> int:
-        """動的にパラメータウィジェットを配置するためのフレームを作成"""
+        """動的パラメータフレームのセットアップ
+        
+        フラクタルタイプに応じて動的に変化するパラメータウィジェットを
+        配置するためのフレームを作成します。
+        
+        Args:
+            start_row (int): セクションの開始行
+            
+        Returns:
+            int: 次のセクションの開始行
+        """
         row = start_row
         self.param_frame = ttk.Frame(self.parent)
         self.param_frame.grid(row=row, column=0, columnspan=2, sticky="nsew", padx=5)
@@ -185,8 +221,15 @@ class ParameterPanel:
         self.logger.log(LogLevel.SUCCESS, "動的にパラメータウィジェットを配置するためのフレームを作成成功")
         return row + 1 # フレームが1行占有
 
-    def _on_fractal_type_selected(self, event=None) -> None:
-        """フラクタルタイプが選択されたときに呼び出される"""
+    def _on_fractal_type_selected(self, event: Optional[tk.Event] = None) -> None:
+        """フラクタルタイプが選択されたときの処理
+        
+        選択されたフラクタルタイプに応じて、
+        関連するパラメータウィジェットを更新します。
+        
+        Args:
+            event (Optional[tk.Event]): イベントオブジェクト
+        """
         selected_type_name = self.fractal_type_var.get()
         self.logger.log(LogLevel.INFO, f"フラクタルタイプ変更: {selected_type_name}")
 
@@ -274,9 +317,14 @@ class ParameterPanel:
 
     def _setup_diverge_section(self, start_row: int) -> int:
         """発散部セクションのセットアップ
-        - 各ウィジェットの追加と設定
-        - イベントバインド
-        - 初期値とリストを設定ファイルから読み込む
+        
+        発散部の着色アルゴリズムとカラーマップを設定します。
+        
+        Args:
+            start_row (int): セクションの開始行
+            
+        Returns:
+            int: 次のセクションの開始行
         """
         row = start_row
 
@@ -339,9 +387,14 @@ class ParameterPanel:
 
     def _setup_non_diverge_section(self, start_row: int) -> int:
         """非発散部セクションのセットアップ
-        - 各ウィジェットの追加と設定
-        - イベントバインド
-        - 初期値とリストを設定ファイルから読み込む
+        
+        非発散部の着色アルゴリズムとカラーマップを設定します。
+        
+        Args:
+            start_row (int): セクションの開始行
+            
+        Returns:
+            int: 次のセクションの開始行
         """
         row = start_row
 
@@ -411,8 +464,14 @@ class ParameterPanel:
 
     def _setup_buttons(self, start_row: int) -> int:
         """ボタンのセットアップ
-        - 描画ボタンと描画リセットボタンの追加
-        - 各ボタンのコールバック設定
+        
+        描画ボタンと描画リセットボタンを設定します。
+        
+        Args:
+            start_row (int): セクションの開始行
+            
+        Returns:
+            int: 次のセクションの開始行
         """
         row = start_row
 
@@ -480,10 +539,9 @@ class ParameterPanel:
 
     def _common_callback(self, event=None) -> None:
         """共通のコールバック関数
-        - 描画モードをクイックに設定
-        - 描画更新コールバックを呼び出し
-        - カラーバーを更新
-        - 数式表示を更新
+        
+        描画モードをクイックに設定し、描画更新コールバックを呼び出します。
+        さらに、カラーバーを更新し、数式表示を更新します。
         """
         self.render_mode = "quick"  # 簡易描画モードに設定
         self.update_callback()      # 描画更新をトリガー
@@ -491,10 +549,10 @@ class ParameterPanel:
 
     def _create_colorbar_image(self, cmap_name: str) -> ImageTk.PhotoImage:
         """カラーバー画像を生成する
-
+        
         Args:
             cmap_name: カラーマップ名
-
+        
         Returns:
             ImageTk.PhotoImage: カラーバー画像のPhotoImageオブジェクト
         """
@@ -527,7 +585,8 @@ class ParameterPanel:
 
     def _update_colorbars(self, *args) -> None:
         """カラーバーを更新する
-        - 発散部と非発散部のカラーバー画像を生成し、ラベルに設定する
+        
+        発散部と非発散部のカラーバー画像を生成し、ラベルに設定します。
         """
         # 発散部のカラーバー画像を生成
         diverge_cmap_name = self.diverge_colormap_var.get()
@@ -549,7 +608,7 @@ class ParameterPanel:
 
     def get_parameters(self) -> Optional[Dict[str, Any]]:
         """現在のパネル設定を取得する (動的パラメータ対応)
-
+        
         Returns:
             Optional[Dict[str, Any]]: パラメータ辞書、またはエラー時は None
         """

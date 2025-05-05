@@ -22,14 +22,21 @@ from debug import DebugLogger, LogLevel
 
 def _calculate_dynamic_resolution(width: float, config: Dict[str, Any], logger: DebugLogger) -> int:
     """ズームレベルに応じて描画解像度を動的に計算
-    - 解像度は対数スケールで調整
-    - ズームインするほど高解像度になる
+    
+    対数スケールで解像度を調整し、ズームインするほど高解像度になる
+    
     Args:
         width (float): 描画範囲の幅 (ズームレベルの指標)
         config (Dict[str, Any]): config.json から読み込んだ設定データ
         logger (DebugLogger): デバッグログ用
+    
     Returns:
         int: 計算された描画解像度（ピクセル数）
+    
+    Notes:
+        - 基準幅（4.0）に対して対数スケールで解像度を調整
+        - 最小解像度と最大解像度でクリップされる
+        - ゼロ割防止のため width は 1e-9 でクリップされる
     """
     # 設定ファイルから動的解像度のパラメータを取得
     dr_config = config.get("fractal_settings", {}).get("dynamic_resolution", {})
@@ -64,18 +71,25 @@ def _calculate_dynamic_resolution(width: float, config: Dict[str, Any], logger: 
 
 def _create_fractal_grid(params: dict, super_resolution_x: int, super_resolution_y: int, logger: DebugLogger) -> np.ndarray:
     """フラクタル計算用の複素数グリッドを生成
+    
     Args:
-        params (dict): フラクタルのパラメータ (MainWindowで設定済み想定)
-            - center_x: 中心X座標
-            - center_y: 中心Y座標
-            - width:  描画範囲の幅
-            - height: 描画範囲の高さ (MainWindowで設定済み想定)
-            - rotation: 回転角度
+        params (dict): フラクタルのパラメータ
+            - center_x: 中心X座標 (float)
+            - center_y: 中心Y座標 (float)
+            - width:  描画範囲の幅 (float)
+            - height: 描画範囲の高さ (float)
+            - rotation: 回転角度 (float, 度)
         super_resolution_x (int): 水平方向の解像度
         super_resolution_y (int): 垂直方向の解像度
         logger (DebugLogger): デバッグログ出力用
+    
     Returns:
-        np.ndarray: 複素数グリッド
+        np.ndarray: 複素数グリッド (dtype=np.complex64)
+    
+    Notes:
+        - width > 1.0 の場合は np.float16 を使用
+        - width <= 1.0 の場合は np.float32 を使用
+        - 回転角度が指定された場合はグリッドを回転させる
     """
     center_x = params.get("center_x", 0.0)
     center_y = params.get("center_y", 0.0)
@@ -119,16 +133,31 @@ def _compute_fractal(
 ) -> Optional[Dict[str, np.ndarray]]: # 戻り値を Optional に変更
 
     """フラクタル計算を実行
+    
     Args:
         Z (np.ndarray): 複素数グリッド
-        params (dict): フラクタルのパラメータ (MainWindow/ParameterPanelで設定済み想定)
-            - fractal_type: フラクタルの種類
-            - c_real, c_imag: Julia用
-            - z_real, z_imag: Mandelbrot用 (通常0)
+        params (dict): フラクタルのパラメータ
+            - fractal_type_name: フラクタルの種類 ("Julia" or "Mandelbrot")
+            - c_real, c_imag: Julia用複素数 C の実部・虚部
+            - z0_real, z0_imag: Mandelbrot用初期値 Z0 の実部・虚部
             - max_iterations: 最大反復回数
+        compute_function (Callable): フラクタル計算関数
         logger (DebugLogger): デバッグログ出力用
+    
     Returns:
-        dict: 計算結果 (iterations, mask, z_vals など)
+        Optional[Dict[str, np.ndarray]]: 計算結果
+            - iterations: 反復回数配列
+            - mask: 発散判定マスク
+            - z_vals: 最終複素数値配列
+    
+    Raises:
+        TypeError: 計算関数の呼び出し時に引数の型が不正な場合
+        Exception: 計算中に予期せぬエラーが発生した場合
+    
+    Notes:
+        - Julia集合の場合は C パラメータを使用
+        - Mandelbrot集合の場合は Z0 パラメータを使用
+        - 計算結果が None の場合はエラーが発生したことを示す
     """
     start_time = time.perf_counter()
 
@@ -207,7 +236,8 @@ def _downsample_image(
     samples_per_pixel_y: int,
     logger: DebugLogger
 ) -> np.ndarray:
-    """高解像度画像をダウンサンプリングしてアンチエイリアシング (変更なし、引数名修正)
+    """高解像度画像をダウンサンプリングしてアンチエイリアシング
+    
     Args:
         high_res_image (np.ndarray): 高解像度画像 (RGBA想定)
         target_resolution_x (int): 目標解像度 X
@@ -215,8 +245,13 @@ def _downsample_image(
         samples_per_pixel_x (int): X方向の1ピクセルあたりのサンプル数
         samples_per_pixel_y (int): Y方向の1ピクセルあたりのサンプル数
         logger (DebugLogger): デバッグログ出力用
+    
     Returns:
         np.ndarray: ダウンサンプリングされた画像
+    
+    Notes:
+        - サンプル数が1の場合はダウンサンプリングをスキップ
+        - サンプル数が1より大きい場合はダウンサンプリングを実行
     """
     try:
         # 期待される高解像度画像の形状
@@ -268,17 +303,33 @@ def render_fractal(
     logger: DebugLogger,
     config: Dict[str, Any]
 ) -> np.ndarray:
-    """フラクタル画像を生成 (計算関数を引数で受け取る)
+    """フラクタル画像を生成
+    
     Args:
-        params (dict): フラクタルのパラメータ (UIから渡される)
-            - fractal_type, c_real, c_imag, z_real, z_imag, max_iterations
-            - center_x, center_y, width, height, rotation
-            - diverge_algorithm, non_diverge_algorithm, diverge_colormap, non_diverge_colormap
-            - render_mode ("quick" or "full")
+        params (dict): フラクタルのパラメータ
+            - fractal_type_name: フラクタルの種類 ("Julia" or "Mandelbrot")
+            - c_real, c_imag: Julia用複素数 C の実部・虚部
+            - z0_real, z0_imag: Mandelbrot用初期値 Z0 の実部・虚部
+            - max_iterations: 最大反復回数
+            - center_x, center_y: 画像の中心座標
+            - width, height: 描画範囲のサイズ
+            - rotation: 回転角度 (度)
+            - diverge_algorithm: 発散領域の着色アルゴリズム
+            - non_diverge_algorithm: 非発散領域の着色アルゴリズム
+            - diverge_colormap: 発散領域のカラーマップ
+            - non_diverge_colormap: 非発散領域のカラーマップ
+            - render_mode: "quick" or "full"
+        compute_function (Callable): フラクタル計算関数
         logger (DebugLogger): デバッグログ出力用
         config (Dict[str, Any]): config.json から読み込んだ設定データ
+    
     Returns:
         np.ndarray: RGBA形式のフラクタル画像 (uint8 [0, 255])
+    
+    Notes:
+        - 動的解像度制御により最適な解像度でレンダリング
+        - スーパーサンプリングにより高品質な画像生成
+        - カラーリングは coloring.manager モジュールを使用
     """
     render_mode = params.get("render_mode", "quick")  # デフォルトは簡易モード
     current_width = params.get("width", 4.0) # 現在の描画範囲の幅

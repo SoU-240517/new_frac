@@ -9,9 +9,16 @@ if TYPE_CHECKING:
 class EventHandlersPrivate:
     """EventHandler から呼び出され、具体的なマウス/キーボードイベント処理を行うクラス
     - 矩形の作成、移動、リサイズ、回転などの具体的な操作を実行する
-    - EventHandler インスタンスを通じて、他のコンポーネントや状態にアクセスする
+    - イベント処理の状態管理と履歴管理を行う
+    - カーソルの更新や描画の更新などのUI関連処理を行う
+    
     Attributes:
         core: 親である EventHandler インスタンス
+        logger: ログ出力機能
+        rect_manager: 矩形管理機能
+        zoom_selector: ズーム選択機能
+        cursor_manager: カーソル管理機能
+        utils: 便利なユーティリティ関数群
     """
 
     # --- コンストラクタ ---
@@ -250,8 +257,16 @@ class EventHandlersPrivate:
     def handle_motion_rotating(self, event: MouseEvent) -> None:
         """ROTATING 状態でのマウス移動: 矩形回転
         - 回転中心とマウスの移動から回転角度を計算し、矩形を回転する
+        - 回転角度の変化が閾値を超えた場合のみ更新を行う
+        - 回転感度を考慮した角度調整を行う
+        
         Args:
             event: MouseEvent オブジェクト
+        
+        Notes:
+            - 回転中心、前回の角度、現在のマウス座標が有効な場合のみ処理を行う
+            - 角度変化が rotation_threshold を超えた場合のみ更新を行う
+            - 回転角度は rotation_sensitivity で調整される
         """
         # 回転ログを出力
         if not self.core._rotate_logged:
@@ -269,7 +284,7 @@ class EventHandlersPrivate:
                 current_vector_angle,
                 self.core.previous_vector_angle)
 
-            # 角度変化が閾値を超えた場合に矩形を回転
+            # 角度変化が rotation_threshold を超えた場合のみ更新を行う
             if abs(delta_angle) > self.core.rotation_threshold:
                 adjusted_delta_angle = delta_angle * self.core.rotation_sensitivity
                 current_rect_angle = self.core.rect_manager.get_rotation()
@@ -331,10 +346,20 @@ class EventHandlersPrivate:
     def handle_release_resizing(self, event: MouseEvent) -> ZoomState:
         """RESIZING 状態でのマウス解放: リサイズ完了またはキャンセル/Undo
         - 矩形のリサイズを確定、または無効なリサイズの場合Undoを実行し、状態を更新する
+        - リサイズ後の矩形サイズの有効性チェックを行う
+        
         Args:
             event: MouseEvent オブジェクト
+            
         Returns:
-            ZoomState: 次の状態 (EDIT または NO_RECT)
+            ZoomState: 次の状態
+            - EDIT: リサイズが成功した場合
+            - NO_RECT: リサイズが失敗してUndoされた場合
+            
+        Notes:
+            - 最後に計算されたピクセルサイズが有効かチェック
+            - 無効なサイズになった場合はUndoを試行
+            - Undoの結果、矩形が消えた場合は NO_RECT 状態に移行
         """
         self.core.logger.log(LogLevel.SUCCESS, "リサイズ完了：後処理開始")
         self.core.rect_manager.edge_change_finishing()
@@ -366,9 +391,16 @@ class EventHandlersPrivate:
     # --- Key イベントハンドラ ---
     def _handle_key_escape(self, event: KeyEvent) -> None:
         """Escapeキー押下処理
-        - 現在の状態に応じて、ズーム確定キャンセル、Undo、編集キャンセルなどの処理を行う
+        - 現在の状態に応じて、適切なキャンセル処理を行う
+        - ズーム確定キャンセル、Undo、編集キャンセルなどの処理を実行
+        
         Args:
             event: KeyEvent オブジェクト
+            
+        Notes:
+            - NO_RECT 状態: ズーム確定キャンセル
+            - EDIT 状態: Undoまたは編集キャンセル
+            - その他の状態: 操作キャンセル
         """
         # 親の state_handler から現在の状態を取得
         state = self.core.state_handler.state

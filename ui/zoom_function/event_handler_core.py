@@ -18,6 +18,7 @@ class EventHandler:
     """マウス/キーボードイベントを処理し、適切な操作に変換するクラス
     - matplotlib のイベントを処理し、各コンポーネントに指示を出す
     - イベントの種類と現在の状態に応じて、具体的な処理を行うクラスに処理を委譲する（振り分ける）
+    
     Attributes:
         logger: デバッグログ出力用ロガー
         zoom_selector: ZoomSelector インスタンス。矩形選択処理を管理する
@@ -75,6 +76,9 @@ class EventHandler:
             logger: DebugLogger インスタンス。デバッグログ出力用
             canvas: FigureCanvasTkAgg インスタンス。matplotlibの描画領域
             config (Dict[str, Any]): config.json から読み込んだ設定データ
+        
+        Notes:
+            インスタンス変数の初期化と依存コンポーネントの設定を行う
         """
         self.logger = logger
         self.config = config
@@ -168,6 +172,9 @@ class EventHandler:
     # (実際の使用箇所は private_handlers や utils にあるため、そちらの修正が必要)
         """全イベントハンドラを接続
         - 各種matplotlibイベントと、対応するハンドラメソッドを接続する
+        
+        Notes:
+            すでに接続されている場合は何もしない
         """
         if self._cid_press is None: # すでに接続されている場合は何もしない
             self._cid_press = self.canvas.mpl_connect('button_press_event', self.on_press)
@@ -181,6 +188,7 @@ class EventHandler:
     def on_press(self, event: MouseEvent) -> None:
         """マウスボタン押下イベントのディスパッチャ
         - イベントの検証を行い、状態に応じて適切なハンドラを呼び出す
+        
         Args:
             event: MouseEvent オブジェクト。発生したイベントの情報を含む
         """
@@ -206,6 +214,7 @@ class EventHandler:
     def on_motion(self, event: MouseEvent) -> None:
         """マウス移動イベントのディスパッチャ
         - イベントの検証を行い、状態に応じて適切なハンドラを呼び出す
+        
         Args:
             event: MouseEvent オブジェクト。発生したイベントの情報を含む
         """
@@ -242,6 +251,7 @@ class EventHandler:
     def on_release(self, event: MouseEvent) -> None:
         """マウスボタン解放イベントのディスパッチャ
         - イベントの検証を行い、状態に応じて適切なハンドラを呼び出す
+        
         Args:
             event: MouseEvent オブジェクト。発生したイベントの情報を含む
         """
@@ -297,6 +307,7 @@ class EventHandler:
     def on_key_press(self, event: KeyEvent) -> None:
         """キーボード押下イベントのディスパッチャ
         - キー入力に応じて特定の処理を呼び出す
+        
         Args:
             event: KeyEvent オブジェクト。発生したイベントの情報を含む
         """
@@ -319,6 +330,7 @@ class EventHandler:
     def on_key_release(self, event: KeyEvent) -> None:
         """キーボード解放イベントのディスパッチャ
         - キー解放に応じて特定の処理を呼び出す
+        
         Args:
             event: KeyEvent オブジェクト。発生したイベントの情報を含む
         """
@@ -339,9 +351,12 @@ class EventHandler:
     # --- イベント処理メソッド (ディスパッチャ) ここまで ---
 
     # --- 状態リセットメソッド ---
-    def reset_internal_state(self):
+    def reset_internal_state(self) -> None:
         """全ての内部状態と編集履歴をリセット
         - 内部状態を初期化し、編集履歴をクリアする
+        
+        Notes:
+            内部状態をリセットする
         """
         # EventHandler の公開メソッドとして残しておく
         # ただし、内部での具体的なリセット処理は utils に依頼する
@@ -349,9 +364,12 @@ class EventHandler:
     # --- 状態リセットメソッド ここまで ---
 
     # --- Undo 関連メソッド ---
-    def clear_edit_history(self):
+    def clear_edit_history(self) -> None:
         """編集履歴をクリア
         - 内部に保持している編集履歴を削除する
+        
+        Notes:
+            編集履歴をクリアする
         """
         # EventHandler の公開メソッドとして残しておく
         # ただし、内部での具体的なクリア処理は utils に依頼する

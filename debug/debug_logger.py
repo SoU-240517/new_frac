@@ -8,24 +8,36 @@ from typing import Optional, Dict, Any, Tuple
 from .enum_debug import LogLevel
 
 class DebugLogger:
-    """デバッグ用のログ出力を管理するクラス
-    - ログの出力処理を行う
-    - 設定ファイルに基づいてログレベルのフィルタリングを行う
+    """
+    デバッグ用のログ出力を管理するクラス
+
+    このクラスは、アプリケーションのデバッグログを管理し、
+    設定ファイルに基づいてログレベルのフィルタリングを行います。
+    ログは rich ライブラリを使用してカラーフォーマットで出力されます。
+
     Attributes:
-        debug_enabled (bool): デバッグ関連の機能を有効にするフラグ (設定ファイルから)
-        min_log_level (LogLevel): 表示する最小ログレベル (設定ファイルから)
+        debug_enabled (bool): デバッグ関連の機能を有効にするフラグ
+        min_log_level (LogLevel): 表示する最小ログレベル
         start_time (float): ログ出力開始時刻
         project_root (str): プロジェクトルートディレクトリのパス
     """
 
-    def __init__(self, debug_enabled, min_level_str):
-        """DebugLogger クラスのコンストラクタ
-        - クラスの初期化を行う
-        - ログ出力開始時刻を記録し、プロジェクトルートディレクトリのパスを取得する
-        - 表示する最小ログレベルを設定する
+    def __init__(self, debug_enabled: bool, min_level_str: str):
+        """
+        DebugLogger クラスのコンストラクタ
+
+        初期化時に以下の処理を行います：
+        1. デバッグ設定の初期化
+        2. ログ出力開始時刻の記録
+        3. プロジェクトルートディレクトリの取得
+        4. 最小ログレベルの設定
+
         Args:
-            debug_enabled (bool, optional): デバッグ機能を有効にするか。デフォルトは True。
-            min_level_str (Optional[str], optional): 表示する最小ログレベルの文字列。デフォルトは "DEBUG"。
+            debug_enabled (bool): デバッグ機能を有効にするか
+            min_level_str (str): 表示する最小ログレベルの文字列
+
+        Raises:
+            KeyError: 無効なログレベル文字列が指定された場合
         """
         # 設定ファイルから渡された値で属性を設定
         self.debug_enabled = debug_enabled
@@ -61,13 +73,19 @@ class DebugLogger:
             context: Optional[Dict[str, Any]] = None,
             force: bool = False
     ) -> None:
-        """ログを出力する（外部呼び出し用）
-        - デバッグログが無効かつログレベルが DEBUG の場合は、ログ出力を行わない
+        """
+        ログを出力する（外部呼び出し用）
+
+        デバッグログが無効かつログレベルが DEBUG の場合は、
+        ログ出力を行いません。
+
         Args:
             level (LogLevel): ログレベル
             message (str): ログメッセージ
-            context (Optional[Dict[str, Any]], optional): コンテキスト情報。デフォルトは None
-            force (bool, optional): 強制的にログを出力するかどうか。デフォルトは False
+            context (Optional[Dict[str, Any]], optional): 
+                追加のコンテキスト情報。デフォルトは None
+            force (bool, optional): 
+                強制的にログを出力するかどうか。デフォルトは False
         """
         # 最小ログレベルでフィルタリング
         # force=True の場合を除き、メッセージのレベルが設定された最小レベルより低い場合は出力しない
@@ -85,15 +103,24 @@ class DebugLogger:
             force: bool = False, # force引数はフィルタリングに使われたので、ここでは不要だが残しておく
             stacklevel: int = 3
     ) -> None:
-        """ログ出力の内部実装
-        - ログの出力形式を整形し、`rprint` で出力する
-        - エラー発生時は、エラーメッセージを標準出力する
+        """
+        ログ出力の内部実装
+
+        ログの出力形式を整形し、rich.printを使用して出力します。
+        エラー発生時は、エラーメッセージを標準出力します。
+
         Args:
             level (LogLevel): ログレベル
             message (str): ログメッセージ
-            context (Optional[Dict[str, Any]], optional): コンテキスト情報。デフォルトは None
-            force (bool, optional): 強制的にログを出力するかどうか。デフォルトは False
-            stacklevel (int, optional): 呼び出し元のスタックレベル。デフォルトは 3
+            context (Optional[Dict[str, Any]], optional): 
+                追加のコンテキスト情報。デフォルトは None
+            force (bool, optional): 
+                強制的にログを出力するかどうか。デフォルトは False
+            stacklevel (int, optional): 
+                呼び出し元のスタックレベル。デフォルトは 3
+
+        Raises:
+            Exception: ログ出力時に予期せぬエラーが発生した場合
         """
         try:
             # 呼び出し元の情報を取得 (stacklevel はこの関数を呼ぶ階層に応じて調整が必要)
@@ -122,12 +149,22 @@ class DebugLogger:
             print(f"[DebugLogger Error] Failed to log message: '{message}'. Error: {e}")
 
     def _get_caller_info(self, stacklevel: int) -> Tuple[str, str, int]:
-        """呼び出し元の情報を取得する
-        - 呼び出し元の関数名、ファイル名、行番号を取得する
+        """
+        呼び出し元の情報を取得する
+
+        呼び出し元の関数名、ファイル名、行番号を取得します。
+        プロジェクトルートからの相対パスを表示します。
+
         Args:
             stacklevel (int): 呼び出し元のスタックレベル
+
         Returns:
-            Tuple[str, str, int]: 呼び出し元の関数名、ファイル名、行番号。取得できない場合は "unknown", "unknown", 0 を返す
+            Tuple[str, str, int]: 
+                (関数名, ファイルパス, 行番号)のタプル
+                取得できない場合は ("unknown", "unknown", 0) を返す
+
+        Raises:
+            Exception: inspect.stack()で予期せぬエラーが発生した場合
         """
         try:
             stack = inspect.stack()
@@ -151,28 +188,45 @@ class DebugLogger:
             return "error", "error", 0
 
     def _get_color(self, level: LogLevel) -> str:
-        """ログレベルに応じた色を取得する
-        - ログレベルに対応する色名を返す
+        """
+        ログレベルに応じた色を取得する
+
+        各ログレベルに対応する色を返します。
+        色のマッピングは以下の通りです：
+        - DEBUG: グレー
+        - INIT: 水色
+        - CALL: 緑
+        - SUCCESS: 青
+        - INFO: 白
+        - WARNING: 黄
+        - ERROR: 赤
+        - CRITICAL: 赤（強調）
+
         Args:
             level (LogLevel): ログレベル
+
         Returns:
             str: ログレベルに対応する色名
         """
         color_map = {
             LogLevel.DEBUG: "grey50",
-            LogLevel.INIT: "dim cyan", # 色を少し変更
+            LogLevel.INIT: "dim cyan",
             LogLevel.CALL: "green",
-            LogLevel.SUCCESS: "bold blue", # 少し変更
+            LogLevel.SUCCESS: "bold blue",
             LogLevel.INFO: "white",
             LogLevel.WARNING: "yellow",
             LogLevel.ERROR: "red",
-            LogLevel.CRITICAL: "bold red on white", # 強調
+            LogLevel.CRITICAL: "bold red on white",
         }
         return color_map.get(level, "white")
 
     def _get_project_root(self) -> str:
-        """プロジェクトルートのパスを取得する
-        - 現在のファイルのディレクトリから2階層上のディレクトリの絶対パスを返す
+        """
+        プロジェクトルートのパスを取得する
+
+        現在のファイルのディレクトリから2階層上のディレクトリの
+        絶対パスを返します。
+
         Returns:
             str: プロジェクトルートのパス
         """
@@ -183,10 +237,15 @@ class DebugLogger:
         return project_root
 
     def _format_context(self, context: Dict[str, Any]) -> str:
-        """コンテキスト情報を整形する
-        - コンテキスト情報を文字列に整形する
+        """
+        コンテキスト情報を整形する
+
+        コンテキスト情報を文字列に整形し、ログ出力に適した形式に
+        変換します。
+
         Args:
             context (Dict[str, Any]): コンテキスト情報
+
         Returns:
             str: 整形後のコンテキスト情報
         """
