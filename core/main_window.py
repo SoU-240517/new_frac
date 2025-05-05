@@ -5,15 +5,13 @@ import threading
 import tkinter as tk
 from tkinter import ttk
 from debug import DebugLogger, LogLevel
-# --- 追加: -------------------------------
 from plugins.fractal_types.loader import FractalTypeLoader
-# -----------------------------------------
 from .canvas import FractalCanvas
 from .parameter_panel import ParameterPanel
 from .render import render_fractal
 from .status_bar import StatusBarManager
 
-def load_config(logger: DebugLogger, config_path="config.json") -> dict:
+def load_config(logger: DebugLogger, config_path) -> dict:
     """設定ファイル (JSON) を読み込む
 
     Args:
@@ -31,10 +29,10 @@ def load_config(logger: DebugLogger, config_path="config.json") -> dict:
     try:
         with open(config_path, 'r', encoding='utf-8') as f:
             config = json.load(f)
-            logger.log(LogLevel.INFO, f"設定ファイル読み込み完了: {config_path}")
+            logger.log(LogLevel.SUCCESS, f"設定ファイル読込成功: {config_path}")
             return config
     except json.JSONDecodeError as e:
-        logger.log(LogLevel.ERROR, f"設定ファイルのJSON解析エラー: {e}")
+        logger.log(LogLevel.ERROR, f"設定ファイルの JSON 解析エラー: {e}")
         return {}
     except Exception as e:
         logger.log(LogLevel.ERROR, f"設定ファイル読み込み中に予期せぬエラー: {e}")
@@ -47,6 +45,7 @@ class MainWindow:
     Attributes:
         root (tk.Tk): Tkinter のルートウィンドウ
         logger (DebugLogger): デバッグログを管理するロガーインスタンス
+        config (dict): アプリケーションの設定データ
         canvas_frame (ttk.Frame): フラクタル描画領域 (FractalCanvas) を配置するフレーム
         fractal_canvas (FractalCanvas): フラクタルを描画するキャンバス
         parameter_frame (ttk.Frame): パラメータパネル (ParameterPanel) を配置するフレーム
@@ -58,42 +57,43 @@ class MainWindow:
         draw_thread (threading.Thread): フラクタル描画処理を実行するスレッド
         canvas_width (int): キャンバスの幅 (ピクセル単位)
         canvas_height (int): キャンバスの高さ (ピクセル単位)
-        config (dict): config.json から読み込んだ設定データ
     """
 
-    def __init__(self, root: tk.Tk, logger: DebugLogger):
-        """MainWindow クラスのコンストラクタ
-            - ルートウィンドウの設定を行う
-            - 設定ファイルを読み込む
-            - UIコンポーネントの初期化を行う
-            - ズームパラメータの初期化を行う
-            - 初期描画を開始する
+    def __init__(self, root: tk.Tk, logger: DebugLogger, config: dict):
+        """MainWindow クラスの初期化
 
         Args:
             root (tk.Tk): Tkinter のルートウィンドウ
             logger (DebugLogger): デバッグログを管理するロガーインスタンス
+            config (dict): アプリケーションの設定データ
         """
-        self.logger = logger
         self.root = root
+        self.logger = logger
+        self.config = config
         self.is_drawing = False
         self.draw_thread = None
 
-        self.config = load_config(self.logger)  # 設定ファイルを読み込む準備
-        self.ui_settings = self.config.get("ui_settings", {}) # ui_settings 分を設定ファイルから読み込む
+        # 設定ファイルから情報取得
+        self.ui_settings = self.config.get("ui_settings", {})
+        self.plugin_dir = self.config.get("system_settings",{}).get("plugin_dir", "plugins/fractal_types")
 
-        # --- 追加: フラクタルローダーの初期化と読み込み ---
-        self.logger.log(LogLevel.CALL, "FractalTypeLoader の初期化とプラグイン読み込み開始")
-        # plugin_dir のパスは環境に合わせて調整してください
-        self.fractal_loader = FractalTypeLoader(plugin_dir="plugins/fractal_types", logger=self.logger)
+        # フラクタルローダーの初期化と読み込み
+        self.logger.log(LogLevel.INIT, "FractalTypeLoader クラスのインスタンス作成開始")
+        self.fractal_loader = FractalTypeLoader(plugin_dir=self.plugin_dir, logger=self.logger)
+        self.logger.log(LogLevel.CALL, "プラグインのスキャンとロードを開始")
         self.fractal_loader.scan_and_load_plugins()
-        self.logger.log(LogLevel.SUCCESS, "FractalTypeLoader 初期化・読み込み完了")
-        # -----------------------------------------
 
+        self.logger.log(LogLevel.CALL, "ルートウィンドウの基本設定を開始")
         self._setup_root_window()
+        self.logger.log(LogLevel.CALL, "ステータスバーの初期化と配置開始")
         self._setup_status_bar()
+        self.logger.log(LogLevel.CALL, "パラメータパネルを配置するフレームの初期化と配置開始")
         self._setup_parameter_frame()
+        self.logger.log(LogLevel.CALL, "フラクタル描画領域を配置するフレームの初期化と配置開始")
         self._setup_canvas_frame()
+        self.logger.log(LogLevel.CALL, "ズーム操作に関するパラメータを初期化開始")
         self._setup_zoom_params()
+        self.logger.log(LogLevel.CALL, "アプリケーション起動時の初期描画を開始")
         self._start_initial_drawing()
 
     def _setup_root_window(self) -> None:
@@ -101,12 +101,14 @@ class MainWindow:
             - タイトル設定
             - ウィンドウの初期サイズ設定 (設定ファイルから読み込む)
         """
-        app_title = self.ui_settings.get("app_title", "フラクタル描画アプリケーション")
-        window_width = self.ui_settings.get("window_width", 1280)
-        window_height = self.ui_settings.get("window_height", 800)
+        app_title = self.config.get("ui_settings", {}).get("app_title", "フラクタル描画アプリケーション")
+        window_width = self.config.get("ui_settings", {}).get("window_width", 1280)
+        window_height = self.config.get("ui_settings", {}).get("window_height", 800)
 
         self.root.title(app_title)
         self.root.geometry(f"{window_width}x{window_height}")
+
+        self.logger.log(LogLevel.SUCCESS, "ルートウィンドウの基本設定を完了")
 
     def _setup_status_bar(self) -> None:
         """ステータスバーを初期化し、ルートウィンドウの下部に配置する"""
@@ -119,6 +121,8 @@ class MainWindow:
             status_frame,
             self.logger
         )
+
+        self.logger.log(LogLevel.SUCCESS, "ステータスバーの初期化と配置成功")
 
     def _setup_zoom_params(self) -> None:
         """ズーム操作に関するパラメータを初期化する
@@ -142,13 +146,14 @@ class MainWindow:
             "height": height,           # 幅と比率から計算
             "rotation": rotation        # 回転角
         }
-        self.logger.log(LogLevel.SUCCESS, "初期ズームパラメータ設定完了", context=self.zoom_params)
 
         self.prev_zoom_params = None
 
+        self.logger.log(LogLevel.SUCCESS, "ズーム操作に関するパラメータを初期化成功", context=self.zoom_params)
+
     def _setup_parameter_frame(self) -> None:
         """パラメータパネルを配置するフレームを初期化し、ルートウィンドウの右側に配置する"""
-        width = self.ui_settings.get("parameter_panel_width", 300)
+        width = self.config.get("ui_settings", {}).get("parameter_panel_width", 300)
 
         self.parameter_frame = ttk.Frame(self.root, width=width)
         self.parameter_frame.pack(
@@ -161,15 +166,6 @@ class MainWindow:
         self.parameter_frame.pack_propagate(False)
 
         self.logger.log(LogLevel.INIT, "ParameterPanel クラスのインスタンス作成開始")
-#        self.parameter_panel = ParameterPanel(
-#            self.parameter_frame,
-#            self.update_fractal,
-#            reset_callback=self.reset_zoom,
-#            logger=self.logger,
-#            config=self.config # 設定データを渡す
-#        )
-
-        # --- 変更: fractal_loader を ParameterPanel に渡す ---
         self.parameter_panel = ParameterPanel(
             self.parameter_frame,
             self.update_fractal,
@@ -178,7 +174,8 @@ class MainWindow:
             config=self.config,
             fractal_loader=self.fractal_loader # ローダーインスタンスを渡す
         )
-        # --------------------------------------------------
+
+        self.logger.log(LogLevel.SUCCESS, "パラメータパネルを配置するフレームの初期化と配置成功")
 
     def _setup_canvas_frame(self) -> None:
         """フラクタル描画領域を配置するキャンバスフレームを初期化し、ルートウィンドウの左側に配置する"""
@@ -193,8 +190,8 @@ class MainWindow:
 
         self.canvas_frame.bind("<Configure>", self._on_canvas_frame_configure)
 
-        initial_canvas_width = self.ui_settings.get("initial_canvas_width", 1067)
-        initial_canvas_height = self.ui_settings.get("initial_canvas_height", 600)
+        initial_canvas_width = self.config.get("ui_settings", {}).get("initial_canvas_width", 1067)
+        initial_canvas_height = self.config.get("ui_settings", {}).get("initial_canvas_height", 600)
 
         self.logger.log(LogLevel.INIT, "FractalCanvas クラスのインスタンス作成開始")
         self.fractal_canvas = FractalCanvas(
@@ -206,6 +203,8 @@ class MainWindow:
             zoom_cancel_callback=self.on_zoom_cancel,
             config=self.config
         )
+
+        self.logger.log(LogLevel.SUCCESS, "フラクタル描画領域を配置するフレームの初期化と配置成功")
 
     def _start_initial_drawing(self) -> None:
         """アプリケーション起動時の初期描画を開始する
@@ -221,6 +220,8 @@ class MainWindow:
             daemon=True
         )
         self.draw_thread.start()
+
+        self.logger.log(LogLevel.SUCCESS, "アプリケーション起動時の初期描画成功")
 
     def update_fractal(self) -> None:
         """フラクタルを再描画する
@@ -248,20 +249,8 @@ class MainWindow:
             - 生成された画像をメインスレッドでキャンバスに描画
             - エラー発生時はログ出力とステータスバーにエラーメッセージを表示
         """
-#        try:
-#            self.logger.log(LogLevel.CALL, "描画パラメータ：取得開始（スレッド内）")
-#            panel_params = self.parameter_panel._get_parameters()
-#            # 描画パラメータが取得できなかった場合（数値変換エラーなど）は処理中断
-#            if not panel_params:
-#                 self.logger.log(LogLevel.ERROR, "パラメータ取得に失敗したため描画を中止します。")
-#                 self.status_bar_manager.stop_animation("エラー: パラメータ無効")
-#                 self.is_drawing = False
-#                 return
-
         try:
             self.logger.log(LogLevel.CALL, "描画パラメータ：取得開始（スレッド内）")
-            # ParameterPanel から現在選択されているフラクタルタイプ名も含めて取得する必要がある
-            # panel_params = self.parameter_panel._get_parameters()
             panel_params = self.parameter_panel.get_parameters() # 新しいメソッド名 (後で ParameterPanel に実装)
             if not panel_params:
                  self.logger.log(LogLevel.ERROR, "パラメータ取得に失敗したため描画を中止します。")
@@ -271,7 +260,7 @@ class MainWindow:
 
             current_params = self._merge_zoom_and_panel_params(panel_params)
 
-            # --- 変更: 選択されたフラクタルタイプの計算関数を取得 ---
+            # --- 選択されたフラクタルタイプの計算関数を取得 ---
             selected_fractal_type_name = panel_params.get("fractal_type_name") # ParameterPanel が返す辞書に含める
             compute_function = self.fractal_loader.get_compute_function(selected_fractal_type_name)
 
@@ -282,13 +271,8 @@ class MainWindow:
                 return
             # ------------------------------------------------------
 
-#            self.logger.log(LogLevel.CALL, "フラクタル計算と着色処理を開始（スレッド内）")
-#            fractal_image = render_fractal(current_params, self.logger, config=self.config)
-
             self.logger.log(LogLevel.CALL, f"フラクタル計算 ({selected_fractal_type_name}) と着色処理を開始（スレッド内）")
-            # --- 変更: render_fractal に計算関数を渡す ---
             fractal_image = render_fractal(current_params, compute_function, self.logger, config=self.config)
-            # -------------------------------------------
 
             self.logger.log(LogLevel.CALL, "メインスレッドでキャンバス更新要求（スレッド内）")
             # メインスレッドでキャンバス更新をスケジュール
@@ -320,9 +304,7 @@ class MainWindow:
         """
         current_params = self.zoom_params.copy()
         current_params.update(panel_params)
-        # panel_params に render_mode は含まれていないので、parameter_panel から直接取得
         current_params["render_mode"] = self.parameter_panel.render_mode
-        # 'fractal_type_name' は panel_params に含まれているはずなのでここでは不要
         return current_params
 
     def on_zoom_confirm(self, x: float, y: float, w: float, h: float, angle: float) -> None:
@@ -344,7 +326,6 @@ class MainWindow:
         self.prev_zoom_params = self.zoom_params.copy()
 
         new_width = w
-        # 高さは設定ファイルから読み込んだ比率を使うように変更
         height_ratio = self.config.get("fractal_settings", {}).get("initial_zoom", {}).get("height_ratio", 9/16)
         new_height = new_width * height_ratio # 16:9 アスペクト比維持
 
@@ -433,23 +414,17 @@ class MainWindow:
         """
         self._setup_zoom_params()
 
-#        reset_iter = self.config.get("fractal_settings", {}).get("reset_max_iterations", 200)
-#        self.parameter_panel.max_iter_var.set(str(reset_iter))
-#        self.logger.log(LogLevel.CALL, f"最大反復回数をリセット: {reset_iter}")
-
-        # --- 変更: パラメータパネルの状態も初期化（推奨） ---
+        # --- パラメータパネルの状態も初期化 ------------------
         # 初期表示のフラクタルタイプを取得
         default_fractal_type = self.config.get("fractal_settings", {}).get("parameter_panel", {}).get("fractal_type", None)
         if default_fractal_type is None and self.fractal_loader.get_available_types():
              default_fractal_type = self.fractal_loader.get_available_types()[0] # ローダーから最初のタイプを取得
 
         if default_fractal_type:
-             # ParameterPanel に初期状態に戻すメソッドを追加する (推奨)
              self.parameter_panel.reset_to_defaults(default_fractal_type)
              self.logger.log(LogLevel.CALL, f"パラメータパネルをデフォルト ({default_fractal_type}) にリセット")
         else:
              self.logger.log(LogLevel.WARNING, "デフォルトのフラクタルタイプが見つからないため、パラメータパネルのリセットをスキップ")
-             # 必要であれば、最大反復回数だけでもリセットする
              reset_iter = self.config.get("fractal_settings", {}).get("reset_max_iterations", 200)
              self.parameter_panel.max_iter_var.set(str(reset_iter)) # max_iter_var がまだ存在する場合
              self.logger.log(LogLevel.CALL, f"最大反復回数のみリセット: {reset_iter}")
@@ -509,6 +484,6 @@ class MainWindow:
 
         try:
             self.fractal_canvas.fig.set_size_inches(new_width_inches, new_height_inches, forward=True)
-            self.logger.log(LogLevel.SUCCESS, f"Matplotlib Figure サイズ更新完了: {new_width_inches:.2f}x{new_height_inches:.2f}インチ ({new_width_pixels}x{new_height_pixels}ピクセル)")
+            self.logger.log(LogLevel.DEBUG, f"Matplotlib Figure サイズ更新完了: {new_width_inches:.2f}x{new_height_inches:.2f}インチ ({new_width_pixels}x{new_height_pixels}ピクセル)")
         except Exception as e:
             self.logger.log(LogLevel.ERROR, f"Matplotlib Figure サイズ更新中にエラー: {e}")

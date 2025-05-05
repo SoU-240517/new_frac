@@ -88,12 +88,12 @@ class EventHandler:
         self.canvas = canvas
 
         # 分割した他のクラスのインスタンスを作成
-        self.logger.log(LogLevel.INIT, "EventHandlersPrivate クラスのインスタンスを作成")
+        self.logger.log(LogLevel.INIT, "EventHandlersPrivate クラスのインスタンスを作成開始")
         # private_handlers や utils にも config を渡すか、
         # またはこれらのクラス内で self.core.config を参照するようにする
         # ここでは self.core.config を参照する想定で、引数追加はしない
         self.private_handlers = EventHandlersPrivate(self)
-        self.logger.log(LogLevel.INIT, "EventHandlersUtils クラスのインスタンスを作成")
+        self.logger.log(LogLevel.INIT, "EventHandlersUtils クラスのインスタンスを作成開始")
         self.utils = EventHandlersUtils(self)
 
         # --- 設定ファイルから読み込む値 ---
@@ -160,6 +160,8 @@ class EventHandler:
         self.edit_history: List[Optional[Dict[str, Any]]] = []
 		# --- 内部状態ここまで ---
 
+        self.logger.log(LogLevel.INIT, "EventHandler クラスのインスタンスを作成成功")
+
     def connect(self):
     # connect, on_press, on_motion, on_release, on_key_press, on_key_release は
     # 内部で self.rotation_threshold 等を直接参照していなければ変更不要
@@ -173,7 +175,7 @@ class EventHandler:
             self._cid_release = self.canvas.mpl_connect('button_release_event', self.on_release)
             self._cid_key_press = self.canvas.mpl_connect('key_press_event', self.on_key_press)
             self._cid_key_release = self.canvas.mpl_connect('key_release_event', self.on_key_release)
-            self.logger.log(LogLevel.SUCCESS, "イベントハンドラ接続完了")
+            self.logger.log(LogLevel.SUCCESS, "イベントハンドラ接続成功")
 
     # --- イベント処理メソッド (ディスパッチャ) ---
     def on_press(self, event: MouseEvent) -> None:

@@ -22,6 +22,8 @@ class EventHandlersPrivate:
         """
         self.core = core
 
+        self.core.logger.log(LogLevel.INIT, "EventHandlersPrivate クラスのインスタンスを作成成功")
+
     # --- プライベートハンドラメソッド ---
     # --- Press イベントハンドラ ---
     def handle_press_no_rect_left(self, event: MouseEvent) -> None:

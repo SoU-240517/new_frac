@@ -131,9 +131,6 @@ def _compute_fractal(
         dict: 計算結果 (iterations, mask, z_vals など)
     """
     start_time = time.perf_counter()
-#    fractal_type = params.get("fractal_type", "Julia")
-#    max_iter = params.get("max_iterations", 100)
-#    logger.log(LogLevel.INFO, f"フラクタル計算開始: タイプ={fractal_type}, 最大反復={max_iter}")
 
     fractal_type_name = params.get("fractal_type_name", "Unknown") # ParameterPanel から渡される名前
     max_iter = params.get("max_iterations", 100)
@@ -315,10 +312,6 @@ def render_fractal(
 
     logger.log(LogLevel.DEBUG, f"描画モード: {render_mode}, 解像度: {resolution}x{resolution}, サンプル数: {samples_per_pixel} (ズームレベル={zoom_level:.2f}, 閾値={zoom_threshold})")
 
-    # 高解像度グリッドサイズ (サンプル数が1でも resolution x 1 になる)
-#    super_resolution_x = resolution * samples_per_pixel
-#    super_resolution_y = resolution * samples_per_pixel # 正方形を仮定、必要ならX/Yで分ける
-
     # 高解像度グリッドサイズ
     resolution = _calculate_dynamic_resolution(current_width, config, logger) # 解像度再計算 (上とかぶる？要確認)
     if render_mode == "quick":
@@ -332,16 +325,9 @@ def render_fractal(
     super_resolution_x = resolution * samples_per_pixel
     super_resolution_y = resolution * samples_per_pixel
 
-    # グリッド作成 (params には height も含まれている想定)
-#    Z = _create_fractal_grid(params, super_resolution_x, super_resolution_y, logger)
-#    logger.log(LogLevel.SUCCESS, f"グリッド作成完了: shape={Z.shape}")
-
-    # フラクタル計算
-#    results = _compute_fractal(Z, params, logger)
-
     # グリッド作成
     Z = _create_fractal_grid(params, super_resolution_x, super_resolution_y, logger)
-    logger.log(LogLevel.SUCCESS, f"グリッド作成完了: shape={Z.shape}")
+    logger.log(LogLevel.SUCCESS, f"フラクタル計算用の複素数グリッドを作成完了: shape={Z.shape}")
 
     # フラクタル計算 (計算関数を渡す)
     results = _compute_fractal(Z, params, compute_function, logger)
@@ -358,16 +344,6 @@ def render_fractal(
     # ---------------------------
 
     try:
-        # apply_coloring_algorithm に config を渡す
-#        colored_high_res = manager.apply_coloring_algorithm(results, params, logger, config)
-#        logger.log(LogLevel.SUCCESS, f"着色処理完了: shape={colored_high_res.shape}, dtype={colored_high_res.dtype}")
-        # manager がRGBA (uint8) を返すか、float (0-1 or 0-255) を返すか要確認
-        # ここでは float (0-255) を想定
-#        if not isinstance(colored_high_res, np.ndarray):
-#             raise TypeError(f"着色処理がndarrayを返しませんでした: {type(colored_high_res)}")
-#        if colored_high_res.ndim != 3 or colored_high_res.shape[2] != 4:
-#             raise ValueError(f"着色処理が期待されるRGBA形状を返しませんでした: {colored_high_res.shape}")
-
         # 着色処理 (変更なし)
         colored_high_res = manager.apply_coloring_algorithm(results, params, logger, config)
         # ... (着色エラーハンドリング) ...
@@ -375,13 +351,6 @@ def render_fractal(
              raise TypeError(f"着色処理がndarrayを返しませんでした: {type(colored_high_res)}")
         if colored_high_res.ndim != 3 or colored_high_res.shape[2] != 4:
              raise ValueError(f"着色処理が期待されるRGBA形状を返しませんでした: {colored_high_res.shape}")
-
-#    except Exception as e:
-#        logger.log(LogLevel.CRITICAL, f"着色処理中にエラーが発生しました: {e}")
-#        # エラー発生時はエラー画像 (例: 紫色) を返す
-#        error_color = [128, 0, 128, 255] # 紫色
-#        # ダウンサンプリング前の解像度で作成
-#        colored_high_res = np.full((super_resolution_y, super_resolution_x, 4), error_color, dtype=np.float32)
 
     except Exception as e:
         logger.log(LogLevel.CRITICAL, f"着色処理中にエラーが発生しました: {e}")

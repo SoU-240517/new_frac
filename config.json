@@ -1,4 +1,7 @@
 {
+  "system_settings": {
+    "plugin_dir": "plugins/fractal_types"
+  },
   "fractal_settings": {
     "initial_zoom": {
       "center_x": 0.0,

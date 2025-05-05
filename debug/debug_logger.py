@@ -18,7 +18,7 @@ class DebugLogger:
         project_root (str): プロジェクトルートディレクトリのパス
     """
 
-    def __init__(self, debug_enabled: bool = True, min_level_str: Optional[str] = "DEBUG"):
+    def __init__(self, debug_enabled, min_level_str):
         """DebugLogger クラスのコンストラクタ
         - クラスの初期化を行う
         - ログ出力開始時刻を記録し、プロジェクトルートディレクトリのパスを取得する
@@ -29,11 +29,10 @@ class DebugLogger:
         """
         # 設定ファイルから渡された値で属性を設定
         self.debug_enabled = debug_enabled
+        self.min_log_level = min_level_str # 最小ログレベルを設定
         self.start_time = time.time()
         self.project_root = self._get_project_root()
 
-        # 最小ログレベルを設定
-        self.min_log_level = LogLevel.DEBUG # デフォルト
         if min_level_str:
             try:
                 # 文字列を LogLevel Enum に変換
@@ -46,12 +45,12 @@ class DebugLogger:
                     force=True, # この警告は常に出す
                     stacklevel=2 # 呼び出し元を調整
                 )
-                self.min_log_level = LogLevel.DEBUG # 安全なデフォルトに戻す
+                self.min_log_level = LogLevel.DEBUG
 
         # 初期化完了ログ (force=True で必ず表示)
         self._log_internal(
             LogLevel.INIT,
-            f"DebugLogger 初期化完了：debug_enabled={self.debug_enabled}, min_level={self.min_log_level.name}",
+            f"DebugLogger クラスのインスタンス作成成功：debug_enabled={self.debug_enabled}, min_level={self.min_log_level.name}",
             force=True,
             stacklevel=2 # 呼び出し元を調整
         )
@@ -70,17 +69,10 @@ class DebugLogger:
             context (Optional[Dict[str, Any]], optional): コンテキスト情報。デフォルトは None
             force (bool, optional): 強制的にログを出力するかどうか。デフォルトは False
         """
-        # --- 変更箇所: 最小ログレベルでフィルタリング ---
+        # 最小ログレベルでフィルタリング
         # force=True の場合を除き、メッセージのレベルが設定された最小レベルより低い場合は出力しない
-        # LogLevel Enum は値が大きいほど重要度が高いと仮定 (例: DEBUG=10, INFO=20, ...)
-        # Enum の値で比較する
         if not force and level.value < self.min_log_level.value:
              return # 表示レベルに満たない場合はここで処理を終了
-
-        # --- 削除: 以前の debug_enabled チェック ---
-        # if not self.debug_enabled and not force and level == LogLevel.DEBUG:
-        #     return
-        # 最小レベルチェックに統合されたため不要
 
         # 内部ログ出力関数を呼び出す (スタックレベルを調整)
         self._log_internal(level, message, context, force, stacklevel=3)
@@ -103,9 +95,6 @@ class DebugLogger:
             force (bool, optional): 強制的にログを出力するかどうか。デフォルトは False
             stacklevel (int, optional): 呼び出し元のスタックレベル。デフォルトは 3
         """
-        # --- 変更箇所: 最小レベルチェックはこちらでは行わない ---
-        # (呼び出し元の log メソッドでチェック済み)
-
         try:
             # 呼び出し元の情報を取得 (stacklevel はこの関数を呼ぶ階層に応じて調整が必要)
             caller_info = self._get_caller_info(stacklevel)
@@ -189,9 +178,8 @@ class DebugLogger:
         """
         # 現在のファイル (__file__) の場所に基づいてルートを決定
         logger_dir = os.path.dirname(__file__)
-        # このファイルが ui/zoom_function/ にあると仮定して2階層上がる
+        # debug_logger.py が core/ にあると仮定して1階層上がる
         project_root = os.path.abspath(os.path.join(logger_dir, '.', '.'))
-        # print(f"[DebugLogger] Project root detected: {project_root}") # 初期化時に確認用
         return project_root
 
     def _format_context(self, context: Dict[str, Any]) -> str:
@@ -213,7 +201,7 @@ class DebugLogger:
             # elif isinstance(v, np.ndarray):
             #     formatted_v = f"ndarray(shape={v.shape}, dtype={v.dtype})" # numpy 配列は形状と型
             else:
-                 # 長すぎる文字列は省略するなどしても良い
+                # 長すぎる文字列は省略するなどしても良い
                 formatted_v = str(v)
             items.append(f"{escape(str(k))}={escape(formatted_v)}") # キーもエスケープ
         return ", ".join(items)

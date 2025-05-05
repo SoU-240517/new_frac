@@ -15,7 +15,7 @@ Core モジュールパッケージ
 # パッケージレベルでアクセスできるようにします。
 # 例: from base import MainWindow
 from .canvas import FractalCanvas
-from .main_window import MainWindow
+from .main_window import MainWindow, load_config
 from .parameter_panel import ParameterPanel
 from .render import render_fractal # クラスは無いが、関数をインポートできるようにする
 from .status_bar import StatusBarManager
@@ -25,6 +25,7 @@ from .status_bar import StatusBarManager
 __all__ = [
     'FractalCanvas',
     'MainWindow',
+    'load_config',
     'ParameterPanel',
     'render_fractal',
     'StatusBarManager'

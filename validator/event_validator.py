@@ -52,6 +52,8 @@ class EventValidator:
     def __init__(self, logger: DebugLogger):
         self.logger = logger
 
+        self.logger.log(LogLevel.INIT, "EventValidator クラスのインスタンスを作成成功")
+
     def validate_event(self, event, ax: Axes) -> ValidationResult:
         """イベントの妥当性を検証する
         - イベントの種類に応じて必要な情報の有無を検証する

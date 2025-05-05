@@ -3,33 +3,12 @@ import json
 import os
 import sys
 from typing import Dict, Any, Optional, Callable, List
-
-# ★ここは一時的★
-# 現在のファイルの絶対パスを取得し、プロジェクトルートへのパスを計算
-#current_dir = os.path.dirname(os.path.abspath(__file__))
-#project_root = os.path.abspath(os.path.join(current_dir, "../.."))
-# プロジェクトルートをPythonのパスに追加
-#sys.path.insert(0, project_root)
-# ★ここまで一時的★
-
 from debug import DebugLogger, LogLevel
-
-# プラグイン情報を格納するデータクラス (必要であれば)
-# from dataclasses import dataclass
-# @dataclass
-# class FractalPlugin:
-#     name: str
-#     description: str
-#     module_name: str
-#     function_name: str
-#     compute_function: Callable
-#     parameters: List[Dict[str, Any]]
-#     recommended_coloring: Dict[str, Any]
 
 class FractalTypeLoader:
     """フラクタルタイププラグインをロードし、管理するクラス"""
 
-    def __init__(self, plugin_dir: str = "plugins/fractal_types", logger: Optional[DebugLogger] = None):
+    def __init__(self, plugin_dir, logger: Optional[DebugLogger] = None):
         """
         Args:
             plugin_dir (str): プラグインが格納されているディレクトリのパス
@@ -39,6 +18,8 @@ class FractalTypeLoader:
 
         self.plugin_dir = plugin_dir
         self.loaded_plugins: Dict[str, Dict[str, Any]] = {} # プラグイン名 -> プラグイン情報の辞書
+
+        self.logger.log(LogLevel.INIT, "FractalTypeLoader クラスのインスタンス作成成功")
 
     def scan_and_load_plugins(self) -> None:
         """プラグインディレクトリをスキャンし、有効なプラグインをロードする"""
@@ -54,7 +35,7 @@ class FractalTypeLoader:
                 self.logger.log(LogLevel.INFO, f"検出されたプラグイン候補ディレクトリ: {plugin_name}")
                 self._load_single_plugin(plugin_name, item.path)
 
-        self.logger.log(LogLevel.INFO, f"{len(self.loaded_plugins)} 個のプラグインをロード完了")
+        self.logger.log(LogLevel.SUCCESS, f"{len(self.loaded_plugins)} 個のプラグインをロード成功")
 
     def _load_single_plugin(self, plugin_name: str, plugin_path: str) -> None:
         """個別のプラグインをロードする試み"""
@@ -160,35 +141,3 @@ class FractalTypeLoader:
          """指定された表示名に対応する推奨カラーリング設定を返す"""
          plugin = self.get_plugin(name)
          return plugin.get("config", {}).get("recommended_coloring") if plugin else None
-
-
-# --- 使用例 ---
-#if __name__ == '__main__':
-    # **************************************************************
-    # このファイル単体で実行した場合のテスト用コード
-    # **************************************************************
-    # pluginディレクトリのパスを適切に設定してください
-    # この例では、loader.py の一つ上の階層を基準としています
-#    logger = DebugLogger()
-
-#    loader = FractalTypeLoader(plugin_dir="./plugins/fractal_types", logger=logger)
-#    loader.scan_and_load_plugins()
-
-#    print("\nロードされたフラクタルタイプ:")
-#    types = loader.get_available_types()
-#    print(types)
-
-#    if types:
-#        selected_type = types[0] # 最初のタイプを選択
-#        print(f"\n--- {selected_type} の情報 ---")
-#        plugin_info = loader.get_plugin(selected_type)
-#        if plugin_info:
-#            print("設定:", json.dumps(plugin_info.get("config"), indent=2, ensure_ascii=False))
-#            print("計算関数:", plugin_info.get("compute_function"))
-#            print("パラメータ設定:", loader.get_parameters_config(selected_type))
-#            print("説明:", loader.get_description(selected_type))
-#            print("推奨カラーリング:", loader.get_recommended_coloring(selected_type))
-
-        # 計算関数の取得例
-#        compute_func = loader.get_compute_function(selected_type)
-#        print(f"\n取得した計算関数 ({selected_type}):", compute_func)

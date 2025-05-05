@@ -57,6 +57,8 @@ class FractalCanvas:
         # 背景色の設定
         self._set_black_background()
 
+        self.logger.log(LogLevel.INIT, "FractalCanvas クラスのインスタンス作成成功")
+
     def _setup_figure(self, width: int, height: int) -> None:
         """MatplotlibのFigureとAxesの設定
         - Figureの設定
@@ -104,7 +106,7 @@ class FractalCanvas:
         # ZoomSelector を遅延インポート
         from ui.zoom_function.zoom_selector import ZoomSelector
 
-        self.logger.log(LogLevel.INIT, "ZoomSelector クラスのインスタンスを作成")
+        self.logger.log(LogLevel.INIT, "ZoomSelector クラスのインスタンスを作成開始")
         self.zoom_selector = ZoomSelector(
             self.ax,
             on_zoom_confirm=self.zoom_confirmed,

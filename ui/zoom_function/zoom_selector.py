@@ -39,6 +39,8 @@ class ZoomSelector:
         self._setup_callbacks(on_zoom_confirm, on_zoom_cancel)
         self._connect_events()
 
+        self.logger.log(LogLevel.INIT, "ZoomSelector クラスのインスタンス作成成功")
+
     def _initialize_components(self, ax: Axes, logger: DebugLogger) -> None:
         """コンポーネントの初期化
         - 各コンポーネント（状態ハンドラ、矩形マネージャ、カーソルマネージャ、イベントハンドラ）の初期化を行う
@@ -75,7 +77,7 @@ class ZoomSelector:
         """ZoomStateHandlerの初期化
         - ズーム操作の状態を管理する ZoomStateHandler のインスタンスを生成する
         """
-        self.logger.log(LogLevel.INIT, "ZoomStateHandler クラスのインスタンスを作成")
+        self.logger.log(LogLevel.INIT, "ZoomStateHandler クラスのインスタンスを作成開始")
         self.state_handler = ZoomStateHandler(
             initial_state=ZoomState.NO_RECT,
             logger=self.logger,
@@ -86,22 +88,23 @@ class ZoomSelector:
         """RectManagerの初期化
         - ズーム領域の矩形描画と変形を管理する RectManager のインスタンスを生成する
         """
-        self.logger.log(LogLevel.INIT, "RectManager クラスのインスタンスを作成")
+        self.logger.log(LogLevel.INIT, "RectManager クラスのインスタンスを作成開始")
         self.rect_manager = RectManager(self.ax, self.logger, self.config)
 
     def _initialize_cursor_manager(self) -> None:
         """CursorManagerの初期化
         - カーソルの表示を管理する CursorManager のインスタンスを生成する
         """
-        self.logger.log(LogLevel.INIT, "CursorManager クラスのインスタンスを作成")
+        self.logger.log(LogLevel.INIT, "CursorManager クラスのインスタンスを作成開始")
         self.cursor_manager = CursorManager(self, self.logger)
 
     def _initialize_event_handler(self) -> None:
         """EventHandlerの初期化
         - マウスイベントを処理する EventHandler のインスタンスを生成し、各コンポーネントとの連携を設定する
         """
-        self.logger.log(LogLevel.INIT, "EventHandler クラスのインスタンスを作成")
+        self.logger.log(LogLevel.INIT, "EventValidator クラスのインスタンスを作成開始")
         self.validator = EventValidator(self.logger)
+        self.logger.log(LogLevel.INIT, "EventHandler クラスのインスタンスを作成開始")
         self.event_handler = EventHandler(
             self,
             self.state_handler,

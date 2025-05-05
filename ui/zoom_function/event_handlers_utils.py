@@ -22,6 +22,8 @@ class EventHandlersUtils:
         """
         self.core = core # 親インスタンスへの参照
 
+        self.core.logger.log(LogLevel.INIT, "EventHandlersUtils クラスのインスタンスを作成成功")
+
     # --- ヘルパーメソッド ---
     def _calculate_angle(self, cx: float, cy: float, px: float, py: float) -> float:
         """中心点から点へのベクトル角度を計算

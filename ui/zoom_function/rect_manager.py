@@ -66,6 +66,8 @@ class RectManager:
 
         self.logger.log(LogLevel.DEBUG, f"RectManager 初期設定: min_w={self.min_width_px}px, min_h={self.min_height_px}px, aspect={self.aspect_ratio_w_h:.4f}")
 
+        self.logger.log(LogLevel.INIT, "RectManager クラスのインスタンスを作成成功")
+
     def get_rect(self) -> Optional[patches.Rectangle]:
         """現在のズーム領域の矩形パッチを取得
         Returns:

@@ -44,6 +44,8 @@ class ZoomStateHandler:
         self._event_handler = event_handler
         self._canvas = canvas
 
+        self.logger.log(LogLevel.INIT, "ZoomStateHandler クラスのインスタンスを作成成功")
+
     @property
     def state(self) -> ZoomState:
         """現在の状態を取得

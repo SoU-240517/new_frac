@@ -55,6 +55,9 @@ class StatusBarManager:
         # アニメーション状態の初期化
         self.logger.log(LogLevel.INIT, "AnimationState クラスのインスタンス作成開始")
         self._animation_state = AnimationState()
+        self.logger.log(LogLevel.INIT, "AnimationState クラスのインスタンス作成成功")
+
+        self.logger.log(LogLevel.INIT, "StatusBarManager クラスのインスタンス作成成功")
 
     def start_animation(self) -> None:
         """ステータスバーの描画中アニメーションを開始
@@ -70,6 +73,8 @@ class StatusBarManager:
         self._draw_start_time = time.perf_counter()
         self._schedule_time_update()
         self._start_animation_thread()
+
+        self.logger.log(LogLevel.SUCCESS, "非同期でフラクタル描画成功")
 
     def _start_animation_thread(self) -> None:
         """アニメーション用スレッドを開始
@@ -175,12 +180,12 @@ class StatusBarManager:
             final_message (str, optional): 最終メッセージ. Defaults to "完了"
         """
         if self._animation_state.is_running:
-            self.logger.log(LogLevel.CALL, "ステータスアニメーション停止開始")
             self._animation_state.stop()
             self._wait_for_thread()
             self._cancel_time_update()
             self._show_final_message(final_message)
             self._reset_state()
+            self.logger.log(LogLevel.SUCCESS, "ステータスアニメーション停止完了")
 
     def _wait_for_thread(self) -> None:
         """アニメーションスレッドの終了を待機
