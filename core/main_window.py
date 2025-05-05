@@ -400,7 +400,7 @@ class MainWindow:
         zoom_factor = self.zoom_params["width"] / new_width if new_width > 0 else 1
 
         # panel_params が None でないことを確認
-        panel_params = self.parameter_panel._get_parameters()
+        panel_params = self.parameter_panel.get_parameters()
         if panel_params:
             current_max_iter = panel_params.get("max_iterations", 100) # デフォルト値を追加
         else:
