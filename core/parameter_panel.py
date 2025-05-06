@@ -5,15 +5,15 @@ from PIL import Image, ImageTk
 from tkinter import ttk
 from typing import Dict, Any, Optional, List, Callable
 from debug import DebugLogger, LogLevel
-from plugins.fractal_types.loader import FractalTypeLoader
+from plugins.fractal_loader import FractalTypeLoader
 
 class ParameterPanel:
     """フラクタル生成用パラメータ設定パネルクラス
-    
+
     このクラスは、フラクタル生成に必要なパラメータを設定・管理するGUIパネルを提供します。
     ユーザーはこのパネルを通じて、フラクタルタイプの選択、数式の表示、
     パラメータの設定、カラーマッピングの設定等を行うことができます。
-    
+
     Attributes:
         parent (tk.Widget): 親ウィジェット
         update_callback (Callable): 描画更新コールバック関数
@@ -51,15 +51,15 @@ class ParameterPanel:
         param_frame (Optional[ttk.Frame]): パラメータウィジェットを配置するフレーム
     """
 
-    def __init__(self, 
-                 parent: tk.Widget, 
-                 update_callback: Callable, 
-                 reset_callback: Callable, 
-                 logger: DebugLogger, 
-                 config: Dict[str, Any], 
+    def __init__(self,
+                 parent: tk.Widget,
+                 update_callback: Callable,
+                 reset_callback: Callable,
+                 logger: DebugLogger,
+                 config: Dict[str, Any],
                  fractal_loader: FractalTypeLoader):
         """ParameterPanel クラスのコンストラクタ
-        
+
         Args:
             parent (tk.Widget): 親ウィジェット
             update_callback (Callable): 描画更新コールバック関数
@@ -114,7 +114,7 @@ class ParameterPanel:
 
     def _setup_panel(self) -> None:
         """パネルのセットアップ
-        
+
         フラクタルタイプセクション、数式表示セクション、パラメータセクション、
         発散部セクション、非発散部セクション、ボタンセクションを順にセットアップします。
         """
@@ -142,13 +142,13 @@ class ParameterPanel:
 
     def _setup_fractal_type_section(self, start_row: int) -> int:
         """フラクタルタイプセクションのセットアップ
-        
+
         フラクタルタイプの選択用コンボボックスを設定し、
         イベントハンドラをバインドします。
-        
+
         Args:
             start_row (int): セクションの開始行
-            
+
         Returns:
             int: 次のセクションの開始行
         """
@@ -177,12 +177,12 @@ class ParameterPanel:
 
     def _setup_formula_section(self, start_row: int) -> int:
         """数式表示セクションのセットアップ
-        
+
         数式を表示するラベルを設定します。
-        
+
         Args:
             start_row (int): セクションの開始行
-            
+
         Returns:
             int: 次のセクションの開始行
         """
@@ -203,13 +203,13 @@ class ParameterPanel:
 
     def _setup_dynamic_parameter_frame(self, start_row: int) -> int:
         """動的パラメータフレームのセットアップ
-        
+
         フラクタルタイプに応じて動的に変化するパラメータウィジェットを
         配置するためのフレームを作成します。
-        
+
         Args:
             start_row (int): セクションの開始行
-            
+
         Returns:
             int: 次のセクションの開始行
         """
@@ -223,10 +223,10 @@ class ParameterPanel:
 
     def _on_fractal_type_selected(self, event: Optional[tk.Event] = None) -> None:
         """フラクタルタイプが選択されたときの処理
-        
+
         選択されたフラクタルタイプに応じて、
         関連するパラメータウィジェットを更新します。
-        
+
         Args:
             event (Optional[tk.Event]): イベントオブジェクト
         """
@@ -317,12 +317,12 @@ class ParameterPanel:
 
     def _setup_diverge_section(self, start_row: int) -> int:
         """発散部セクションのセットアップ
-        
+
         発散部の着色アルゴリズムとカラーマップを設定します。
-        
+
         Args:
             start_row (int): セクションの開始行
-            
+
         Returns:
             int: 次のセクションの開始行
         """
@@ -387,12 +387,12 @@ class ParameterPanel:
 
     def _setup_non_diverge_section(self, start_row: int) -> int:
         """非発散部セクションのセットアップ
-        
+
         非発散部の着色アルゴリズムとカラーマップを設定します。
-        
+
         Args:
             start_row (int): セクションの開始行
-            
+
         Returns:
             int: 次のセクションの開始行
         """
@@ -464,12 +464,12 @@ class ParameterPanel:
 
     def _setup_buttons(self, start_row: int) -> int:
         """ボタンのセットアップ
-        
+
         描画ボタンと描画リセットボタンを設定します。
-        
+
         Args:
             start_row (int): セクションの開始行
-            
+
         Returns:
             int: 次のセクションの開始行
         """
@@ -539,7 +539,7 @@ class ParameterPanel:
 
     def _common_callback(self, event=None) -> None:
         """共通のコールバック関数
-        
+
         描画モードをクイックに設定し、描画更新コールバックを呼び出します。
         さらに、カラーバーを更新し、数式表示を更新します。
         """
@@ -549,10 +549,10 @@ class ParameterPanel:
 
     def _create_colorbar_image(self, cmap_name: str) -> ImageTk.PhotoImage:
         """カラーバー画像を生成する
-        
+
         Args:
             cmap_name: カラーマップ名
-        
+
         Returns:
             ImageTk.PhotoImage: カラーバー画像のPhotoImageオブジェクト
         """
@@ -585,7 +585,7 @@ class ParameterPanel:
 
     def _update_colorbars(self, *args) -> None:
         """カラーバーを更新する
-        
+
         発散部と非発散部のカラーバー画像を生成し、ラベルに設定します。
         """
         # 発散部のカラーバー画像を生成
@@ -608,7 +608,7 @@ class ParameterPanel:
 
     def get_parameters(self) -> Optional[Dict[str, Any]]:
         """現在のパネル設定を取得する (動的パラメータ対応)
-        
+
         Returns:
             Optional[Dict[str, Any]]: パラメータ辞書、またはエラー時は None
         """
