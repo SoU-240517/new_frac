@@ -1,6 +1,10 @@
 {
   "system_settings": {
-    "plugin_dir": "plugins/fractal_types"
+    "plugin_dir": "plugins/fractal_types",
+    "coloring_plugin_dirs": {
+      "divergent": "plugins/coloring/divergent",
+      "non_divergent": "plugins/coloring/non_divergent"
+    }
   },
   "fractal_settings": {
     "initial_zoom": {
@@ -24,8 +28,8 @@
       "c_real": -0.8,
       "c_imag": 0.156,
       "diverge_algorithm": "スムージング",
-      "non_diverge_algorithm": "単色",
       "diverge_colormap": "viridis",
+      "non_diverge_algorithm": "単色",
       "non_diverge_colormap": "magma"
     },
     "dynamic_resolution": {
@@ -41,6 +45,8 @@
     },
     "reset_max_iterations": 200,
     "coloring_algorithms": {
+      "default_divergent": "smoothing",
+      "default_non_divergent": "solid_color",
       "divergent": {
         "角度カラーリング": "div_angle.apply_angle_coloring",
         "距離カラーリング": "div_distance.apply_distance_coloring",

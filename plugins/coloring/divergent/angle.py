@@ -4,6 +4,29 @@ from typing import Dict, Tuple
 from debug import DebugLogger, LogLevel
 from coloring.utils import _normalize_and_color
 
+def apply_color(iterations: np.ndarray, z_values: np.ndarray, mask: np.ndarray, params: dict, logger: DebugLogger, config: dict) -> np.ndarray:
+    """
+    スムージングによる着色を行う関数
+
+    Args:
+        iterations (np.ndarray): 各点の反復回数
+        z_values (np.ndarray): 各点の最終的なZ値
+        mask (np.ndarray): 着色対象のマスク (Trueの部分を着色)
+        params (dict): カラーマップ名などのパラメータ
+        logger (DebugLogger): ロガー
+        config (dict): アプリケーション設定
+
+    Returns:
+        np.ndarray: 着色後のRGBA画像データ (形状: (height, width, 4), 値域: 0-255)
+    """
+    logger.log(LogLevel.CALL, "Smoothing プラグインによる着色開始")
+    # ここに具体的なスムージング処理とカラーマップ適用処理を記述
+    # ... (既存の manager.py 内の該当処理を参考に)
+    colored_image_segment = np.zeros((*iterations.shape, 4), dtype=np.uint8) # 仮の画像データ
+    # ...
+    logger.log(LogLevel.SUCCESS, "Smoothing プラグインによる着色完了")
+    return colored_image_segment
+
 def apply_angle_coloring(
     colored: np.ndarray,
     divergent_mask: np.ndarray,

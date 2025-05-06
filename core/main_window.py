@@ -5,6 +5,7 @@ import threading
 import tkinter as tk
 from tkinter import ttk
 from debug import DebugLogger, LogLevel
+from plugins.coloring_loader import ColoringPluginLoader
 from plugins.fractal_loader import FractalTypeLoader
 from .canvas import FractalCanvas
 from .parameter_panel import ParameterPanel
@@ -97,19 +98,30 @@ class MainWindow:
         # 設定ファイルから情報取得
         self.ui_settings = self.config.get("ui_settings", {})
         self.plugin_dir = self.config.get("system_settings",{}).get("plugin_dir", "plugins/fractal_types")
+        # 着色プラグインのディレクトリ設定 (config.json から読み込むようにする)
+        coloring_plugin_dirs_config = self.config.get("system_settings", {}).get("coloring_plugin_dirs", {
+            "divergent": "plugins/coloring/divergent",
+            "non_divergent": "plugins/coloring/non_divergent"
+        })
 
         # フラクタルローダーの初期化と読み込み
         self.logger.log(LogLevel.INIT, "FractalTypeLoader クラスのインスタンス作成開始")
         self.fractal_loader = FractalTypeLoader(plugin_dir=self.plugin_dir, logger=self.logger)
-        self.logger.log(LogLevel.CALL, "プラグインのスキャンとロードを開始")
+        self.logger.log(LogLevel.CALL, "フラクタルタイププラグインのスキャンとロードを開始")
         self.fractal_loader.scan_and_load_plugins()
+
+        # 着色プラグインローダーの初期化と読み込み
+        self.logger.log(LogLevel.INIT, "ColoringPluginLoader クラスのインスタンス作成開始")
+        self.coloring_loader = ColoringPluginLoader(plugin_dirs=coloring_plugin_dirs_config, logger=self.logger)
+        self.logger.log(LogLevel.CALL, "着色プラグインのスキャンとロードを開始")
+        self.coloring_loader.scan_and_load_plugins()
 
         self.logger.log(LogLevel.CALL, "ルートウィンドウの基本設定を開始")
         self._setup_root_window()
         self.logger.log(LogLevel.CALL, "ステータスバーの初期化と配置開始")
         self._setup_status_bar()
         self.logger.log(LogLevel.CALL, "パラメータパネルを配置するフレームの初期化と配置開始")
-        self._setup_parameter_frame()
+        self._setup_parameter_frame() # この中で ParameterPanel が初期化される
         self.logger.log(LogLevel.CALL, "フラクタル描画領域を配置するフレームの初期化と配置開始")
         self._setup_canvas_frame()
         self.logger.log(LogLevel.CALL, "ズーム操作に関するパラメータを初期化開始")
@@ -222,7 +234,8 @@ class MainWindow:
             reset_callback=self.reset_zoom,
             logger=self.logger,
             config=self.config,
-            fractal_loader=self.fractal_loader # ローダーインスタンスを渡す
+            fractal_loader=self.fractal_loader, # フラクタルローダーを渡す
+            coloring_loader=self.coloring_loader # ColoringPluginLoaderを渡す
         )
 
         self.logger.log(LogLevel.SUCCESS, "パラメータパネルを配置するフレームの初期化と配置成功")
@@ -337,7 +350,14 @@ class MainWindow:
             # ------------------------------------------------------
 
             self.logger.log(LogLevel.CALL, f"フラクタル計算 ({selected_fractal_type_name}) と着色処理を開始（スレッド内）")
-            fractal_image = render_fractal(current_params, compute_function, self.logger, config=self.config)
+            # render_fractal に coloring_loader も渡す (manager.py で利用するため)
+            fractal_image = render_fractal(
+                current_params,
+                compute_function,
+                self.logger,
+                config=self.config,
+                coloring_loader=self.coloring_loader # <<<--- 追加
+            )
 
             self.logger.log(LogLevel.CALL, "メインスレッドでキャンバス更新要求（スレッド内）")
             # メインスレッドでキャンバス更新をスケジュール

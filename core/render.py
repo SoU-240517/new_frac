@@ -1,10 +1,9 @@
 import numpy as np
 import time
-from coloring import manager
-from typing import Dict, Any, Callable, Optional
-#from plugins.fractal_types.julia import compute_julia
-#from plugins.fractal_types.mandelbrot import compute_mandelbrot
+from coloring.manager import apply_coloring_algorithm
 from debug import DebugLogger, LogLevel
+from typing import Dict, Any, Callable, Optional
+from PIL import Image, ImageTk
 
 """フラクタル画像生成エンジン
 このモジュールはフラクタル画像の生成を担当する
@@ -22,17 +21,17 @@ from debug import DebugLogger, LogLevel
 
 def _calculate_dynamic_resolution(width: float, config: Dict[str, Any], logger: DebugLogger) -> int:
     """ズームレベルに応じて描画解像度を動的に計算
-    
+
     対数スケールで解像度を調整し、ズームインするほど高解像度になる
-    
+
     Args:
         width (float): 描画範囲の幅 (ズームレベルの指標)
         config (Dict[str, Any]): config.json から読み込んだ設定データ
         logger (DebugLogger): デバッグログ用
-    
+
     Returns:
         int: 計算された描画解像度（ピクセル数）
-    
+
     Notes:
         - 基準幅（4.0）に対して対数スケールで解像度を調整
         - 最小解像度と最大解像度でクリップされる
@@ -71,7 +70,7 @@ def _calculate_dynamic_resolution(width: float, config: Dict[str, Any], logger: 
 
 def _create_fractal_grid(params: dict, super_resolution_x: int, super_resolution_y: int, logger: DebugLogger) -> np.ndarray:
     """フラクタル計算用の複素数グリッドを生成
-    
+
     Args:
         params (dict): フラクタルのパラメータ
             - center_x: 中心X座標 (float)
@@ -82,10 +81,10 @@ def _create_fractal_grid(params: dict, super_resolution_x: int, super_resolution
         super_resolution_x (int): 水平方向の解像度
         super_resolution_y (int): 垂直方向の解像度
         logger (DebugLogger): デバッグログ出力用
-    
+
     Returns:
         np.ndarray: 複素数グリッド (dtype=np.complex64)
-    
+
     Notes:
         - width > 1.0 の場合は np.float16 を使用
         - width <= 1.0 の場合は np.float32 を使用
@@ -133,7 +132,7 @@ def _compute_fractal(
 ) -> Optional[Dict[str, np.ndarray]]: # 戻り値を Optional に変更
 
     """フラクタル計算を実行
-    
+
     Args:
         Z (np.ndarray): 複素数グリッド
         params (dict): フラクタルのパラメータ
@@ -143,17 +142,17 @@ def _compute_fractal(
             - max_iterations: 最大反復回数
         compute_function (Callable): フラクタル計算関数
         logger (DebugLogger): デバッグログ出力用
-    
+
     Returns:
         Optional[Dict[str, np.ndarray]]: 計算結果
             - iterations: 反復回数配列
             - mask: 発散判定マスク
             - z_vals: 最終複素数値配列
-    
+
     Raises:
         TypeError: 計算関数の呼び出し時に引数の型が不正な場合
         Exception: 計算中に予期せぬエラーが発生した場合
-    
+
     Notes:
         - Julia集合の場合は C パラメータを使用
         - Mandelbrot集合の場合は Z0 パラメータを使用
@@ -237,7 +236,7 @@ def _downsample_image(
     logger: DebugLogger
 ) -> np.ndarray:
     """高解像度画像をダウンサンプリングしてアンチエイリアシング
-    
+
     Args:
         high_res_image (np.ndarray): 高解像度画像 (RGBA想定)
         target_resolution_x (int): 目標解像度 X
@@ -245,10 +244,10 @@ def _downsample_image(
         samples_per_pixel_x (int): X方向の1ピクセルあたりのサンプル数
         samples_per_pixel_y (int): Y方向の1ピクセルあたりのサンプル数
         logger (DebugLogger): デバッグログ出力用
-    
+
     Returns:
         np.ndarray: ダウンサンプリングされた画像
-    
+
     Notes:
         - サンプル数が1の場合はダウンサンプリングをスキップ
         - サンプル数が1より大きい場合はダウンサンプリングを実行
@@ -298,148 +297,160 @@ def _downsample_image(
     return downsampled
 
 def render_fractal(
-    params: dict,
-    compute_function: Callable, # 計算関数を受け取る
+    params: Dict,
+    compute_function: Callable, # フラクタル計算関数
     logger: DebugLogger,
-    config: Dict[str, Any]
-) -> np.ndarray:
-    """フラクタル画像を生成
-    
-    Args:
-        params (dict): フラクタルのパラメータ
-            - fractal_type_name: フラクタルの種類 ("Julia" or "Mandelbrot")
-            - c_real, c_imag: Julia用複素数 C の実部・虚部
-            - z0_real, z0_imag: Mandelbrot用初期値 Z0 の実部・虚部
-            - max_iterations: 最大反復回数
-            - center_x, center_y: 画像の中心座標
-            - width, height: 描画範囲のサイズ
-            - rotation: 回転角度 (度)
-            - diverge_algorithm: 発散領域の着色アルゴリズム
-            - non_diverge_algorithm: 非発散領域の着色アルゴリズム
-            - diverge_colormap: 発散領域のカラーマップ
-            - non_diverge_colormap: 非発散領域のカラーマップ
-            - render_mode: "quick" or "full"
-        compute_function (Callable): フラクタル計算関数
-        logger (DebugLogger): デバッグログ出力用
-        config (Dict[str, Any]): config.json から読み込んだ設定データ
-    
-    Returns:
-        np.ndarray: RGBA形式のフラクタル画像 (uint8 [0, 255])
-    
-    Notes:
-        - 動的解像度制御により最適な解像度でレンダリング
-        - スーパーサンプリングにより高品質な画像生成
-        - カラーリングは coloring.manager モジュールを使用
+    config: Dict[str, Any],
+    coloring_loader # <<<--- 追加: MainWindowから渡される ColoringPluginLoader のインスタンス
+) -> Optional[ImageTk.PhotoImage]:
     """
-    render_mode = params.get("render_mode", "quick")  # デフォルトは簡易モード
-    current_width = params.get("width", 4.0) # 現在の描画範囲の幅
+    指定されたパラメータと計算関数を使用してフラクタル画像を生成し、着色する。
 
-    dpi = config.get("canvas_settings", {}).get("config_dpi", 100)
+    Args:
+        params (Dict): フラクタル描画と着色に必要なパラメータ群。
+                       (例: center_x, width, max_iterations, diverge_algorithm, diverge_colormap など)
+        compute_function (Callable): フラクタル計算を行う関数。
+                                     (例: plugins.fractal_types.mandelbrot.compute 等)
+        logger (DebugLogger): ロガーインスタンス。
+        config (Dict[str, Any]): アプリケーション全体の設定。
+        coloring_loader (ColoringPluginLoader): ロードされた着色プラグインを管理するローダー。
 
-    # 動的解像度計算 (config を渡す)
-    resolution = _calculate_dynamic_resolution(current_width, config, logger)
+    Returns:
+        Optional[ImageTk.PhotoImage]: 生成されたフラクタル画像の PhotoImage オブジェクト。
+                                      エラーが発生した場合は None。
+    """
+    logger.log(LogLevel.CALL, "render_fractal 関数の実行開始")
+    start_time_render = time.perf_counter()
 
-    # 簡易モードでは解像度をさらに下げる
-    quick_mode_resolution_factor = config.get("fractal_settings", {}).get("quick_mode_resolution_factor", 0.5)
-    if render_mode == "quick":
-        resolution = int(resolution * quick_mode_resolution_factor)
-        # 最小解像度を下回らないようにする
-        resolution = max(resolution, dpi)
+    # キャンバスサイズ (ピクセル単位)
+    # params から 'canvas_width', 'canvas_height' を取得することを想定
+    # これらは FractalCanvas から渡されるか、config のデフォルト値を使用する
+    canvas_width = params.get("canvas_width", config.get("ui_settings", {}).get("initial_canvas_width", 800))
+    canvas_height = params.get("canvas_height", config.get("ui_settings", {}).get("initial_canvas_height", 600))
 
-    # アンチエイリアシング設定 (設定ファイルから読み込む)
-    ss_config = config.get("fractal_settings", {}).get("super_sampling", {})
-    zoom_threshold = ss_config.get("zoom_threshold", 0.8)
-    low_samples = ss_config.get("low_samples", 2)
-    high_samples = ss_config.get("high_samples", 4)
+    # フラクタル計算に必要な座標グリッドを生成
+    # (この部分は既存のロジック、または compute_function 内部で行われるかもしれません)
+    # ここでは compute_function が座標グリッドの面倒を見ると仮定します。
+    # x_coords, y_coords = create_coordinate_grid(params, canvas_width, canvas_height, logger)
 
-    zoom_level = 4.0 / current_width # 基準幅4.0に対する比率 (大きいほどズームイン)
-
-    # 簡易モードではアンチエイリアシング無効 (サンプル数=1)
-    if render_mode == "quick":
-        samples_per_pixel = config.get("canvas_settings", {}).get("samples_per_pixel", 1)
-    else:
-        # ズームレベルに応じてサンプル数を決定
-        samples_per_pixel = high_samples if zoom_level >= zoom_threshold else low_samples
-
-    logger.log(LogLevel.DEBUG, f"描画モード: {render_mode}, 解像度: {resolution}x{resolution}, サンプル数: {samples_per_pixel} (ズームレベル={zoom_level:.2f}, 閾値={zoom_threshold})")
-
-    # 高解像度グリッドサイズ
-    resolution = _calculate_dynamic_resolution(current_width, config, logger) # 解像度再計算 (上とかぶる？要確認)
-    if render_mode == "quick":
-        resolution = int(resolution * config.get("fractal_settings", {}).get("quick_mode_resolution_factor", 0.5))
-        resolution = max(resolution, config.get("canvas_settings", {}).get("config_dpi", 100))
-    samples_per_pixel = 1 if render_mode == "quick" else \
-                        (config.get("fractal_settings",{}).get("super_sampling",{}).get("high_samples", 4) \
-                         if (4.0 / current_width) >= config.get("fractal_settings",{}).get("super_sampling",{}).get("zoom_threshold", 0.8) \
-                         else config.get("fractal_settings",{}).get("super_sampling",{}).get("low_samples", 2))
-
-    super_resolution_x = resolution * samples_per_pixel
-    super_resolution_y = resolution * samples_per_pixel
-
-    # グリッド作成
-    Z = _create_fractal_grid(params, super_resolution_x, super_resolution_y, logger)
-    logger.log(LogLevel.SUCCESS, f"フラクタル計算用の複素数グリッドを作成完了: shape={Z.shape}")
-
-    # フラクタル計算 (計算関数を渡す)
-    results = _compute_fractal(Z, params, compute_function, logger)
-
-    # --- 追加: 計算失敗時の処理 ---
-    if results is None:
-        logger.log(LogLevel.ERROR, "フラクタル計算に失敗したため、エラー画像を表示します。")
-        # エラー画像 (例: 赤色) を返す
-        error_color = [255, 0, 0, 255] # 赤色
-        # 最終的な解像度で作成
-        final_image = np.full((resolution, resolution, 4), error_color, dtype=np.uint8)
-        del Z # メモリ解放
-        return final_image
-    # ---------------------------
-
+    # フラクタル計算の実行
+    logger.log(LogLevel.CALL, "フラクタル計算処理の開始")
+    start_time_compute = time.perf_counter()
     try:
-        # 着色処理 (変更なし)
-        colored_high_res = manager.apply_coloring_algorithm(results, params, logger, config)
-        # ... (着色エラーハンドリング) ...
-        if not isinstance(colored_high_res, np.ndarray):
-             raise TypeError(f"着色処理がndarrayを返しませんでした: {type(colored_high_res)}")
-        if colored_high_res.ndim != 3 or colored_high_res.shape[2] != 4:
-             raise ValueError(f"着色処理が期待されるRGBA形状を返しませんでした: {colored_high_res.shape}")
+        # compute_function は (params, canvas_width, canvas_height, logger) のような引数を期待
+        # 戻り値は (iterations, mask, z_values, final_x_coords, final_y_coords) のようなタプルを想定
+        # compute_function の仕様に合わせて調整してください。
+        computation_results = compute_function(params, canvas_width, canvas_height, logger)
+        # computation_results が None でないこと、および期待する要素を含んでいることを確認
+        if computation_results is None:
+            logger.log(LogLevel.ERROR, "フラクタル計算関数が None を返しました。")
+            return None
+
+        # 計算結果を分解 (compute_function の戻り値の構造に依存)
+        # 例: iterations, mask, z_values, final_x_coords, final_y_coords = computation_results
+        # 呼び出し元の _update_fractal_thread と整合性を取る必要があります。
+        # ここでは、タプルで返ってくると仮定します。
+        # もし辞書で返ってくるなら、 `iterations = computation_results.get('iterations')` のように取得します。
+        # 今回は、compute_function が直接 iterations, mask, z_values などを返すのではなく、
+        # それらを要素とする辞書またはオブジェクトを返すことを想定してみましょう。
+        # (現在のコードでは compute_function が直接 iterations 等を返すわけではなさそうなので、
+        #  compute_function の実装に依存します)
+
+        # 仮に compute_function が辞書を返すとすると:
+        # iterations = computation_results.get('iterations')
+        # mask = computation_results.get('mask')
+        # z_values = computation_results.get('z_vals')
+        # final_x_coords = computation_results.get('final_x_coords') # 必要に応じて
+        # final_y_coords = computation_results.get('final_y_coords') # 必要に応じて
+
+        # 現状の FractalTypeLoader のプラグイン (mandelbrot.py, julia.py) は
+        # iterations, mask, z_values をタプルで返しているようです。
+        iterations, mask, z_values = computation_results[:3] # 最初の3要素を取得
+        # final_x_coords, final_y_coords は compute_function が返すかどうかに依存
+        final_x_coords = computation_results[3] if len(computation_results) > 3 else None
+        final_y_coords = computation_results[4] if len(computation_results) > 4 else None
+
 
     except Exception as e:
-        logger.log(LogLevel.CRITICAL, f"着色処理中にエラーが発生しました: {e}")
-        # エラー画像 (例: 紫色) を返す
-        error_color = [128, 0, 128, 255] # 紫色
-        final_image = np.full((resolution, resolution, 4), error_color, dtype=np.uint8)
-        del Z, results # メモリ解放
-        return final_image
+        logger.log(LogLevel.ERROR, f"フラクタル計算中にエラーが発生: {e}", exc_info=True)
+        return None
+    end_time_compute = time.perf_counter()
+    logger.log(LogLevel.SUCCESS, f"フラクタル計算処理の完了 (所要時間: {end_time_compute - start_time_compute:.4f} 秒)")
 
-    # ダウンサンプリング (サンプル数が1より大きい場合のみ)
-    if samples_per_pixel > 1:
-        logger.log(LogLevel.DEBUG, "ダウンサンプリング実行...")
-        # ダウンサンプリング関数呼び出し (解像度とサンプル数を渡す)
-        # 正方形を仮定していても X/Y は同じ値
-        colored = _downsample_image(
-            colored_high_res,
-            resolution, resolution,          # 目標解像度 X, Y
-            samples_per_pixel, samples_per_pixel, # サンプル数 X, Y
-            logger
-        )
+    # --- ここからが着色処理のセクションです ---
+    # 「if iterations is not None and mask is not None and z_values is not None:」のブロックは
+    # フラクタル計算が成功し、着色に必要なデータが得られた場合に実行されます。
+    if iterations is not None and mask is not None and z_values is not None:
+        # 着色に必要なデータを辞書にまとめる
+        # manager.py の apply_coloring_algorithm がこの辞書を受け取る
+        results_for_coloring = {
+            'iterations': iterations,
+            'mask': mask,
+            'z_vals': z_values,
+            # final_x_coords や final_y_coords も着色に使う場合はここに追加
+            'final_x_coords': final_x_coords,
+            'final_y_coords': final_y_coords
+        }
+
+        logger.log(LogLevel.CALL, "着色処理 (apply_coloring_algorithm) の呼び出し開始")
+        start_time_coloring = time.perf_counter()
+        try:
+            # `apply_coloring_algorithm` を呼び出す際に `coloring_loader` を渡します。
+            # これが今回の修正の主要なポイントです。
+            colored_array_float = apply_coloring_algorithm(
+                results_for_coloring, # 計算結果
+                params,               # UIなどからのパラメータ
+                logger,
+                config,
+                coloring_loader       # <<<--- ここで coloring_loader を渡す
+            )
+        except Exception as e:
+            logger.log(LogLevel.ERROR, f"apply_coloring_algorithm でエラーが発生: {e}", exc_info=True)
+            return None # エラー時は None を返す
+        end_time_coloring = time.perf_counter()
+        logger.log(LogLevel.SUCCESS, f"着色処理の完了 (所要時間: {end_time_coloring - start_time_coloring:.4f} 秒)")
+
+        if colored_array_float is None:
+            logger.log(LogLevel.ERROR, "着色処理の結果が None でした。")
+            return None
+
+        # float32 (0-255) の配列を uint8 (0-255) に変換
+        try:
+            # 値が確実に0-255の範囲内にあることを確認（クリッピング）
+            colored_array_uint8 = np.clip(colored_array_float, 0, 255).astype(np.uint8)
+            logger.log(LogLevel.DEBUG,
+                       f"uint8変換後の配列統計: dtype={colored_array_uint8.dtype}, "
+                       f"shape={colored_array_uint8.shape}, min={np.min(colored_array_uint8)}, max={np.max(colored_array_uint8)}")
+        except Exception as e:
+            logger.log(LogLevel.ERROR, f"着色結果の uint8 への変換中にエラー: {e}", exc_info=True)
+            return None
+
+        # NumPy 配列を PIL Image に変換
+        try:
+            # RGBAモードであることを確認
+            if colored_array_uint8.shape[2] == 4:
+                pil_image = Image.fromarray(colored_array_uint8, 'RGBA')
+            elif colored_array_uint8.shape[2] == 3:
+                pil_image = Image.fromarray(colored_array_uint8, 'RGB')
+            else:
+                logger.log(LogLevel.ERROR, f"予期しないチャネル数を持つ配列: {colored_array_uint8.shape}")
+                return None
+            logger.log(LogLevel.SUCCESS, "PIL Image への変換成功")
+        except Exception as e:
+            logger.log(LogLevel.ERROR, f"NumPy配列からPIL Imageへの変換中にエラー: {e}", exc_info=True)
+            return None
+
+        # PIL Image を Tkinter PhotoImage に変換
+        try:
+            photo_image = ImageTk.PhotoImage(pil_image)
+            logger.log(LogLevel.SUCCESS, "Tkinter PhotoImage への変換成功")
+            end_time_render = time.perf_counter()
+            logger.log(LogLevel.SUCCESS, f"render_fractal 関数の実行完了 (総所要時間: {end_time_render - start_time_render:.4f} 秒)")
+            return photo_image
+        except Exception as e:
+            logger.log(LogLevel.ERROR, f"PIL ImageからTkinter PhotoImageへの変換中にエラー: {e}", exc_info=True)
+            return None
     else:
-        # サンプル数1の場合はダウンサンプリング不要
-        logger.log(LogLevel.DEBUG, "サンプル数1のためダウンサンプリングをスキップ")
-        colored = colored_high_res # そのまま使う
-
-    # 最終的な結果を uint8 [0, 255] に変換
-    # データ型が float かどうかチェック
-    if not np.issubdtype(colored.dtype, np.integer):
-        # float の場合、0-255 の範囲にクリップしてから uint8 に変換
-         colored = np.clip(colored, 0, 255).astype(np.uint8)
-    elif colored.dtype != np.uint8:
-        # 既に整数型だが uint8 でない場合 (uint16 など)、警告を出して変換
-        logger.log(LogLevel.WARNING, f"最終画像のデータ型が uint8 ではありません ({colored.dtype})。変換します。")
-        colored = np.clip(colored, 0, 255).astype(np.uint8)
-
-    logger.log(LogLevel.DEBUG, f"最終的な render_fractal 出力 dtype: {colored.dtype}, shape: {colored.shape}")
-
-    # メモリ解放を促す (大きな配列を使った後)
-    del Z, results, colored_high_res
-
-    return colored
+        # フラクタル計算の結果、着色に必要なデータが得られなかった場合
+        logger.log(LogLevel.ERROR, "フラクタル計算結果が無効（iterations, mask, または z_values が None）なため、着色処理をスキップしました。")
+        return None
