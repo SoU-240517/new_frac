@@ -53,7 +53,7 @@ class DebugLogger:
                 # 無効な文字列が指定された場合は警告を出し、デフォルト (DEBUG) を使用
                 self._log_internal(
                     LogLevel.WARNING,
-                    f"無効なログレベル '{min_level_str}' が指定されました。デフォルトの DEBUG レベルを使用します。",
+                    f"無効なログレベル: {min_level_str} （DEBUG）を使用",
                     force=True, # この警告は常に出す
                     stacklevel=2 # 呼び出し元を調整
                 )
@@ -61,8 +61,8 @@ class DebugLogger:
 
         # 初期化完了ログ (force=True で必ず表示)
         self._log_internal(
-            LogLevel.INIT,
-            f"DebugLogger クラスのインスタンス作成成功：debug_enabled={self.debug_enabled}, min_level={self.min_log_level.name}",
+            LogLevel.SUCCESS,
+            f"DebugLogger クラスインスタンス作成完了：debug_enabled={self.debug_enabled}, min_level={self.min_log_level.name}",
             force=True,
             stacklevel=2 # 呼び出し元を調整
         )

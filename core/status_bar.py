@@ -7,9 +7,9 @@ from debug import DebugLogger, LogLevel
 
 class StatusBarManager:
     """ステータスバーの表示とアニメーションを管理するクラス
-    
+
     ステータスバーの表示とアニメーションを管理し、描画時間の計測と表示を行います。
-    
+
     Attributes:
         _TIME_FORMAT (str): 時間表示のフォーマット文字列（分:秒:ミリ秒）
         _ANIMATION_INTERVAL (float): アニメーションの間隔（秒）
@@ -28,7 +28,7 @@ class StatusBarManager:
 
     def __init__(self, root: tk.Tk, status_frame: ttk.Frame, logger: DebugLogger):
         """StatusBarManager クラスのコンストラクタ
-        
+
         Args:
             root (tk.Tk): Tkinterのルートウィンドウ
             status_frame (ttk.Frame): ステータスバーを配置するフレーム
@@ -40,6 +40,7 @@ class StatusBarManager:
 
         # 描画時間の計測用変数
         self._draw_start_time: Optional[float] = None
+
         # 時間更新タイマーID
         self._status_timer_id: Optional[str] = None
 
@@ -52,19 +53,15 @@ class StatusBarManager:
         self.status_label.pack(side=tk.LEFT, padx=5, pady=2)
 
         # アニメーション状態の初期化
-        self.logger.log(LogLevel.INIT, "AnimationState クラスのインスタンス作成開始")
         self._animation_state = AnimationState()
-        self.logger.log(LogLevel.INIT, "AnimationState クラスのインスタンス作成成功")
-
-        self.logger.log(LogLevel.INIT, "StatusBarManager クラスのインスタンス作成成功")
 
     def start_animation(self) -> None:
         """ステータスバーの描画中アニメーションを開始
-        
+
         - アニメーション状態を開始
         - 描画開始時刻を記録
         - 時間更新とアニメーションスレッドを開始
-        
+
         Raises:
             ログ出力: アニメーションが既に実行中の場合
         """
@@ -177,13 +174,13 @@ class StatusBarManager:
 
     def stop_animation(self, final_message: str = "完了") -> None:
         """アニメーションを停止し、最終メッセージを表示
-        
+
         - アニメーションを停止
         - スレッドの終了を待機
         - 時間更新をキャンセル
         - 最終メッセージを表示
         - 状態をリセット
-        
+
         Args:
             final_message (str, optional): 最終メッセージ. Defaults to "完了"
         """

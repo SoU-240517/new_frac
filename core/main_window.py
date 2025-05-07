@@ -28,9 +28,7 @@ def load_config(logger: DebugLogger, config_path: str) -> dict:
         Exception: その他の予期せぬエラーが発生した場合
     """
     if not os.path.exists(config_path):
-        logger.log(LogLevel.ERROR, f"設定ファイルが見つかりません: {config_path}")
-        # デフォルト設定を返すか、エラーを発生させるかを選択
-        # ここでは空の辞書を返し、呼び出し元でデフォルト値を使う想定
+        logger.log(LogLevel.ERROR, f"設定ファイルなし: {config_path}")
         return {}
 
     try:
@@ -39,10 +37,10 @@ def load_config(logger: DebugLogger, config_path: str) -> dict:
             logger.log(LogLevel.SUCCESS, f"設定ファイル読込成功: {config_path}")
             return config
     except json.JSONDecodeError as e:
-        logger.log(LogLevel.ERROR, f"設定ファイルの JSON 解析エラー: {e}")
+        logger.log(LogLevel.ERROR, f"JSON 解析エラー: {e}")
         return {}
     except Exception as e:
-        logger.log(LogLevel.ERROR, f"設定ファイル読み込み中に予期せぬエラー: {e}")
+        logger.log(LogLevel.ERROR, f"設定ファイル読込中に予期せぬエラー: {e}")
         return {}
 
 class MainWindow:
@@ -94,27 +92,17 @@ class MainWindow:
         self.is_drawing = False
         self.draw_thread = None
 
-        # 設定ファイルから情報取得
         self.ui_settings = self.config.get("ui_settings", {})
+
         self.plugin_dir = self.config.get("system_settings",{}).get("plugin_dir", "plugins/fractal_types")
-
-        # フラクタルローダーの初期化と読み込み
-        self.logger.log(LogLevel.INIT, "FractalTypeLoader クラスのインスタンス作成開始")
         self.fractal_loader = FractalTypeLoader(plugin_dir=self.plugin_dir, logger=self.logger)
-        self.logger.log(LogLevel.CALL, "プラグインのスキャンとロードを開始")
-        self.fractal_loader.scan_and_load_plugins()
 
-        self.logger.log(LogLevel.CALL, "ルートウィンドウの基本設定を開始")
+        self.fractal_loader.scan_and_load_plugins()
         self._setup_root_window()
-        self.logger.log(LogLevel.CALL, "ステータスバーの初期化と配置開始")
         self._setup_status_bar()
-        self.logger.log(LogLevel.CALL, "パラメータパネルを配置するフレームの初期化と配置開始")
         self._setup_parameter_frame()
-        self.logger.log(LogLevel.CALL, "フラクタル描画領域を配置するフレームの初期化と配置開始")
         self._setup_canvas_frame()
-        self.logger.log(LogLevel.CALL, "ズーム操作に関するパラメータを初期化開始")
         self._setup_zoom_params()
-        self.logger.log(LogLevel.CALL, "アプリケーション起動時の初期描画を開始")
         self._start_initial_drawing()
 
     def _setup_root_window(self) -> None:
@@ -135,7 +123,7 @@ class MainWindow:
         self.root.title(app_title)
         self.root.geometry(f"{window_width}x{window_height}")
 
-        self.logger.log(LogLevel.SUCCESS, "ルートウィンドウの基本設定を完了")
+        self.logger.log(LogLevel.SUCCESS, f"ルートウィンドウの基本設定に成功: title:{app_title}, w:{window_width} x h:{window_height}")
 
     def _setup_status_bar(self) -> None:
         """
@@ -149,14 +137,42 @@ class MainWindow:
         status_frame = ttk.Frame(self.root)
         status_frame.pack(fill=tk.X, side=tk.BOTTOM, pady=(0, 5))
 
-        self.logger.log(LogLevel.INIT, "StatusBarManager クラスのインスタンス作成開始")
         self.status_bar_manager = StatusBarManager(
             self.root,
             status_frame,
             self.logger
         )
 
-        self.logger.log(LogLevel.SUCCESS, "ステータスバーの初期化と配置成功")
+    def _setup_parameter_frame(self) -> None:
+        """
+        パラメータパネルを配置するフレームを初期化し、ルートウィンドウの右側に配置する
+
+        パラメータパネルは以下の機能を提供します：
+        - フラクタルの種類選択
+        - 描画パラメータの設定
+        - ズームリセット機能
+        """
+        width = self.config.get("ui_settings", {}).get("parameter_panel_width", 300)
+        self.logger.log(LogLevel.DEBUG, f"パラメータパネルの幅: {width}")
+
+        self.parameter_frame = ttk.Frame(self.root, width=width)
+        self.parameter_frame.pack(
+            side=tk.RIGHT,
+            fill=tk.Y,
+            padx=(0, 5),
+            pady=5,
+            expand=False
+        )
+        self.parameter_frame.pack_propagate(False)
+
+        self.parameter_panel = ParameterPanel(
+            self.parameter_frame,
+            self.update_fractal,
+            reset_callback=self.reset_zoom,
+            logger=self.logger,
+            config=self.config,
+            fractal_loader=self.fractal_loader # ローダーインスタンスを渡す
+        )
 
     def _setup_zoom_params(self) -> None:
         """
@@ -193,39 +209,6 @@ class MainWindow:
         self.prev_zoom_params = None
 
         self.logger.log(LogLevel.SUCCESS, "ズーム操作に関するパラメータを初期化成功", context=self.zoom_params)
-
-    def _setup_parameter_frame(self) -> None:
-        """
-        パラメータパネルを配置するフレームを初期化し、ルートウィンドウの右側に配置する
-
-        パラメータパネルは以下の機能を提供します：
-        - フラクタルの種類選択
-        - 描画パラメータの設定
-        - ズームリセット機能
-        """
-        width = self.config.get("ui_settings", {}).get("parameter_panel_width", 300)
-
-        self.parameter_frame = ttk.Frame(self.root, width=width)
-        self.parameter_frame.pack(
-            side=tk.RIGHT,
-            fill=tk.Y,
-            padx=(0, 5),
-            pady=5,
-            expand=False
-        )
-        self.parameter_frame.pack_propagate(False)
-
-        self.logger.log(LogLevel.INIT, "ParameterPanel クラスのインスタンス作成開始")
-        self.parameter_panel = ParameterPanel(
-            self.parameter_frame,
-            self.update_fractal,
-            reset_callback=self.reset_zoom,
-            logger=self.logger,
-            config=self.config,
-            fractal_loader=self.fractal_loader # ローダーインスタンスを渡す
-        )
-
-        self.logger.log(LogLevel.SUCCESS, "パラメータパネルを配置するフレームの初期化と配置成功")
 
     def _setup_canvas_frame(self) -> None:
         """
