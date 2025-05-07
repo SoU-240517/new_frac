@@ -1,12 +1,11 @@
-
 import matplotlib.pyplot as plt
 import numpy as np
 import tkinter as tk
 from PIL import Image, ImageTk
 from tkinter import ttk
-from typing import Dict, Any, Optional, List, Callable # Callable を Optional に変更するかも
+from typing import Dict, Any, Optional, List, Callable
 from debug import DebugLogger, LogLevel
-from plugins.fractal_types.loader import FractalTypeLoader
+from plugins import FractalTypeLoader
 
 class ParameterPanel:
     """フラクタル生成用パラメータ設定パネルクラス
@@ -105,22 +104,6 @@ class ParameterPanel:
                 self.colormaps = [] # その他のエラーでも空リスト
 
         self.logger.log(LogLevel.DEBUG, f"カラーマップロード数: {len(self.colormaps)} 個")
-
-        # --- 着色アルゴリズムリストをローダーから取得 ---
-        # 発散部アルゴリズム
-        self.diverge_algorithms = self.coloring_loader.get_available_algorithms("divergent") # <<<--- 変更
-        if not self.diverge_algorithms: # ローダーから取得できなかった場合のフォールバック
-            self.logger.log(LogLevel.WARNING, "ロードされた発散部着色アルゴリズムがありません。デフォルトリストを使用します。")
-            self.diverge_algorithms = ["smoothing", "linear"] # 仮のデフォルト (プラグイン名を指定)
-        self.logger.log(LogLevel.DEBUG, f"利用可能な発散部アルゴリズム: {self.diverge_algorithms}")
-
-        # 非発散部アルゴリズム
-        self.non_diverge_algorithms = self.coloring_loader.get_available_algorithms("non_divergent") # <<<--- 変更
-        if not self.non_diverge_algorithms: # ローダーから取得できなかった場合のフォールバック
-            self.logger.log(LogLevel.WARNING, "ロードされた非発散部着色アルゴリズムがありません。デフォルトリストを使用します。")
-            self.non_diverge_algorithms = ["solid_color", "gradient"] # 仮のデフォルト (プラグイン名を指定)
-        self.logger.log(LogLevel.DEBUG, f"利用可能な非発散部アルゴリズム: {self.non_diverge_algorithms}")
-        # ---------------------------------------------
 
         self.logger.log(LogLevel.CALL, "パラメータパネルのセットアップ開始")
         self._setup_panel()
@@ -350,23 +333,32 @@ class ParameterPanel:
 
         self._add_label("--- 発散部 ---", row, 0, columnspan=2, pady=(10, 0))
         param_defaults = self.config.get("fractal_settings", {}).get("parameter_panel", {})
+        fractal_settings = self.config.get("fractal_settings", {})
 
         # 着色アルゴリズム
         row += 1
         self._add_label("着色アルゴリズム:", row, 0, pady=(5,0))
-        # デフォルト値は、ロードされたアルゴリズムリストにあればそれ、なければリストの先頭
-        default_diverge_algo_config = param_defaults.get("diverge_algorithm", "")
-        if default_diverge_algo_config in self.diverge_algorithms:
-            default_diverge_algo = default_diverge_algo_config
-        elif self.diverge_algorithms:
-            default_diverge_algo = self.diverge_algorithms[0]
-        else:
-            default_diverge_algo = "" # リストが空の場合
+        default_diverge_algo = param_defaults.get("diverge_algorithm", "スムージング")
 
         if not hasattr(self, 'diverge_algo_var'):
              self.diverge_algo_var = tk.StringVar()
         self.diverge_algo_var.set(default_diverge_algo)
 
+        self.diverge_algorithms = list(fractal_settings.get("coloring_algorithms", {}).get("divergent", {}).keys())
+        if not self.diverge_algorithms:
+            self.logger.log(LogLevel.WARNING, "設定ファイルに発散部アルゴリズムリストが見つからないか空なので、デフォルトリストを使用")
+            self.diverge_algorithms = [
+                "スムージング",
+                "高速スムージング",
+                "指数スムージング",
+                "反復回数線形マッピング",
+                "反復回数対数マッピング",
+                "ヒストグラム平坦化法",
+                "距離カラーリング",
+                "角度カラーリング",
+                "ポテンシャル関数法",
+                "軌道トラップ法"
+            ] # フォールバック
         combo = self._add_combobox(row, 1, self.diverge_algo_var, self.diverge_algorithms)
         combo.bind("<<ComboboxSelected>>", self._common_callback)
 
@@ -411,23 +403,39 @@ class ParameterPanel:
 
         self._add_label("--- 非発散部 ---", row, 0, columnspan=2, pady=(10, 0))
         param_defaults = self.config.get("fractal_settings", {}).get("parameter_panel", {})
+        fractal_settings = self.config.get("fractal_settings", {})
 
         # 着色アルゴリズム
         row += 1
         self._add_label("着色アルゴリズム:", row, 0, pady=(5,0))
-        # デフォルト値は、ロードされたアルゴリズムリストにあればそれ、なければリストの先頭
-        default_non_diverge_algo_config = param_defaults.get("non_diverge_algorithm", "")
-        if default_non_diverge_algo_config in self.non_diverge_algorithms:
-            default_non_diverge_algo = default_non_diverge_algo_config
-        elif self.non_diverge_algorithms:
-            default_non_diverge_algo = self.non_diverge_algorithms[0]
-        else:
-            default_non_diverge_algo = "" # リストが空の場合
+        default_non_diverge_algo = param_defaults.get("non_diverge_algorithm", "単色")
 
+        # non_diverge_algo_var はクラス変数として持つ
         if not hasattr(self, 'non_diverge_algo_var'):
              self.non_diverge_algo_var = tk.StringVar()
         self.non_diverge_algo_var.set(default_non_diverge_algo)
 
+        # アルゴリズムリストを設定ファイルから取得
+        self.non_diverge_algorithms = list(fractal_settings.get("coloring_algorithms", {}).get("non_divergent", {}).keys())
+        if not self.non_diverge_algorithms:
+            self.logger.log(LogLevel.WARNING, "設定ファイルに非発散部アルゴリズムリストが見つからないか空なので、デフォルトリストを使用")
+            self.non_diverge_algorithms = [
+                "単色",
+                "グラデーション",
+                "内部距離（Escape Time Distance）",
+                "軌道トラップ(円)（Orbit Trap Coloring）",
+                "位相对称（Phase Angle Symmetry）",
+                "反復収束速度（Convergence Speed）",
+                "微分係数（Derivative Coloring）",
+                "統計分布（Histogram Equalization）",
+                "複素ポテンシャル（Complex Potential Mapping）",
+                "カオス軌道混合（Chaotic Orbit Mixing）",
+                "フーリエ干渉（Fourier Pattern）",
+                "フラクタルテクスチャ（Fractal Texture）",
+                "量子もつれ（Quantum Entanglement）",
+                "パラメータ(C)",
+                "パラメータ(Z)"
+            ] # フォールバック
         combo = self._add_combobox(row, 1, self.non_diverge_algo_var, self.non_diverge_algorithms)
         combo.bind("<<ComboboxSelected>>", self._common_callback)
 
@@ -676,39 +684,21 @@ class ParameterPanel:
         available_types = self.fractal_loader.get_available_types()
         if default_type_name in available_types:
             self.fractal_type_var.set(default_type_name)
-            self._on_fractal_type_selected() # これが推奨カラーリングも適用するはず
+            # タイプ選択イベントを発火させて、パラメータ欄と推奨設定を更新
+            self._on_fractal_type_selected()
         else:
             self.logger.log(LogLevel.WARNING, f"指定されたデフォルトタイプ '{default_type_name}' が見つかりません。リセットできません。")
-            return
+            return # ここで処理中断
 
+        # 2. 最大反復回数を config のリセット値に設定
         reset_iter = self.config.get("fractal_settings", {}).get("reset_max_iterations", 200)
         self.max_iter_var.set(str(reset_iter))
 
-        # --- (オプション) config のデフォルトカラーリングに戻す部分 ---
-        # ここは、推奨カラーリング(_on_fractal_type_selectedで適用済)を上書きするかどうかの判断
-        # もし、常にconfigのデフォルトに戻したいならこの部分を生かす
-        # そうでなければ、_on_fractal_type_selectedで適用された推奨設定を維持する
-        # 今回は、リセット時はconfigのデフォルトに戻す、という動作を維持する想定で記述
+        # 3. (オプション) カラーリングも config のデフォルト値に戻す (推奨設定ではなく)
         param_defaults = self.config.get("fractal_settings", {}).get("parameter_panel", {})
-
-        # 発散部アルゴリズムのデフォルトを設定
-        default_diverge_algo_config = param_defaults.get("diverge_algorithm", "")
-        if default_diverge_algo_config in self.diverge_algorithms:
-            self.diverge_algo_var.set(default_diverge_algo_config)
-        elif self.diverge_algorithms: # リストにあれば最初のものを
-            self.diverge_algo_var.set(self.diverge_algorithms[0])
-        # else: リストが空なら何もしない (StringVarは初期値のまま)
-
-        self.diverge_colormap_var.set(param_defaults.get("diverge_colormap", "viridis")) # カラーマップはそのまま
-
-        # 非発散部アルゴリズムのデフォルトを設定
-        default_non_diverge_algo_config = param_defaults.get("non_diverge_algorithm", "")
-        if default_non_diverge_algo_config in self.non_diverge_algorithms:
-            self.non_diverge_algo_var.set(default_non_diverge_algo_config)
-        elif self.non_diverge_algorithms: # リストにあれば最初のものを
-            self.non_diverge_algo_var.set(self.non_diverge_algorithms[0])
-        # else: リストが空なら何もしない
-
+        self.diverge_algo_var.set(param_defaults.get("diverge_algorithm", "スムージング"))
+        self.diverge_colormap_var.set(param_defaults.get("diverge_colormap", "viridis"))
+        self.non_diverge_algo_var.set(param_defaults.get("non_diverge_algorithm", "単色"))
         self.non_diverge_colormap_var.set(param_defaults.get("non_diverge_colormap", "magma"))
         self._update_colorbars()
 

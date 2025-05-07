@@ -82,9 +82,9 @@ class DebugLogger:
         Args:
             level (LogLevel): ログレベル
             message (str): ログメッセージ
-            context (Optional[Dict[str, Any]], optional): 
+            context (Optional[Dict[str, Any]], optional):
                 追加のコンテキスト情報。デフォルトは None
-            force (bool, optional): 
+            force (bool, optional):
                 強制的にログを出力するかどうか。デフォルトは False
         """
         # 最小ログレベルでフィルタリング
@@ -112,11 +112,11 @@ class DebugLogger:
         Args:
             level (LogLevel): ログレベル
             message (str): ログメッセージ
-            context (Optional[Dict[str, Any]], optional): 
+            context (Optional[Dict[str, Any]], optional):
                 追加のコンテキスト情報。デフォルトは None
-            force (bool, optional): 
+            force (bool, optional):
                 強制的にログを出力するかどうか。デフォルトは False
-            stacklevel (int, optional): 
+            stacklevel (int, optional):
                 呼び出し元のスタックレベル。デフォルトは 3
 
         Raises:
@@ -159,7 +159,7 @@ class DebugLogger:
             stacklevel (int): 呼び出し元のスタックレベル
 
         Returns:
-            Tuple[str, str, int]: 
+            Tuple[str, str, int]:
                 (関数名, ファイルパス, 行番号)のタプル
                 取得できない場合は ("unknown", "unknown", 0) を返す
 
@@ -233,7 +233,7 @@ class DebugLogger:
         # 現在のファイル (__file__) の場所に基づいてルートを決定
         logger_dir = os.path.dirname(__file__)
         # debug_logger.py が core/ にあると仮定して1階層上がる
-        project_root = os.path.abspath(os.path.join(logger_dir, '.', '.'))
+        project_root = os.path.abspath(os.path.join(logger_dir, '..'))
         return project_root
 
     def _format_context(self, context: Dict[str, Any]) -> str:
