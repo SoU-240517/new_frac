@@ -6,7 +6,7 @@ from PIL import Image, ImageTk
 from tkinter import ttk
 from typing import Dict, Any, Optional, List, Callable # Callable を Optional に変更するかも
 from debug import DebugLogger, LogLevel
-from plugins.fractal_loader import FractalTypeLoader
+from plugins.fractal_types.loader import FractalTypeLoader
 
 class ParameterPanel:
     """フラクタル生成用パラメータ設定パネルクラス
@@ -58,8 +58,7 @@ class ParameterPanel:
                  reset_callback: Callable,
                  logger: DebugLogger,
                  config: Dict[str, Any],
-                 fractal_loader: FractalTypeLoader
-    ):
+                 fractal_loader: FractalTypeLoader):
         """ParameterPanel クラスのコンストラクタ
 
         Args:

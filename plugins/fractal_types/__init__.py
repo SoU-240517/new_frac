@@ -5,7 +5,7 @@
     - プラグインディレクトリからフラクタルタイププラグインをスキャンしてロードします。
 """
 
-from .fractal_loader import FractalTypeLoader
+from .loader import FractalTypeLoader
 
 __all__ = ['FractalTypeLoader']
 
