@@ -10,7 +10,7 @@ class FractalTypeLoader:
     フラクタルタイププラグインをロードし、管理するクラス。
     プラグインはJSON設定ファイルとPythonモジュールから構成され、
     フラクタルの計算関数とそのパラメータ設定を提供します。
-    
+
     Attributes:
         plugin_dir (str): プラグインが格納されているディレクトリのパス
         loaded_plugins (Dict[str, Dict[str, Any]]): ロードされたプラグインの情報
@@ -24,18 +24,16 @@ class FractalTypeLoader:
             logger (Optional[DebugLogger]): ロギング用インスタンス
         """
         self.logger = logger
-
         self.plugin_dir = plugin_dir
         self.loaded_plugins: Dict[str, Dict[str, Any]] = {} # プラグイン名 -> プラグイン情報の辞書
-
-        self.logger.log(LogLevel.INIT, "FractalTypeLoader クラスのインスタンス作成成功")
+        self.logger.log(LogLevel.INIT, f"FractalTypeLoader クラスのインスタンス作成成功: plugin_dir={plugin_dir}")
 
     def scan_and_load_plugins(self) -> None:
         """
         プラグインディレクトリをスキャンし、有効なプラグインをロードします。
         各プラグインディレクトリからJSON設定ファイルとPythonモジュールを読み込み、
         フラクタル計算関数を初期化します。
-        
+
         Raises:
             なし（エラーはログとして記録され、該当プラグインのロードがスキップされます）
         """
@@ -58,11 +56,11 @@ class FractalTypeLoader:
         個別のプラグインをロードします。
         JSON設定ファイルとPythonモジュールの存在を確認し、
         必要な要件を満たしている場合にのみロードを実行します。
-        
+
         Args:
             plugin_name (str): プラグインのディレクトリ名
             plugin_path (str): プラグインディレクトリの絶対パス
-        
+
         Raises:
             なし（エラーはログとして記録され、該当プラグインのロードがスキップされます）
         """
@@ -144,7 +142,7 @@ class FractalTypeLoader:
     def get_available_types(self) -> List[str]:
         """
         ロードされたフラクタルタイプの表示名のリストを返します。
-        
+
         Returns:
             List[str]: ロードされたフラクタルタイプの表示名のリスト
         """
@@ -153,10 +151,10 @@ class FractalTypeLoader:
     def get_plugin(self, name: str) -> Optional[Dict[str, Any]]:
         """
         指定された表示名に対応するプラグイン情報を返します。
-        
+
         Args:
             name (str): プラグタルタイプの表示名
-        
+
         Returns:
             Optional[Dict[str, Any]]: プラグイン情報の辞書（存在しない場合はNone）
         """
@@ -165,10 +163,10 @@ class FractalTypeLoader:
     def get_compute_function(self, name: str) -> Optional[Callable]:
         """
         指定された表示名に対応するフラクタル計算関数を返します。
-        
+
         Args:
             name (str): プラグタルタイプの表示名
-        
+
         Returns:
             Optional[Callable]: フラクタル計算関数（存在しない場合はNone）
         """
@@ -178,10 +176,10 @@ class FractalTypeLoader:
     def get_parameters_config(self, name: str) -> Optional[List[Dict[str, Any]]]:
         """
         指定された表示名に対応するパラメータ設定リストを返します。
-        
+
         Args:
             name (str): プラグタルタイプの表示名
-        
+
         Returns:
             Optional[List[Dict[str, Any]]]: パラメータ設定リスト（存在しない場合はNone）
         """
@@ -191,10 +189,10 @@ class FractalTypeLoader:
     def get_description(self, name: str) -> Optional[str]:
         """
         指定された表示名に対応する説明文を返します。
-        
+
         Args:
             name (str): プラグタルタイプの表示名
-        
+
         Returns:
             Optional[str]: プラグインの説明文（存在しない場合はNone）
         """
@@ -204,10 +202,10 @@ class FractalTypeLoader:
     def get_recommended_coloring(self, name: str) -> Optional[Dict[str, str]]:
         """
         指定された表示名に対応する推奨カラーリング設定を返します。
-        
+
         Args:
             name (str): プラグタルタイプの表示名
-        
+
         Returns:
             Optional[Dict[str, str]]: 推奨カラーリング設定（存在しない場合はNone）
         """

@@ -304,8 +304,13 @@ class ParameterPanel:
                  self.non_diverge_colormap_var.set(recommended["non_divergent_colormap"])
 
         # 6. キャンバスを再描画 (クイックモード)
-        self.render_mode = "quick"
-        self.update_callback()
+        # 初期化時 (event is None の場合) は MainWindow._start_initial_drawing で描画されるため、
+        # ここでは update_callback を呼び出さない。
+        # ユーザー操作による呼び出し (event is not None の場合) のみ描画更新を行う。
+        if event is not None:
+            self.render_mode = "quick"
+            self.update_callback()
+
         self._update_colorbars() # カラーバーも更新
 
         self.logger.log(LogLevel.SUCCESS, "フラクタルタイプ選択時の処理成功")
