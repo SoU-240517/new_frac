@@ -5,12 +5,7 @@ import threading
 import tkinter as tk
 from tkinter import ttk
 from debug import DebugLogger, LogLevel
-<<<<<<< HEAD
-from plugins.coloring_loader import ColoringPluginLoader
 from plugins.fractal_loader import FractalTypeLoader
-=======
-from plugins.fractal_types.loader import FractalTypeLoader
->>>>>>> parent of 9f03166 (ローダーの場所を変更した)
 from .canvas import FractalCanvas
 from .parameter_panel import ParameterPanel
 from .render import render_fractal
@@ -113,12 +108,6 @@ class MainWindow:
         self.fractal_loader = FractalTypeLoader(plugin_dir=self.plugin_dir, logger=self.logger)
         self.logger.log(LogLevel.CALL, "フラクタルタイププラグインのスキャンとロードを開始")
         self.fractal_loader.scan_and_load_plugins()
-
-        # 着色プラグインローダーの初期化と読み込み
-        self.logger.log(LogLevel.INIT, "ColoringPluginLoader クラスのインスタンス作成開始")
-        self.coloring_loader = ColoringPluginLoader(plugin_dirs=coloring_plugin_dirs_config, logger=self.logger)
-        self.logger.log(LogLevel.CALL, "着色プラグインのスキャンとロードを開始")
-        self.coloring_loader.scan_and_load_plugins()
 
         self.logger.log(LogLevel.CALL, "ルートウィンドウの基本設定を開始")
         self._setup_root_window()
