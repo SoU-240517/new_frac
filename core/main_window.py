@@ -5,8 +5,12 @@ import threading
 import tkinter as tk
 from tkinter import ttk
 from debug import DebugLogger, LogLevel
+<<<<<<< HEAD
 from plugins.coloring_loader import ColoringPluginLoader
 from plugins.fractal_loader import FractalTypeLoader
+=======
+from plugins.fractal_types.loader import FractalTypeLoader
+>>>>>>> parent of 9f03166 (ローダーの場所を変更した)
 from .canvas import FractalCanvas
 from .parameter_panel import ParameterPanel
 from .render import render_fractal
