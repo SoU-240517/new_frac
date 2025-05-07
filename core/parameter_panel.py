@@ -303,6 +303,11 @@ class ParameterPanel:
              if recommended.get("non_divergent_colormap"):
                  self.non_diverge_colormap_var.set(recommended["non_divergent_colormap"])
 
+        # 6. キャンバスを再描画 (クイックモード)
+        self.render_mode = "quick"
+        self.update_callback()
+        self._update_colorbars() # カラーバーも更新
+
         self.logger.log(LogLevel.SUCCESS, "フラクタルタイプ選択時の処理成功")
 
     def _clear_dynamic_parameters(self) -> None:
