@@ -55,9 +55,7 @@
         "反復回数対数マッピング": "div_logarithmic.apply_logarithmic_mapping",
         "軌道トラップ法": "div_orbit_trap.apply_orbit_trap",
         "ポテンシャル関数法": "div_potential.apply_potential",
-        "スムージング": "div_smoothing.apply_smoothing",
-        "高速スムージング": "div_smoothing.apply_smoothing",
-        "指数スムージング": "div_smoothing.apply_smoothing"
+        "スムージング": "div_smoothing.apply_smoothing"
       },
       "non_divergent": {
         "カオス軌道混合（Chaotic Orbit Mixing）": "ndiv_chaotic_orbit.apply_chaotic_orbit",

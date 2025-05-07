@@ -7,13 +7,11 @@ Coloring モジュールパッケージ
 
 from .manager import apply_coloring_algorithm
 from .gradient import compute_gradient
-from .utils import fast_smoothing   
 from .cache import ColorCache
 
 __all__ = [
     'apply_coloring_algorithm',
     'compute_gradient',
-    'fast_smoothing',
     'ColorCache'
 ]
 

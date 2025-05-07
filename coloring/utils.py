@@ -59,7 +59,7 @@ def _normalize_and_color(values: np.ndarray, cmap: Colormap, vmin: Optional[floa
 
     return colored_values
 
-def _smooth_iterations(z: np.ndarray, iters: np.ndarray, method: str = 'standard') -> np.ndarray:
+def _smooth_iterations(z: np.ndarray, iters: np.ndarray) -> np.ndarray:
     """反復回数のスムージング処理を行う
     - 複素数配列と反復回数配列を入力
     - 指定された方法で反復回数をスムージング
@@ -67,93 +67,47 @@ def _smooth_iterations(z: np.ndarray, iters: np.ndarray, method: str = 'standard
     Args:
         z (np.ndarray): 複素数配列
         iters (np.ndarray): 反復回数配列
-        method (str): スムージング方法 ('standard', 'fast', 'exponential')
 
     Returns:
         np.ndarray: スムージングされた反復回数配列
     """
-    if method == 'fast':
-        # 高速スムージング
-        out = np.zeros_like(iters, dtype=np.float32)
-        fast_smoothing(z, iters, out)
-        return out
-    elif method == 'standard':
-        # 標準スムージング
-        abs_z = np.abs(z)
-        # 発散した点 (abs(z) > 2) のマスク
-        diverged_mask = abs_z > 2
-        log2 = np.log(2)
-        # 結果を格納する配列を NaN で初期化
-        smooth_values = np.full(iters.shape, np.nan, dtype=np.float32)
+    # 標準スムージング
+    abs_z = np.abs(z)
+    # 発散した点 (abs(z) > 2) のマスク
+    diverged_mask = abs_z > 2
+    log2 = np.log(2)
+    # 結果を格納する配列を NaN で初期化
+    smooth_values = np.full(iters.shape, np.nan, dtype=np.float32)
 
-        # 発散した点が存在する場合のみ計算
-        if np.any(diverged_mask):
-            # 発散した点の z と iterations を取得
-            z_diverged = z[diverged_mask]
-            iters_diverged = iters[diverged_mask]
-            abs_z_diverged = np.abs(z_diverged) # abs_z[diverged_mask] と同じ
+    # 発散した点が存在する場合のみ計算
+    if np.any(diverged_mask):
+        # 発散した点の z と iterations を取得
+        z_diverged = z[diverged_mask]
+        iters_diverged = iters[diverged_mask]
+        abs_z_diverged = np.abs(z_diverged) # abs_z[diverged_mask] と同じ
 
-            # log(log(|z|)) の計算 (ゼロ除算、無効な値を無視)
-            with np.errstate(divide='ignore', invalid='ignore'):
-                # log(|z|) > 0 (つまり |z| > 1) が必要
-                log_abs_z = np.log(abs_z_diverged)
-                # log(log(|z|))
-                log_log_abs_z = np.log(log_abs_z)
-
-            # 計算結果が有限な点のみを対象とするマスク
-            valid_calculation_mask = np.isfinite(log_log_abs_z)
-
-            # 有効な計算ができた点に対してスムージング値を計算
-            if np.any(valid_calculation_mask):
-                calculated_smooth = (
-                    iters_diverged[valid_calculation_mask] -
-                    log_log_abs_z[valid_calculation_mask] / log2
-                )
-                # 元の配列の対応する位置に計算結果を代入
-                # smooth_values の diverged_mask が True の部分を取得し、
-                # さらにその中の valid_calculation_mask が True の部分に代入する
-                # 一時変数を使わずに直接代入する方が、マスクの形状が一致しやすい
-                temp_smooth = np.full(diverged_mask.sum(), np.nan, dtype=np.float32)
-                temp_smooth[valid_calculation_mask] = calculated_smooth.astype(np.float32)
-                smooth_values[diverged_mask] = temp_smooth
-
-        return smooth_values
-    elif method == 'exponential':
-        # 指数スムージング
-        abs_z = np.abs(z) + 1e-10  # 0除算を防ぐための微小値
+        # log(log(|z|)) の計算 (ゼロ除算、無効な値を無視)
         with np.errstate(divide='ignore', invalid='ignore'):
-            return iters - np.log(np.log(abs_z)) / np.log(2)
-    else:
-        raise ColorAlgorithmError(f"Unknown smoothing method: {method}")
+            # log(|z|) > 0 (つまり |z| > 1) が必要
+            log_abs_z = np.log(abs_z_diverged)
+            # log(log(|z|))
+            log_log_abs_z = np.log(log_abs_z)
 
-def fast_smoothing(z: np.ndarray, iters: np.ndarray, out: np.ndarray) -> None:
-    """高速スムージングアルゴリズム（インプレース処理）
-    - 高速な手法で反復回数のスムージングを行う
-    - 結果は `out` 配列に直接格納される
+        # 計算結果が有限な点のみを対象とするマスク
+        valid_calculation_mask = np.isfinite(log_log_abs_z)
 
-    Args:
-        z (np.ndarray): 複素数配列
-        iters (np.ndarray): 反復回数配列
-        out (np.ndarray): スムージング結果格納用配列 (iters と同形状)
-    """
-    with np.errstate(divide='ignore', invalid='ignore'):
-        abs_z = np.abs(z)
-        mask_smooth = abs_z > 2
-        log2 = np.log(2)
-        log_abs_z = np.log(abs_z[mask_smooth])
-        valid_log_mask = np.isfinite(log_abs_z) & (log_abs_z > 0)
-        smooth_values = np.full(iters[mask_smooth].shape, np.nan, dtype=np.float64)
+        # 有効な計算ができた点に対してスムージング値を計算
+        if np.any(valid_calculation_mask):
+            calculated_smooth = (
+                iters_diverged[valid_calculation_mask] -
+                log_log_abs_z[valid_calculation_mask] / log2
+            )
+            # 元の配列の対応する位置に計算結果を代入
+            # smooth_values の diverged_mask が True の部分を取得し、
+            # さらにその中の valid_calculation_mask が True の部分に代入する
+            # 一時変数を使わずに直接代入する方が、マスクの形状が一致しやすい
+            temp_smooth = np.full(diverged_mask.sum(), np.nan, dtype=np.float32)
+            temp_smooth[valid_calculation_mask] = calculated_smooth.astype(np.float32)
+            smooth_values[diverged_mask] = temp_smooth
 
-        if np.any(valid_log_mask):
-            log_log_abs_z = np.log(log_abs_z[valid_log_mask])
-            valid_log_log_mask = np.isfinite(log_log_abs_z)
-            if np.any(valid_log_log_mask):
-                smooth_values[valid_log_mask][valid_log_log_mask] = (
-                    iters[mask_smooth][valid_log_mask][valid_log_log_mask] -
-                    log_log_abs_z[valid_log_log_mask] / log2
-                )
-
-        out[...] = iters.astype(np.float32)
-        final_smooth_mask = np.zeros_like(mask_smooth, dtype=bool)
-        final_smooth_mask[mask_smooth] = valid_log_mask & ~np.isnan(smooth_values)
-        out[final_smooth_mask] = smooth_values[~np.isnan(smooth_values)].astype(np.float32)
+    return smooth_values

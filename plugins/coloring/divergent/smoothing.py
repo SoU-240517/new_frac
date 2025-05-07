@@ -2,7 +2,7 @@ import numpy as np
 from matplotlib.colors import Colormap
 from typing import Dict
 from debug import DebugLogger, LogLevel
-from coloring.utils import _smooth_iterations, _normalize_and_color, fast_smoothing, ColorAlgorithmError
+from coloring.utils import _smooth_iterations, _normalize_and_color, ColorAlgorithmError
 
 def apply_smoothing(
     colored: np.ndarray,
@@ -11,7 +11,6 @@ def apply_smoothing(
     z_vals: np.ndarray,
     cmap_func: Colormap,
     params: Dict,
-    smoothing_method: str, # 'standard', 'fast', or 'exponential'
     logger: DebugLogger
     ) -> None:
     """発散領域に対して、指定されたスムージングメソッドを用いて反復回数に基づくカラーリングを適用する (インプレース処理)
@@ -26,14 +25,12 @@ def apply_smoothing(
         z_vals (np.ndarray): 計算終了時の複素数値配列 (形状: (height, width), dtype=complex)
         cmap_func (Colormap): 発散部分用のカラーマップ関数
         params (Dict): 計算パラメータ辞書 (現在は未使用だが将来的な拡張のため)
-        smoothing_method (str): 使用するスムージングの種類 ('standard', 'fast', 'exponential')
         logger (DebugLogger): デバッグログを出力するためのロガーインスタンス
     """
     # 指定された方法でスムージング処理を実行
     try:
         # utils モジュールの _smooth_iterations を呼び出す
-        smooth_iter = _smooth_iterations(z_vals, iterations, method=smoothing_method)
-        logger.log(LogLevel.DEBUG, f"スムージング方法: {smoothing_method}")
+        smooth_iter = _smooth_iterations(z_vals, iterations)
     except ColorAlgorithmError as e:
         logger.log(LogLevel.ERROR, f"スムージング計算中にエラーが発生しました: {e}")
         # エラーが発生した場合、このアルゴリズムでの着色はスキップ
@@ -50,7 +47,6 @@ def apply_smoothing(
 
     # 有効なスムージング値が存在するかチェック
     if valid_smooth_values.size == 0:
-        logger.log(LogLevel.WARNING, f"発散点に対して有限平滑反復値が見つからないため着色をスキップ: {smoothing_method}")
         # 有効な値がない場合は着色できないため、ここで処理を終了
         return
 

@@ -151,17 +151,9 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger, c
 
             try:
                 # アルゴリズムに応じて必要な引数を渡す
-                if divergent_algo_name in ['スムージング', '高速スムージング', '指数スムージング']:
-                    smooth_method_map = {
-                        'スムージング': 'standard',
-                        '高速スムージング': 'fast',
-                        '指数スムージング': 'exponential'
-                    }
-                    smooth_type = smooth_method_map.get(divergent_algo_name, 'standard')
-                    smooth_method = params.get('smoothing_method', smooth_type)
-                    logger.log(LogLevel.DEBUG, f"Smoothing method: {smooth_method}")
+                if divergent_algo_name == 'スムージング':
                     # Smoothing 関数は mask, iterations, z_vals, cmap, params, method, logger を受け取る想定
-                    divergent_algo(colored, divergent_mask, iterations, z_vals, cmap_func, params, smooth_method, logger)
+                    divergent_algo(colored, divergent_mask, iterations, z_vals, cmap_func, params, logger)
                 elif divergent_algo_name in ['距離カラーリング', '角度カラーリング', 'ポテンシャル関数法']:
                     # これらは z_vals が必要
                     divergent_algo(colored, divergent_mask, z_vals, cmap_func, params, logger)
