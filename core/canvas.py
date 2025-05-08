@@ -55,6 +55,7 @@ class FractalCanvas:
         self.logger = logger
         self.parent = master
         self.config = config
+
         self.facecolor = self.config.get("canvas_settings", {}).get("facecolor", "black")
         self.logger.log(LogLevel.DEBUG, "設定読込", {"facecolor": self.facecolor})
 
@@ -207,7 +208,7 @@ class FractalCanvas:
         # 16:9のアスペクト比を維持するための計算
         width = params["width"]
         height = width * (9 / 16) # 16:9のアスペクト比を維持
-        self.logger.log(LogLevel.SUCCESS, f"描画範囲の計算結果: width = {width:.4f}, height = {height:.4f} (目標16:9)")
+        self.logger.log(LogLevel.DEBUG, f"描画範囲の計算結果: width = {width:.4f}, height = {height:.4f} (目標16:9)")
 
         self.ax.set_aspect("auto") # アスペクト比を自動調整
 

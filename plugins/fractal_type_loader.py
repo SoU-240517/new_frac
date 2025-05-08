@@ -38,17 +38,16 @@ class FractalTypeLoader:
         """
         self.loaded_plugins = {} # ロード前にクリア
 
-        self.logger.log(LogLevel.INFO, "プラグインロード開始")
         if not os.path.isdir(self.plugin_dir):
             self.logger.log(LogLevel.ERROR, "プラグインディレクトリなし", {"plugin_dir": self.plugin_dir})
             return
 
+        self.logger.log(LogLevel.INFO, "プラグインロード開始")
         for item in os.scandir(self.plugin_dir):
             if item.is_dir():
                 plugin_name = item.name
                 self.logger.log(LogLevel.INFO, "プラグイン検出", {"plugin_name": plugin_name})
                 self._load_single_plugin(plugin_name, item.path)
-
         self.logger.log(LogLevel.SUCCESS, f"{len(self.loaded_plugins)} 個のプラグインのロードに成功")
 
     def _load_single_plugin(self, plugin_name: str, plugin_path: str) -> None:
@@ -94,7 +93,6 @@ class FractalTypeLoader:
                 return
             if config["module_name"] != plugin_name:
                  self.logger.log(LogLevel.WARNING, f"{plugin_name} : JSON の module_name がディレクトリ名と不一致: {config['module_name']}")
-
         except json.JSONDecodeError as e:
             self.logger.log(LogLevel.ERROR, f"{plugin_name} : JSON 解析エラーによりスキップ: {e}")
             return
@@ -157,7 +155,7 @@ class FractalTypeLoader:
         指定された表示名に対応するプラグイン情報を返します。
 
         Args:
-            name (str): プラグタルタイプの表示名
+            name (str): フラクタルタイプの表示名
 
         Returns:
             Optional[Dict[str, Any]]: プラグイン情報の辞書（存在しない場合はNone）
@@ -169,7 +167,7 @@ class FractalTypeLoader:
         指定された表示名に対応するフラクタル計算関数を返します。
 
         Args:
-            name (str): プラグタルタイプの表示名
+            name (str): フラクタルタイプの表示名
 
         Returns:
             Optional[Callable]: フラクタル計算関数（存在しない場合はNone）
@@ -182,7 +180,7 @@ class FractalTypeLoader:
         指定された表示名に対応するパラメータ設定リストを返します。
 
         Args:
-            name (str): プラグタルタイプの表示名
+            name (str): フラクタルタイプの表示名
 
         Returns:
             Optional[List[Dict[str, Any]]]: パラメータ設定リスト（存在しない場合はNone）
@@ -195,7 +193,7 @@ class FractalTypeLoader:
         指定された表示名に対応する説明文を返します。
 
         Args:
-            name (str): プラグタルタイプの表示名
+            name (str): フラクタルタイプの表示名
 
         Returns:
             Optional[str]: プラグインの説明文（存在しない場合はNone）
@@ -208,7 +206,7 @@ class FractalTypeLoader:
         指定された表示名に対応する推奨カラーリング設定を返します。
 
         Args:
-            name (str): プラグタルタイプの表示名
+            name (str): フラクタルタイプの表示名
 
         Returns:
             Optional[Dict[str, str]]: 推奨カラーリング設定（存在しない場合はNone）

@@ -112,14 +112,17 @@ class EventHandler:
 
         # 値のバリデーション (例: sensitivity は 0より大きく1以下)
         if not (0 < self.rotation_sensitivity <= 1.0):
-            self.logger.log(LogLevel.WARNING, f"設定ファイルの rotation_sensitivity ({self.rotation_sensitivity}) が無効 (0<value<=1.0)。デフォルト値 ({default_rotation_sensitivity}) を使用。")
+            self.logger.log(LogLevel.WARNING,
+                    f"設定ファイルの rotation_sensitivity ({self.rotation_sensitivity}) が無効 (0<value<=1.0)。デフォルト値 ({default_rotation_sensitivity}) を使用")
             self.rotation_sensitivity = default_rotation_sensitivity
         if self.rotation_throttle_interval < 0:
-             self.logger.log(LogLevel.WARNING, f"設定ファイルの rotation_throttle_interval ({self.rotation_throttle_interval}) が無効 (<0)。デフォルト値 ({default_rotation_throttle_interval}) を使用。")
+             self.logger.log(LogLevel.WARNING,
+                    f"設定ファイルの rotation_throttle_interval ({self.rotation_throttle_interval}) が無効 (<0)。デフォルト値 ({default_rotation_throttle_interval}) を使用")
              self.rotation_throttle_interval = default_rotation_throttle_interval
         # threshold は負の値も許容するかもしれないので、バリデーションは緩め
 
-        self.logger.log(LogLevel.DEBUG, f"回転設定: threshold={self.rotation_threshold}, sensitivity={self.rotation_sensitivity}, interval={self.rotation_throttle_interval:.5f}")
+        self.logger.log(LogLevel.DEBUG,
+                    f"回転設定: rotation_threshold={self.rotation_threshold}, rotation_sensitivity={self.rotation_sensitivity}, rotation_throttle_interval={self.rotation_throttle_interval:.5f}")
         # --- 設定ファイル読み込みここまで ---
 
         # --- 内部状態 ---
@@ -190,11 +193,9 @@ class EventHandler:
         """
         validation_result = self.validator.validate_event(event, self.zoom_selector.ax)
         if not validation_result.is_press_valid:
-            # self.logger.log(LogLevel.ERROR, "基本検証失敗：処理中断") # ログレベル調整 or コメントアウト
             return
 
         state = self.state_handler.state
-        # self.logger.log(LogLevel.DEBUG, f"状態取得完了：{state.name}, ボタン={event.button}") # ログレベル調整
 
         if state == ZoomState.NO_RECT:
             if event.button == MouseButton.LEFT:

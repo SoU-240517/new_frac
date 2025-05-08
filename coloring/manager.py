@@ -80,7 +80,7 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger, c
     cache_params = params.copy()
     cached_image = cache.get_cache(cache_params)
     if cached_image is not None:
-        logger.log(LogLevel.INFO, "キャッシュされた画像を返します。")
+        logger.log(LogLevel.INFO, "キャッシュされた画像を返す")
         return cached_image
 
     # --- 2. アルゴリズムの動的読み込み ---
@@ -110,11 +110,11 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger, c
 
     # 必須データの存在チェック
     if iterations is None or mask is None or z_vals is None:
-        logger.log(LogLevel.CRITICAL, "着色に必要なデータ (iterations, mask, z_vals) が results 辞書にありません。")
+        logger.log(LogLevel.CRITICAL, "着色に必要なデータ (iterations, mask, z_vals) が results 辞書にない")
         raise ColorAlgorithmError("Invalid fractal results data for coloring.")
     # 形状チェック
     if not (iterations.shape == mask.shape == z_vals.shape):
-         logger.log(LogLevel.CRITICAL, f"着色データの形状不一致: iterations={iterations.shape}, mask={mask.shape}, z_vals={z_vals.shape}")
+         logger.log(LogLevel.CRITICAL, "着色データの形状不一致", {"iterations": iterations.shape, "mask": mask.shape, "z_vals": z_vals.shape})
          raise ColorAlgorithmError("Input data shapes for coloring do not match.")
 
     # マスクの準備
@@ -142,32 +142,23 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger, c
 
     # --- 3. 着色処理の実行 ---
     try:
-        start_time = time.time() # perf_counter の方がより正確
         start_perf_counter = time.perf_counter()
 
         # --- 3.1 発散部分の着色 ---
         if np.any(divergent_mask): # 処理対象が存在するかチェック
-            logger.log(LogLevel.INFO, "着色開始 発散部", {"divergent_algo_name": divergent_algo_name})
-
             try:
                 # アルゴリズムに応じて必要な引数を渡す
-                if divergent_algo_name == 'スムージング':
-                    # Smoothing 関数は mask, iterations, z_vals, cmap, params, method, logger を受け取る想定
+                if divergent_algo_name in ['スムージング', '軌道トラップ法']:
                     divergent_algo(colored, divergent_mask, iterations, z_vals, cmap_func, params, logger)
                 elif divergent_algo_name in ['距離カラーリング', '角度カラーリング', 'ポテンシャル関数法']:
-                    # これらは z_vals が必要
                     divergent_algo(colored, divergent_mask, z_vals, cmap_func, params, logger)
-                elif divergent_algo_name == '軌道トラップ法':
-                   # 軌道トラップ法は iterations と z_vals が必要
-                   divergent_algo(colored, divergent_mask, iterations, z_vals, cmap_func, params, logger)
                 else: # Linear, Logarithmic, Histogram など
-                    # これらは iterations が必要
                     divergent_algo(colored, divergent_mask, iterations, cmap_func, params, logger)
                 logger.log(LogLevel.SUCCESS, "着色完了 発散部", {"divergent_algo_name": divergent_algo_name})
             except Exception as algo_e:
                 logger.log(LogLevel.ERROR, f"発散アルゴリズム '{divergent_algo_name}' 実行中にエラー: {algo_e}")
                 # エラーが発生した場合、この領域の着色はスキップされるか、
-                # またはデフォルトの安全なアルゴリズムで再試行するなどの対策が必要
+                # デフォルトの安全なアルゴリズムで再試行するなどの対策が必要
                 # ここではエラーを上に投げる
                 raise ColorAlgorithmError(f"Error during divergent algorithm '{divergent_algo_name}'.") from algo_e
         else:
@@ -175,7 +166,6 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger, c
 
         # --- 3.2 非発散部分の着色 ---
         if np.any(non_divergent_mask): # 処理対象が存在するかチェック
-            logger.log(LogLevel.INFO, "着色開始 非発散部", {"non_divergent_algo_name": non_divergent_algo_name})
 
             try:
                 # アルゴリズムに応じて必要な引数を渡す
@@ -184,18 +174,15 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger, c
                     logger.log(LogLevel.DEBUG, "グラデーション値を計算します...")
                     gradient_values = compute_gradient(image_shape, logger)
                     logger.log(LogLevel.DEBUG, "グラデーション値 計算完了", {"shape": gradient_values.shape})
-                    # Gradient 関数は mask, iterations, gradient_values, cmap, params, logger を受け取る想定
                     non_divergent_algo(colored, non_divergent_mask, iterations, gradient_values, non_cmap_func, params, logger)
                 elif non_divergent_algo_name == '統計分布（Histogram Equalization）':
-                     # 統計分布は iterations が必要
                     non_divergent_algo(colored, non_divergent_mask, iterations, non_cmap_func, params, logger)
                 elif non_divergent_algo_name == '単色':
-                     # 単色は params のみ必要 (色情報が params に含まれる想定)
-                     non_divergent_algo(colored, non_divergent_mask, params, logger)
+                    non_divergent_algo(colored, non_divergent_mask, params, logger)
                 elif non_divergent_algo_name in ['パラメータ(C)', 'パラメータ(Z)']:
-                     # パラメータカラーリングは mask, z_vals, cmap, params, logger を受け取る想定
-                     # 関数内部で C か Z かを params['fractal_type'] などで判断する
-                     non_divergent_algo(colored, non_divergent_mask, z_vals, non_cmap_func, params, logger)
+                    # パラメータカラーリングは mask, z_vals, cmap, params, logger を受け取る想定
+                    # 関数内部で C か Z かを params['fractal_type'] などで判断する
+                    non_divergent_algo(colored, non_divergent_mask, z_vals, non_cmap_func, params, logger)
                 else:
                     # 他の多くの非発散アルゴリズムは z_vals が必要と想定
                     non_divergent_algo(colored, non_divergent_mask, z_vals, non_cmap_func, params, logger)
@@ -204,10 +191,10 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger, c
                 logger.log(LogLevel.ERROR, f"非発散アルゴリズム '{non_divergent_algo_name}' 実行中にエラー: {algo_e}")
                 raise ColorAlgorithmError(f"Error during non-divergent algorithm '{non_divergent_algo_name}'.") from algo_e
         else:
-            logger.log(LogLevel.INFO, "非発散領域が存在しないため、非発散部分の着色をスキップします。")
+            logger.log(LogLevel.INFO, "非発散領域が存在しないため、着色をスキップ")
 
         end_perf_counter = time.perf_counter()
-        logger.log(LogLevel.SUCCESS, f"全着色処理完了 ({end_perf_counter - start_perf_counter:.4f} 秒)")
+        logger.log(LogLevel.INFO, f"全着色処理完了 ({end_perf_counter - start_perf_counter:.4f} 秒)")
 
         # --- 4. 結果のキャッシュと返却 ---
         # キャッシュに保存

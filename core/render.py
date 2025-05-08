@@ -40,33 +40,25 @@ def _calculate_dynamic_resolution(width: float, config: Dict[str, Any], logger: 
     """
     # 設定ファイルから動的解像度のパラメータを取得
     dr_config = config.get("fractal_settings", {}).get("dynamic_resolution", {})
-    # 各パラメータにフォールバック用のデフォルト値を設定
     base_res = dr_config.get("base", 600)
     min_res = dr_config.get("min", 400)
     max_res = dr_config.get("max", 1200)
     log_factor = dr_config.get("log_factor", 5.0) # 対数計算用係数
     logger.log(LogLevel.DEBUG, "設定読込：動的解像度パラメータ", {"base_res": base_res, "min_res": min_res, "max_res": max_res, "log_factor": log_factor})
 
-    # 対数スケールでズームファクターを計算
-    # width=4.0 を基準 (widthが大きいほどズームアウト)
-    # width が小さい (ズームイン) ほど zoom_factor は大きくなる
-    # +1 は log(1)=0 を避けるため & width=基準値 で zoom_factor=log(factor/基準値+1) となるように
-    # 例: width=4.0, factor=5.0 -> log(5/4+1) = log(2.25) approx 0.81
-    #     width=1.0, factor=5.0 -> log(5/1+1) = log(6)   approx 1.79 (ズームイン)
-    #     width=0.1, factor=5.0 -> log(5/0.1+1)= log(51)  approx 3.93 (さらにズームイン)
-    base_width_for_log = 4.0 # この値も設定ファイル化可能
-    # widthが非常に小さい場合に log 引数が負にならないようにクリップ
+    # width が非常に小さい場合に log 引数が負にならないようにクリップ
     safe_width = max(width, 1e-9) # ゼロ割防止も兼ねる
     zoom_factor_log = np.log(log_factor / safe_width + 1.0)
-    logger.log(LogLevel.DEBUG, f"計算された対数ズームファクター: {zoom_factor_log:.3f} (width={width})")
+    logger.log(LogLevel.DEBUG, f"対数ズームファクター計算結果: {zoom_factor_log:.3f} (width={width})")
 
-    # zoom_factorにbase_resを掛けて基本解像度を決定
+    # zoom_factor に base_res を掛けて基本解像度を決定
     resolution = int(base_res * zoom_factor_log)
     logger.log(LogLevel.DEBUG, "基本解像度計算結果", {"resolution": resolution})
 
     # 最小解像度と最大解像度でクリップ
     final_resolution = np.clip(resolution, min_res, max_res)
     logger.log(LogLevel.DEBUG, f"最終動的解像度: {final_resolution} (min={min_res}, max={max_res} でクリップ)")
+
     return final_resolution
 
 def _create_fractal_grid(params: dict, super_resolution_x: int, super_resolution_y: int, logger: DebugLogger) -> np.ndarray:
@@ -121,7 +113,6 @@ def _create_fractal_grid(params: dict, super_resolution_x: int, super_resolution
         Z_rotated_relative = Z_relative * rotation_operator
         # 回転後の座標を元の中心に戻す
         Z = Z_rotated_relative + center_complex
-        logger.log(LogLevel.SUCCESS, "グリッド回転適用完了")
 
     return Z
 
@@ -166,67 +157,37 @@ def _compute_fractal(
     logger.log(LogLevel.INFO, "フラクタル計算開始", {"fractal_type_name": fractal_type_name, "max_iter": max_iter})
 
     # パラメータから計算関数に必要な引数を抽出する
-    # ここは少し工夫が必要。現状の compute_julia と compute_mandelbrot の引数シグネチャが異なるため。
-    # 案1: 各計算関数が必要な引数を params 辞書から **kwargs のように受け取るように修正する
-    # 案2: タイプに応じて必要な引数をここで組み立てる (あまり良くない)
-    # 案3: 計算関数に渡す引数を標準化する (例: compute(Z, max_iter, specific_params: dict, logger))
-
-    # --- 案1 or 案3 を想定した実装例 (関数側が **params で受け取る or 標準化されている場合) ---
     try:
-        # 計算関数が必要とするパラメータを params から抽出
-        # inspect を使って関数の引数を調べることもできるが、複雑になる
-        # ここでは params 全体を渡すか、必要なキーだけ渡すことを想定
-        # 例: Julia なら C を、Mandelbrot なら Z0 を params から取り出して渡す必要がある
-
-        # シンプルに、計算関数が必要なものを params から取り出すと仮定
-        # (計算関数側で params.get("c_real", default) のようにアクセスする)
-        # Mandelbrot の Z0 は params["z0_real"], params["z0_imag"] として渡ってくる想定
-        # Julia の C は params["c_real"], params["c_imag"] として渡ってくる想定
-
-        # compute_julia(Z, C, max_iter, logger)
-        # compute_mandelbrot(Z, Z0, max_iter, logger)
-        # に合わせるための引数準備
-
         func_args = [Z] # 最初の引数は Z グリッド
 
-        # Julia の場合
-        if fractal_type_name == "Julia": # プラグイン名で判定するのは良くないかも？ 関数オブジェクトで判定？
-             c_real = params.get("c_real", -0.8) # ParameterPanel で取得した値
+        if fractal_type_name == "Julia":
+             c_real = params.get("c_real", -0.8)
              c_imag = params.get("c_imag", 0.156)
-             func_args.append(complex(c_real, c_imag)) # 第2引数 C
-        # Mandelbrot の場合
+             func_args.append(complex(c_real, c_imag))
         elif fractal_type_name == "Mandelbrot":
-             z0_real = params.get("z0_real", 0.0) # ParameterPanel で取得した値
+             z0_real = params.get("z0_real", 0.0)
              z0_imag = params.get("z0_imag", 0.0)
-             func_args.append(complex(z0_real, z0_imag)) # 第2引数 Z0
-        # 他のプラグインの場合は、引数をどう渡すかルールを決める必要がある
-        # else:
-        #    logger.log(LogLevel.WARNING, f"未知のフラクタルタイプ '{fractal_type_name}' のための引数準備ロジックがありません。")
-            # プラグイン固有パラメータを辞書で渡す？
-            # specific_params = {k: v for k, v in params.items() if k not in [...共通パラメータ...]}
-            # func_args.append(specific_params) # 第2引数として辞書を渡すルール？
-
-        func_args.append(max_iter) # 第3引数 max_iter
-        func_args.append(logger)   # 第4引数 logger
+             func_args.append(complex(z0_real, z0_imag))
+        func_args.append(max_iter)
+        func_args.append(logger)
 
         # 計算関数を呼び出し
-        results = compute_function(*func_args) # 引数を展開して渡す
+        results = compute_function(*func_args)
 
         # results が辞書であることを確認 (より厳密なチェックが望ましい)
         if not isinstance(results, dict):
-             logger.log(LogLevel.ERROR, f"フラクタル計算関数 '{compute_function.__name__}' が辞書を返しませんでした。")
+             logger.log(LogLevel.ERROR, f"フラクタル計算関数 '{compute_function.__name__}' が辞書を返さない")
              return None
 
         logger.log(LogLevel.SUCCESS, f"{fractal_type_name} 計算完了 ({time.perf_counter() - start_time:.3f}秒)")
         return results
 
     except TypeError as e:
-         logger.log(LogLevel.CRITICAL, f"フラクタル計算関数の呼び出しで TypeError: {e}。引数を確認してください。")
+         logger.log(LogLevel.CRITICAL, f"フラクタル計算関数の呼び出しで TypeError: {e}。引数の確認が必要")
          return None
     except Exception as e:
          logger.log(LogLevel.CRITICAL, f"フラクタル計算中に予期せぬエラー ({fractal_type_name}): {e}")
          return None
-    # ---------------------------------------------------------------------------------------
 
 def _downsample_image(
     high_res_image: np.ndarray,
@@ -335,12 +296,15 @@ def render_fractal(
     current_width = params.get("width", 4.0) # 現在の描画範囲の幅
 
     dpi = config.get("canvas_settings", {}).get("config_dpi", 100)
+    logger.log(LogLevel.DEBUG, "設定読込", {"dpi": dpi})
 
     # 動的解像度計算 (config を渡す)
     resolution = _calculate_dynamic_resolution(current_width, config, logger)
 
     # 簡易モードでは解像度をさらに下げる
     quick_mode_resolution_factor = config.get("fractal_settings", {}).get("quick_mode_resolution_factor", 0.5)
+    logger.log(LogLevel.DEBUG, "設定読込", {"quick_mode_resolution_factor": quick_mode_resolution_factor})
+
     if render_mode == "quick":
         resolution = int(resolution * quick_mode_resolution_factor)
         # 最小解像度を下回らないようにする
@@ -351,39 +315,32 @@ def render_fractal(
     zoom_threshold = ss_config.get("zoom_threshold", 0.8)
     low_samples = ss_config.get("low_samples", 2)
     high_samples = ss_config.get("high_samples", 4)
+    logger.log(LogLevel.DEBUG, "設定読込", {"zoom_threshold": zoom_threshold, "low_samples": low_samples, "high_samples": high_samples})
 
     zoom_level = 4.0 / current_width # 基準幅4.0に対する比率 (大きいほどズームイン)
 
-    # 簡易モードではアンチエイリアシング無効 (サンプル数=1)
+    # 簡易モードではアンチエイリアシング無効 (サンプル数 = 1)
     if render_mode == "quick":
         samples_per_pixel = config.get("canvas_settings", {}).get("samples_per_pixel", 1)
+        logger.log(LogLevel.DEBUG, "設定読込", {"samples_per_pixel": samples_per_pixel})
     else:
         # ズームレベルに応じてサンプル数を決定
         samples_per_pixel = high_samples if zoom_level >= zoom_threshold else low_samples
 
     logger.log(LogLevel.DEBUG, f"描画モード: {render_mode}, 解像度: {resolution}x{resolution}, サンプル数: {samples_per_pixel} (ズームレベル={zoom_level:.2f}, 閾値={zoom_threshold})")
 
-    # 高解像度グリッドサイズ
-    resolution = _calculate_dynamic_resolution(current_width, config, logger) # 解像度再計算 (上とかぶる？要確認)
-    if render_mode == "quick":
-        resolution = int(resolution * config.get("fractal_settings", {}).get("quick_mode_resolution_factor", 0.5))
-        resolution = max(resolution, config.get("canvas_settings", {}).get("config_dpi", 100))
-    samples_per_pixel = 1 if render_mode == "quick" else \
-                        (config.get("fractal_settings",{}).get("super_sampling",{}).get("high_samples", 4) \
-                         if (4.0 / current_width) >= config.get("fractal_settings",{}).get("super_sampling",{}).get("zoom_threshold", 0.8) \
-                         else config.get("fractal_settings",{}).get("super_sampling",{}).get("low_samples", 2))
-
+    # スーパーサンプリング
     super_resolution_x = resolution * samples_per_pixel
     super_resolution_y = resolution * samples_per_pixel
 
     # グリッド作成
     Z = _create_fractal_grid(params, super_resolution_x, super_resolution_y, logger)
-    logger.log(LogLevel.SUCCESS, "フラクタル計算用の複素数グリッドを作成完了", {"shape": Z.shape})
+    logger.log(LogLevel.DEBUG, "フラクタル計算用の複素数グリッドを作成完了", {"shape": Z.shape})
 
     # フラクタル計算 (計算関数を渡す)
     results = _compute_fractal(Z, params, compute_function, logger)
 
-    # --- 追加: 計算失敗時の処理 ---
+    # 計算失敗時の処理
     if results is None:
         logger.log(LogLevel.ERROR, "フラクタルの計算に失敗したのでエラー画像を表示")
         # エラー画像 (例: 赤色) を返す
@@ -392,19 +349,17 @@ def render_fractal(
         final_image = np.full((resolution, resolution, 4), error_color, dtype=np.uint8)
         del Z # メモリ解放
         return final_image
-    # ---------------------------
 
     try:
-        # 着色処理 (変更なし)
+        # 着色処理
         colored_high_res = manager.apply_coloring_algorithm(results, params, logger, config)
-        # ... (着色エラーハンドリング) ...
+        # 着色エラーハンドリング
         if not isinstance(colored_high_res, np.ndarray):
-             raise TypeError(f"着色処理がndarrayを返しませんでした: {type(colored_high_res)}")
+             raise TypeError(f"着色処理がndarrayを返さない: {type(colored_high_res)}")
         if colored_high_res.ndim != 3 or colored_high_res.shape[2] != 4:
-             raise ValueError(f"着色処理が期待されるRGBA形状を返しませんでした: {colored_high_res.shape}")
-
+             raise ValueError(f"着色処理が期待されるRGBA形状を返さない: {colored_high_res.shape}")
     except Exception as e:
-        logger.log(LogLevel.CRITICAL, f"着色処理中にエラーが発生しました: {e}")
+        logger.log(LogLevel.CRITICAL, "着色処理中にエラー発生", {"message": e})
         # エラー画像 (例: 紫色) を返す
         error_color = [128, 0, 128, 255] # 紫色
         final_image = np.full((resolution, resolution, 4), error_color, dtype=np.uint8)

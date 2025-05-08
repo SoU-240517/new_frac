@@ -365,7 +365,7 @@ class EventHandlersPrivate:
         # rect_props = self.core.rect_manager.get_properties() # 不要になる
         # 最後に計算されたピクセルサイズが有効かチェック
         if not self.core.rect_manager.is_last_calculated_size_valid():
-            self.core.logger.log(LogLevel.WARNING, "リサイズ中断: 無効なサイズになったためUndo試行")
+            self.core.logger.log(LogLevel.WARNING, "リサイズ中断: 無効なサイズになったため Undo 試行")
             self.core.utils._undo_last_edit()
             if not self.core.rect_manager.get_rect(): # Undoの結果、矩形が消えた場合
                 final_state = ZoomState.NO_RECT
@@ -424,7 +424,7 @@ class EventHandlersPrivate:
         if not self.core._alt_pressed: # Altキーが押されていなかったら
             self.core._alt_pressed = True
             if self.core.state_handler.state == ZoomState.EDIT:
-                self.core.logger.log(LogLevel.DEBUG, "Alt押下: EDIT状態")
+                self.core.logger.log(LogLevel.DEBUG, "Alt 押下: EDIT 状態")
 
     def handle_key_alt_release(self, event: KeyEvent) -> None:
         """Altキー解放処理
@@ -437,5 +437,5 @@ class EventHandlersPrivate:
         if self.core._alt_pressed: # Altキーが押されていたら
             self.core._alt_pressed = False
             if self.core.state_handler.state == ZoomState.EDIT:
-                self.core.logger.log(LogLevel.DEBUG, "Alt解放: EDIT状態")
+                self.core.logger.log(LogLevel.DEBUG, "Alt 解放: EDIT 状態")
     # --- Key イベントハンドラ ここまで ---

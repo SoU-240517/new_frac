@@ -90,7 +90,6 @@ class ParameterPanel:
 
         # カラーマップリストを設定ファイルから取得
         self.colormaps = self.config.get("coloring_options", {}).get("available_colormaps", [])
-        self.logger.log(LogLevel.DEBUG, "設定読込", {"colormaps": self.colormaps})
         if not self.colormaps:
             # 設定ファイルにない、または空の場合のフォールバック処理
             self.logger.log(LogLevel.WARNING, "設定ファイルにカラーマップリストが無いか空なので、matplotlibから取得する")
@@ -104,7 +103,7 @@ class ParameterPanel:
                 self.logger.log(LogLevel.ERROR, "matplotlib からカラーマップ取得中にエラー", {"message": e})
                 self.colormaps = [] # その他のエラーでも空リスト
 
-        self.logger.log(LogLevel.DEBUG, f"カラーマップロード数: {len(self.colormaps)} 個")
+        self.logger.log(LogLevel.INFO, f"カラーマップロード数: {len(self.colormaps)} 個")
 
         self._setup_panel()
 #        self._update_colorbars() # 初期カラーバー表示
@@ -165,51 +164,6 @@ class ParameterPanel:
         self.logger.log(LogLevel.DEBUG, "初期設定：フラクタルタイプ", {"default_fractal_type": default_fractal_type})
 
         return row + 1
-
-    def _setup_formula_section(self, start_row: int) -> int:
-        """数式表示セクションのセットアップ
-
-        数式を表示するラベルを設定します。
-
-        Args:
-            start_row (int): セクションの開始行
-
-        Returns:
-            int: 次のセクションの開始行
-        """
-        row = start_row
-
-        # 設定ファイルからフォント名とサイズを取得
-        Panel_font = self.config.get("fractal_settings", {}).get("parameter_panel", {}).get("panel_font", "Courier")
-        panel_font_size = self.config.get("fractal_settings", {}).get("parameter_panel", {}).get("panel_font_size", 10)
-        self.logger.log(LogLevel.DEBUG, "設定読込", {"Panel_font": Panel_font, "panel_font_size": panel_font_size})
-
-        self.formula_var = tk.StringVar()
-        self.formula_label = ttk.Label(self.parent, textvariable=self.formula_var, font=(Panel_font, panel_font_size), wraplength=self.config.get("ui_settings",{}).get("parameter_panel_width", 300)-20) # 折返し追加
-        self.formula_label.grid(row=row, column=0, columnspan=2, sticky=tk.W, padx=10, pady=2)
-
-        return row + 1
-
-    def _setup_dynamic_parameter_frame(self, start_row: int) -> int:
-        """動的パラメータフレームのセットアップ
-
-        フラクタルタイプに応じて動的に変化するパラメータウィジェットを
-        配置するためのフレームを作成します。
-
-        Args:
-            start_row (int): セクションの開始行
-
-        Returns:
-            int: 次のセクションの開始行
-        """
-        row = start_row
-        self.param_frame = ttk.Frame(self.parent)
-        self.param_frame.grid(row=row, column=0, columnspan=2, sticky="nsew", padx=5)
-
-        # フレーム内の列設定 (ラベルと入力欄)
-        self.param_frame.columnconfigure(1, weight=1)
-
-        return row + 1 # フレームが1行占有
 
     def _on_fractal_type_selected(self, event: Optional[tk.Event] = None) -> None:
         """フラクタルタイプが選択されたときの処理
@@ -317,6 +271,51 @@ class ParameterPanel:
         self.param_widgets.clear()
         # max_iter_var はクリアしない（クラス変数として保持）
 
+    def _setup_formula_section(self, start_row: int) -> int:
+        """数式表示セクションのセットアップ
+
+        数式を表示するラベルを設定します。
+
+        Args:
+            start_row (int): セクションの開始行
+
+        Returns:
+            int: 次のセクションの開始行
+        """
+        row = start_row
+
+        # 設定ファイルからフォント名とサイズを取得
+        Panel_font = self.config.get("fractal_settings", {}).get("parameter_panel", {}).get("panel_font", "Courier")
+        panel_font_size = self.config.get("fractal_settings", {}).get("parameter_panel", {}).get("panel_font_size", 10)
+        self.logger.log(LogLevel.DEBUG, "設定読込", {"Panel_font": Panel_font, "panel_font_size": panel_font_size})
+
+        self.formula_var = tk.StringVar()
+        self.formula_label = ttk.Label(self.parent, textvariable=self.formula_var, font=(Panel_font, panel_font_size), wraplength=self.config.get("ui_settings",{}).get("parameter_panel_width", 300)-20) # 折返し追加
+        self.formula_label.grid(row=row, column=0, columnspan=2, sticky=tk.W, padx=10, pady=2)
+
+        return row + 1
+
+    def _setup_dynamic_parameter_frame(self, start_row: int) -> int:
+        """動的パラメータフレームのセットアップ
+
+        フラクタルタイプに応じて動的に変化するパラメータウィジェットを
+        配置するためのフレームを作成します。
+
+        Args:
+            start_row (int): セクションの開始行
+
+        Returns:
+            int: 次のセクションの開始行
+        """
+        row = start_row
+        self.param_frame = ttk.Frame(self.parent)
+        self.param_frame.grid(row=row, column=0, columnspan=2, sticky="nsew", padx=5)
+
+        # フレーム内の列設定 (ラベルと入力欄)
+        self.param_frame.columnconfigure(1, weight=1)
+
+        return row + 1 # フレームが1行占有
+
     def _setup_diverge_section(self, start_row: int) -> int:
         """発散部セクションのセットアップ
 
@@ -412,9 +411,9 @@ class ParameterPanel:
         # 着色アルゴリズム
         row += 1
         self._add_label("着色アルゴリズム:", row, 0, pady=(5,0))
-        default_non_diverge_algo = param_defaults.get("non_diverge_algorithm", "単色")
 
-        self.logger.log(LogLevel.DEBUG, "初期読込：非発散部 標準着色方法", {"default_non_diverge_algo": default_non_diverge_algo})
+        default_non_diverge_algo = param_defaults.get("non_diverge_algorithm", "単色")
+        self.logger.log(LogLevel.DEBUG, "設定読込：非発散部 標準着色方法", {"default_non_diverge_algo": default_non_diverge_algo})
 
         # non_diverge_algo_var はクラス変数として持つ
         if not hasattr(self, 'non_diverge_algo_var'):
@@ -668,7 +667,7 @@ class ParameterPanel:
             panel_params["diverge_colormap"] = self.diverge_colormap_var.get()
             panel_params["non_diverge_colormap"] = self.non_diverge_colormap_var.get()
 
-            self.logger.log(LogLevel.SUCCESS, "描画パラメータ取得成功", context=panel_params)
+            self.logger.log(LogLevel.DEBUG, "描画パラメータ取得成功", context=panel_params)
             return panel_params
 
         except ValueError as e:

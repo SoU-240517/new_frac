@@ -210,7 +210,7 @@ class DebugLogger:
         """
         color_map = {
             LogLevel.DEBUG: "grey50",
-            LogLevel.INIT: "dim cyan",
+#            LogLevel.INIT: "dim cyan",
             LogLevel.CALL: "green",
             LogLevel.SUCCESS: "bold blue",
             LogLevel.INFO: "white",

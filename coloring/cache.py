@@ -22,19 +22,18 @@ class ColorCache:
             logger (DebugLogger, optional): デバッグ用ロガー。指定されない場合は新しい DebugLogger が生成される
         """
         self.cache = {}
-        # logger が None の場合、デフォルトの DebugLogger を作成
-        # logger の初期化を先に行う
         self.logger = logger
 
         # 設定ファイルからキャッシュ最大サイズを取得
         coloring_settings = config.get("coloring_settings", {})
         # フォールバック用のデフォルト値を設定
-        default_max_size = 100
-        self.cache_max_size = coloring_settings.get("cache_max_size", default_max_size)
+        default_cache_max_size = 100
+        self.cache_max_size = coloring_settings.get("cache_max_size", default_cache_max_size)
+
         # max_size が非正数の場合の処理
         if self.cache_max_size <= 0:
-            self.logger.log(LogLevel.WARNING, f"設定ファイルの cache_max_size ({self.cache_max_size}) が無効なのでデフォルト値 ({default_max_size}) を使用")
-            self.cache_max_size = default_max_size
+            self.logger.log(LogLevel.WARNING, f"設定ファイルの cache_max_size ({self.cache_max_size}) が無効なのでデフォルト値 ({default_cache_max_size}) を使用")
+            self.cache_max_size = default_cache_max_size
         else:
              self.logger.log(LogLevel.DEBUG, "設定読込", {"cache_max_size": self.cache_max_size})
 
@@ -63,11 +62,11 @@ class ColorCache:
              return str(sorted(params.items()))
         except TypeError as e:
             # params にソート不可能な型が含まれる場合の代替処理
-            self.logger.log(LogLevel.WARNING, f"キャッシュキー生成中にTypeError ({e})。reprを使用します。パラメータ内容を確認してください: {params}")
+            self.logger.log(LogLevel.WARNING, f"キャッシュキー生成中に TypeError ({e})。reprを使用する。パラメータ内容の確認が必要: {params}")
             # repr を使う (オブジェクト固有の表現になるが、一意性は保証されにくい)
             return repr(params)
         except Exception as e:
-            self.logger.log(LogLevel.ERROR, f"キャッシュキー生成中に予期せぬエラー: {e}")
+            self.logger.log(LogLevel.ERROR, "キャッシュキー生成中に予期せぬエラー", {"message": e})
             # エラー発生時の代替キー (キャッシュ効率は落ちる)
             return f"error_key_{hash(frozenset(params.items()))}" if isinstance(params, dict) else f"error_key_{hash(params)}"
 

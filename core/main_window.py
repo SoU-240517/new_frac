@@ -34,7 +34,7 @@ def load_config(logger: DebugLogger, config_path: str) -> dict:
     try:
         with open(config_path, 'r', encoding='utf-8') as f:
             config = json.load(f)
-            logger.log(LogLevel.SUCCESS, "設定ファイルロード成功", {"FILE": config_path})
+            logger.log(LogLevel.INFO, "設定ファイルロード成功", {"FILE": config_path})
             return config
     except json.JSONDecodeError as e:
         logger.log(LogLevel.ERROR, "JSON 解析エラー", {"message": e})
@@ -96,6 +96,7 @@ class MainWindow:
 
         self.plugin_dir = self.config.get("system_settings",{}).get("plugin_dir", "plugins/fractal_types")
         self.logger.log(LogLevel.INFO, "設定読込", {"plugin_dir": self.plugin_dir})
+
         self.fractal_loader = FractalTypeLoader(plugin_dir=self.plugin_dir, logger=self.logger)
 
         self.fractal_loader.scan_and_load_plugins()
@@ -117,6 +118,8 @@ class MainWindow:
         Raises:
             TypeError: 設定ファイルの形式が不正な場合
         """
+        self.logger.log(LogLevel.INFO, "ルートウィンドウ設定開始")
+
         app_title = self.config.get("ui_settings", {}).get("app_title", "フラクタル描画アプリケーション")
         window_width = self.config.get("ui_settings", {}).get("window_width", 1280)
         window_height = self.config.get("ui_settings", {}).get("window_height", 800)
@@ -134,6 +137,8 @@ class MainWindow:
         - エラーメッセージの表示
         - プログレスインジケータの表示
         """
+        self.logger.log(LogLevel.INFO, "ステータスバー設定開始")
+
         status_frame = ttk.Frame(self.root)
         status_frame.pack(fill=tk.X, side=tk.BOTTOM, pady=(0, 5))
 
@@ -142,8 +147,6 @@ class MainWindow:
             status_frame,
             self.logger
         )
-
-        self.logger.log(LogLevel.SUCCESS, "ステータスバーの初期化成功")
 
     def _setup_parameter_frame(self) -> None:
         """
@@ -154,6 +157,8 @@ class MainWindow:
         - 描画パラメータの設定
         - ズームリセット機能
         """
+        self.logger.log(LogLevel.INFO, "パラメータパネル設定開始")
+
         width = self.config.get("ui_settings", {}).get("parameter_panel_width", 300)
         self.logger.log(LogLevel.DEBUG, "設定読込", {"parameter_panel_width": width})
 
@@ -176,47 +181,6 @@ class MainWindow:
             fractal_loader=self.fractal_loader # ローダーインスタンスを渡す
         )
 
-        self.logger.log(LogLevel.SUCCESS, "パラメータパネルの初期化成功")
-
-    def _setup_zoom_params(self) -> None:
-        """
-        ズーム操作に関するパラメータを初期化する
-
-        初期化されるパラメータ：
-        - center_x: 中心X座標
-        - center_y: 中心Y座標
-        - width: 表示範囲の幅
-        - height: 表示範囲の高さ（幅と比率から計算）
-        - rotation: 回転角
-
-        Raises:
-            KeyError: 設定ファイルに必要なパラメータが存在しない場合
-        """
-        # 初期ズームパラメータを設定ファイルから読み込む
-        initial_zoom_config = self.config.get("fractal_settings", {}).get("initial_zoom", {})
-        center_x = initial_zoom_config.get("center_x", 0.0)
-        center_y = initial_zoom_config.get("center_y", 0.0)
-        width = initial_zoom_config.get("width", 4.0)
-        height_ratio = initial_zoom_config.get("height_ratio", 9 / 16)
-        rotation = initial_zoom_config.get("rotation", 0.0)
-        self.logger.log(LogLevel.DEBUG, "設定読込", {"center_x": center_x, "center_y": center_y, "width": width})
-        self.logger.log(LogLevel.DEBUG, "設定読込", {"height_ratio": height_ratio, "rotation": rotation})
-
-        # 高さは幅と比率から計算 (設定ファイルに height_ratio あり)
-        height = width * height_ratio
-
-        self.zoom_params = {
-            "center_x": center_x,       # 中心X座標
-            "center_y": center_y,       # 中心Y座標
-            "width": width,             # 初期表示範囲の幅
-            "height": height,           # 幅と比率から計算
-            "rotation": rotation        # 回転角
-        }
-
-        self.prev_zoom_params = None
-
-        self.logger.log(LogLevel.SUCCESS, "ズーム操作に関するパラメータの初期化成功", context=self.zoom_params)
-
     def _setup_canvas_frame(self) -> None:
         """
         フラクタル描画領域を配置するキャンバスフレームを初期化し、
@@ -228,6 +192,8 @@ class MainWindow:
         - パン操作
         - 回転操作
         """
+        self.logger.log(LogLevel.INFO, "キャンバスフレーム設定開始")
+
         self.canvas_frame = ttk.Frame(self.root)
         self.canvas_frame.pack(
             side=tk.LEFT,
@@ -253,7 +219,44 @@ class MainWindow:
             config=self.config
         )
 
-        self.logger.log(LogLevel.SUCCESS, "キャンバスフレームの初期化成功")
+    def _setup_zoom_params(self) -> None:
+        """
+        ズーム操作に関するパラメータを初期化する
+
+        初期化されるパラメータ：
+        - center_x: 中心X座標
+        - center_y: 中心Y座標
+        - width: 表示範囲の幅
+        - height: 表示範囲の高さ（幅と比率から計算）
+        - rotation: 回転角
+
+        Raises:
+            KeyError: 設定ファイルに必要なパラメータが存在しない場合
+        """
+        self.logger.log(LogLevel.INFO, "ズーム操作用パラメータ設定開始")
+
+        # 初期ズームパラメータを設定ファイルから読み込む
+        initial_zoom_config = self.config.get("fractal_settings", {}).get("initial_zoom", {})
+        center_x = initial_zoom_config.get("center_x", 0.0)
+        center_y = initial_zoom_config.get("center_y", 0.0)
+        width = initial_zoom_config.get("width", 4.0)
+        height_ratio = initial_zoom_config.get("height_ratio", 9 / 16)
+        rotation = initial_zoom_config.get("rotation", 0.0)
+        self.logger.log(LogLevel.DEBUG, "設定読込", {"center_x": center_x, "center_y": center_y, "width": width})
+        self.logger.log(LogLevel.DEBUG, "設定読込", {"height_ratio": height_ratio, "rotation": rotation})
+
+        # 高さは幅と比率から計算 (設定ファイルに height_ratio あり)
+        height = width * height_ratio
+
+        self.zoom_params = {
+            "center_x": center_x,       # 中心X座標
+            "center_y": center_y,       # 中心Y座標
+            "width": width,             # 初期表示範囲の幅
+            "height": height,           # 幅と比率から計算
+            "rotation": rotation        # 回転角
+        }
+
+        self.prev_zoom_params = None
 
     def _start_initial_drawing(self) -> None:
         """
@@ -263,9 +266,9 @@ class MainWindow:
         - 別スレッドでフラクタル描画処理を開始
         """
         self.status_bar_manager.set_text("準備中...")
+        self.status_bar_manager.start_status_animation()
 
-        self.logger.log(LogLevel.CALL, "非同期でフラクタル描画開始")
-        self.status_bar_manager.start_animation()
+        self.logger.log(LogLevel.INFO, "非同期でフラクタル描画開始（起動時）")
         self.draw_thread = threading.Thread(
             target=self._update_fractal_thread,
             daemon=True
@@ -284,7 +287,9 @@ class MainWindow:
             return
 
         self.is_drawing = True
-        self.status_bar_manager.start_animation()
+        self.status_bar_manager.start_status_animation()
+
+        self.logger.log(LogLevel.INFO, "非同期でフラクタル描画開始")
         self.draw_thread = threading.Thread(
             target=self._update_fractal_thread,
             daemon=True
@@ -332,9 +337,7 @@ class MainWindow:
             # 参考用としてキープ（デバッグ用スタックトレース出力）
             # import traceback
             # stack_trace = traceback.format_exc()
-            # self.logger.log(LogLevel.ERROR, f"フラクタル更新スレッドエラー: {str(e)}",
-            #                 context={"stack_trace": stack_trace})
-
+            # self.logger.log(LogLevel.ERROR, f"フラクタル更新スレッドエラー: {str(e)}", context={"stack_trace": stack_trace})
             self.logger.log(LogLevel.ERROR, f"フラクタル更新スレッドエラー: {str(e)}")
             self.status_bar_manager.stop_animation(f"エラー: {str(e)}")
         finally:
@@ -543,6 +546,6 @@ class MainWindow:
 
         try:
             self.fractal_canvas.fig.set_size_inches(new_width_inches, new_height_inches, forward=True)
-            self.logger.log(LogLevel.SUCCESS, f"Matplotlib Figure サイズ更新成功: {new_width_inches:.2f} x {new_height_inches:.2f}インチ ({new_width_pixels} x {new_height_pixels}ピクセル)")
+            self.logger.log(LogLevel.DEBUG, f"Matplotlib Figure サイズ更新成功: {new_width_inches:.2f} x {new_height_inches:.2f}インチ ({new_width_pixels} x {new_height_pixels}ピクセル)")
         except Exception as e:
             self.logger.log(LogLevel.ERROR, f"Matplotlib Figure サイズ更新中にエラー: {e}")

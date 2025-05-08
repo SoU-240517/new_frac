@@ -55,7 +55,7 @@ class StatusBarManager:
         # アニメーション状態の初期化
         self._animation_state = AnimationState()
 
-    def start_animation(self) -> None:
+    def start_status_animation(self) -> None:
         """ステータスバーの描画中アニメーションを開始
 
         - アニメーション状態を開始
@@ -79,7 +79,7 @@ class StatusBarManager:
         - アニメーションスレッドを作成し、開始する
         """
         try:
-            self.logger.log(LogLevel.CALL, "ステータスアニメーションスレッドを開始")
+            self.logger.log(LogLevel.DEBUG, "ステータスアニメーションスレッドを開始")
             self._animation_state.thread = threading.Thread(
                 target=self._run_animation,
                 daemon=True
