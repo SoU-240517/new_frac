@@ -2,8 +2,6 @@ import numpy as np
 import time
 from coloring import manager
 from typing import Dict, Any, Callable, Optional
-#from plugins.fractal_types.julia import compute_julia
-#from plugins.fractal_types.mandelbrot import compute_mandelbrot
 from debug import DebugLogger, LogLevel
 
 """フラクタル画像生成エンジン
@@ -37,6 +35,7 @@ def _calculate_dynamic_resolution(width: float, config: Dict[str, Any], logger: 
         - 基準幅（4.0）に対して対数スケールで解像度を調整
         - 最小解像度と最大解像度でクリップされる
         - ゼロ割防止のため width は 1e-9 でクリップされる
+        - log_factor は解像度調整の感度を制御（大きいほど解像度の変化が緩やか）
     """
     # 設定ファイルから動的解像度のパラメータを取得
     dr_config = config.get("fractal_settings", {}).get("dynamic_resolution", {})
@@ -71,16 +70,17 @@ def _create_fractal_grid(params: dict, super_resolution_x: int, super_resolution
             - width:  描画範囲の幅 (float)
             - height: 描画範囲の高さ (float)
             - rotation: 回転角度 (float, 度)
-        super_resolution_x (int): 水平方向の解像度
-        super_resolution_y (int): 垂直方向の解像度
+        super_resolution_x (int): 水平方向のスーパーサンプリング解像度
+        super_resolution_y (int): 垂直方向のスーパーサンプリング解像度
         logger (DebugLogger): デバッグログ出力用
 
     Returns:
         np.ndarray: 複素数グリッド (dtype=np.complex64)
 
     Notes:
-        - width > 1.0 の場合は np.float16 を使用
-        - width <= 1.0 の場合は np.float32 を使用
+        - データ型選択ロジック：
+          * width > 1.0 の場合: np.float16 を使用（メモリ効率重視）
+          * width <= 1.0 の場合: np.float32 を使用（精度重視）
         - 回転角度が指定された場合はグリッドを回転させる
     """
     center_x = params.get("center_x", 0.0)
@@ -119,10 +119,9 @@ def _create_fractal_grid(params: dict, super_resolution_x: int, super_resolution
 def _compute_fractal(
     Z: np.ndarray,
     params: dict,
-    compute_function: Callable, # 計算関数を引数で受け取る
+    compute_function: Callable[[np.ndarray, complex, int, DebugLogger], Dict[str, np.ndarray]],
     logger: DebugLogger
-) -> Optional[Dict[str, np.ndarray]]: # 戻り値を Optional に変更
-
+) -> Optional[Dict[str, np.ndarray]]:
     """フラクタル計算を実行
 
     Args:
@@ -133,6 +132,10 @@ def _compute_fractal(
             - z0_real, z0_imag: Mandelbrot用初期値 Z0 の実部・虚部
             - max_iterations: 最大反復回数
         compute_function (Callable): フラクタル計算関数
+            - 第1引数: 複素数グリッド (np.ndarray)
+            - 第2引数: 複素数パラメータ (complex)
+            - 第3引数: 最大反復回数 (int)
+            - 第4引数: デバッグログ (DebugLogger)
         logger (DebugLogger): デバッグログ出力用
 
     Returns:
@@ -149,6 +152,9 @@ def _compute_fractal(
         - Julia集合の場合は C パラメータを使用
         - Mandelbrot集合の場合は Z0 パラメータを使用
         - 計算結果が None の場合はエラーが発生したことを示す
+        - エラーハンドリング：
+          * TypeError: 計算関数の引数型チェック
+          * その他の例外: 計算中の予期せぬエラー
     """
     start_time = time.perf_counter()
 

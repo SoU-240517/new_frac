@@ -23,17 +23,11 @@ Directory structure:
     │   ├── debug_logger.py
     │   └── enum_debug.py
     ├── document/
-    │   ├── base.md
-    │   ├── coloring-divergent.md
-    │   ├── coloring-non_divergent.md
-    │   ├── coloring.md
-    │   ├── debug.md
-    │   ├── directory_structure.md
-    │   ├── plugins-fractal_types.md
-    │   ├── ui-zoom_function.md
-    │   ├── user_ profile.md
-    │   └── validator.md
+    │   ├── _directory_structure.md
+    │   └── _user_ profile.md
     ├── plugins/
+    │   ├── __init__.py
+    │   ├── fractal_type_loader.py
     │   ├── coloring/
     │   │   ├── divergent/
     │   │   │   ├── __init__.py
