@@ -203,8 +203,8 @@ class ParameterPanel:
             entry = self._add_entry(param_row, 1, self.max_iter_var, parent=self.param_frame)
             entry.bind("<Return>", self._common_callback)
             param_row += 1
-
-            # --- プラグイン固有パラメータ ---
+            # ------------------------------------------------------------
+            # --- プラグイン固有パラメータ ---------------------------------
             for param_config in self.current_plugin_params:
                 param_id = param_config.get("id")
                 param_label = param_config.get("label", param_id) # ラベルがなければIDを使う
@@ -217,6 +217,7 @@ class ParameterPanel:
 
                 # ラベルを追加
                 self._add_label(f"{param_label}:", param_row, 0, parent=self.param_frame)
+                self.logger.log(LogLevel.SUCCESS, "ラベル追加", {"param_label": param_label})
 
                 # StringVar を作成して辞書に保存
                 var = tk.StringVar(value=param_default)
@@ -233,7 +234,7 @@ class ParameterPanel:
                 self.param_widgets[param_id] = entry
 
                 param_row += 1
-            # -------------------------------
+            # ------------------------------------------------------------
 
         # 4. 数式表示を更新
         description = self.fractal_loader.get_description(selected_type_name) or ""
