@@ -51,13 +51,15 @@ class ParameterPanel:
         param_frame (Optional[ttk.Frame]): パラメータウィジェットを配置するフレーム
     """
 
-    def __init__(self,
-                 parent: tk.Widget,
-                 update_callback: Callable,
-                 reset_callback: Callable,
-                 logger: DebugLogger,
-                 config: Dict[str, Any],
-                 fractal_loader: FractalTypeLoader):
+    def __init__(
+        self,
+        parent: tk.Widget,
+        update_callback: Callable,
+        reset_callback: Callable,
+        logger: DebugLogger,
+        config: Dict[str, Any],
+        fractal_loader: FractalTypeLoader
+    ):
         """ParameterPanel クラスのコンストラクタ
 
         Args:
@@ -88,6 +90,7 @@ class ParameterPanel:
 
         # カラーマップリストを設定ファイルから取得
         self.colormaps = self.config.get("coloring_options", {}).get("available_colormaps", [])
+        self.logger.log(LogLevel.DEBUG, "設定読込", {"colormaps": self.colormaps})
         if not self.colormaps:
             # 設定ファイルにない、または空の場合のフォールバック処理
             self.logger.log(LogLevel.WARNING, "設定ファイルにカラーマップリストが無いか空なので、matplotlibから取得する")
@@ -148,6 +151,7 @@ class ParameterPanel:
 
         # デフォルト値もローダーから取得するか、config から読む
         default_fractal_type = self.config.get("fractal_settings", {}).get("parameter_panel", {}).get("fractal_type", None)
+        self.logger.log(LogLevel.DEBUG, "設定読込", {"default_fractal_type": default_fractal_type})
 
         # デフォルトがリストにない場合や未設定の場合は最初のタイプを選択
         if default_fractal_type not in fractal_types or default_fractal_type is None:
@@ -178,12 +182,11 @@ class ParameterPanel:
         # 設定ファイルからフォント名とサイズを取得
         Panel_font = self.config.get("fractal_settings", {}).get("parameter_panel", {}).get("panel_font", "Courier")
         panel_font_size = self.config.get("fractal_settings", {}).get("parameter_panel", {}).get("panel_font_size", 10)
+        self.logger.log(LogLevel.DEBUG, "設定読込", {"Panel_font": Panel_font, "panel_font_size": panel_font_size})
 
         self.formula_var = tk.StringVar()
         self.formula_label = ttk.Label(self.parent, textvariable=self.formula_var, font=(Panel_font, panel_font_size), wraplength=self.config.get("ui_settings",{}).get("parameter_panel_width", 300)-20) # 折返し追加
         self.formula_label.grid(row=row, column=0, columnspan=2, sticky=tk.W, padx=10, pady=2)
-
-        self.logger.log(LogLevel.DEBUG, "初期設定：数式表示フォント", {"Panel_font": Panel_font, "panel_font_size": panel_font_size})
 
         return row + 1
 
@@ -237,6 +240,7 @@ class ParameterPanel:
 
             # デフォルト値は config かプラグインJSONか？ -> config優先
             default_max_iter = str(self.config.get("fractal_settings", {}).get("parameter_panel", {}).get("max_iterations", 100))
+            self.logger.log(LogLevel.DEBUG, "設定読込", {"default_max_iter": default_max_iter})
 
             # max_iter_var はクラス変数として持つ
             if not hasattr(self, 'max_iter_var'):
@@ -338,7 +342,7 @@ class ParameterPanel:
         self._add_label("着色アルゴリズム:", row, 0, pady=(5,0))
         default_diverge_algo = param_defaults.get("diverge_algorithm", "スムージング")
 
-        self.logger.log(LogLevel.DEBUG, "初期設定：発散部 標準着色方法", {"default_diverge_algo": default_diverge_algo})
+        self.logger.log(LogLevel.DEBUG, "設定読込：発散部 標準着色方法", {"default_diverge_algo": default_diverge_algo})
 
         if not hasattr(self, 'diverge_algo_var'):
              self.diverge_algo_var = tk.StringVar()
@@ -347,6 +351,7 @@ class ParameterPanel:
         self.diverge_algorithms = list(fractal_settings.get("coloring_algorithms", {}).get("divergent", {}).keys())
         if not self.diverge_algorithms:
             self.logger.log(LogLevel.WARNING, "設定ファイルに発散部アルゴリズムリストが無いか空なので、デフォルトリストを使用")
+            # フォールバック
             self.diverge_algorithms = [
                 "スムージング",
                 "反復回数線形マッピング",
@@ -356,7 +361,7 @@ class ParameterPanel:
                 "角度カラーリング",
                 "ポテンシャル関数法",
                 "軌道トラップ法"
-            ] # フォールバック
+            ]
         combo = self._add_combobox(row, 1, self.diverge_algo_var, self.diverge_algorithms)
         combo.bind("<<ComboboxSelected>>", self._common_callback)
 
@@ -371,7 +376,7 @@ class ParameterPanel:
         self._add_label("カラーマップ:", row, 0, pady=(2,5))
         default_diverge_cmap = param_defaults.get("diverge_colormap", "viridis")
 
-        self.logger.log(LogLevel.DEBUG, "初期設定：発散部 標準カラーマップ", {"default_diverge_cmap": default_diverge_cmap})
+        self.logger.log(LogLevel.DEBUG, "設定読込：発散部 標準カラーマップ", {"default_diverge_cmap": default_diverge_cmap})
 
         # diverge_colormap_var はクラス変数として持つ
         if not hasattr(self, 'diverge_colormap_var'):
@@ -409,7 +414,7 @@ class ParameterPanel:
         self._add_label("着色アルゴリズム:", row, 0, pady=(5,0))
         default_non_diverge_algo = param_defaults.get("non_diverge_algorithm", "単色")
 
-        self.logger.log(LogLevel.DEBUG, "初期設定：非発散部 標準着色方法", {"default_non_diverge_algo": default_non_diverge_algo})
+        self.logger.log(LogLevel.DEBUG, "初期読込：非発散部 標準着色方法", {"default_non_diverge_algo": default_non_diverge_algo})
 
         # non_diverge_algo_var はクラス変数として持つ
         if not hasattr(self, 'non_diverge_algo_var'):
@@ -420,6 +425,7 @@ class ParameterPanel:
         self.non_diverge_algorithms = list(fractal_settings.get("coloring_algorithms", {}).get("non_divergent", {}).keys())
         if not self.non_diverge_algorithms:
             self.logger.log(LogLevel.WARNING, "設定ファイルに非発散部アルゴリズムリストが見つからないか空なので、デフォルトリストを使用")
+            # フォールバック
             self.non_diverge_algorithms = [
                 "単色",
                 "グラデーション",
@@ -436,7 +442,7 @@ class ParameterPanel:
                 "量子もつれ（Quantum Entanglement）",
                 "パラメータ(C)",
                 "パラメータ(Z)"
-            ] # フォールバック
+            ]
         combo = self._add_combobox(row, 1, self.non_diverge_algo_var, self.non_diverge_algorithms)
         combo.bind("<<ComboboxSelected>>", self._common_callback)
 
@@ -452,7 +458,7 @@ class ParameterPanel:
         self._add_label("カラーマップ:", row, 0, pady=(2,5))
         default_non_diverge_cmap = param_defaults.get("non_diverge_colormap", "magma")
 
-        self.logger.log(LogLevel.DEBUG, "初期設定：非発散部 標準カラーマップ", {"default_non_diverge_cmap": default_non_diverge_cmap})
+        self.logger.log(LogLevel.DEBUG, "設定読込：非発散部 標準カラーマップ", {"default_non_diverge_cmap": default_non_diverge_cmap})
 
         # non_diverge_colormap_var はクラス変数として持つ
         if not hasattr(self, 'non_diverge_colormap_var'):
@@ -614,7 +620,7 @@ class ParameterPanel:
             # 1. フラクタルタイプ名
             selected_type_name = self.fractal_type_var.get()
             if not selected_type_name or selected_type_name == "(ロード失敗)":
-                self.logger.log(LogLevel.ERROR, "有効なフラクタルタイプが選択されていません。")
+                self.logger.log(LogLevel.ERROR, "有効なフラクタルタイプがない")
                 return None
             panel_params["fractal_type_name"] = selected_type_name # MainWindow で計算関数取得に使用
 
@@ -643,7 +649,7 @@ class ParameterPanel:
                         else: # string or other
                             dynamic_params[param_id] = value_str
                     except ValueError:
-                        self.logger.log(LogLevel.ERROR, f"パラメータ '{param_id}' の値 '{value_str}' を型 '{param_type}' に変換できません。")
+                        self.logger.log(LogLevel.ERROR, f"パラメータ '{param_id}' の値 '{value_str}' を型 '{param_type}' に変換できない")
                         # エラー時の処理: デフォルト値を使うか、None を返すか
                         # ここではエラーとして None を返す
                         return None
@@ -684,7 +690,7 @@ class ParameterPanel:
             # タイプ選択イベントを発火させて、パラメータ欄と推奨設定を更新
             self._on_fractal_type_selected()
         else:
-            self.logger.log(LogLevel.WARNING, f"指定されたデフォルトタイプ '{default_type_name}' が見つかりません。リセットできません。")
+            self.logger.log(LogLevel.WARNING, f"指定されたデフォルトタイプ '{default_type_name}' がないのでリセット不可")
             return # ここで処理中断
 
         # 2. 最大反復回数を config のリセット値に設定

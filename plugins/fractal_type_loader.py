@@ -38,7 +38,7 @@ class FractalTypeLoader:
         """
         self.loaded_plugins = {} # ロード前にクリア
 
-        self.logger.log(LogLevel.INFO, "プラグインロード開始", {"plugin_dir": self.plugin_dir})
+        self.logger.log(LogLevel.INFO, "プラグインロード開始")
         if not os.path.isdir(self.plugin_dir):
             self.logger.log(LogLevel.ERROR, "プラグインディレクトリなし", {"plugin_dir": self.plugin_dir})
             return

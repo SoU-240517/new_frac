@@ -66,15 +66,13 @@ class StatusBarManager:
             ログ出力: アニメーションが既に実行中の場合
         """
         if self._animation_state.is_running:
-            self.logger.log(LogLevel.ERROR, "アニメーションは既に実行中")
+            self.logger.log(LogLevel.ERROR, "ステータスアニメーションは既に実行中")
             return
 
         self._animation_state.start()
         self._draw_start_time = time.perf_counter()
         self._schedule_time_update()
         self._start_animation_thread()
-
-        self.logger.log(LogLevel.SUCCESS, "非同期でフラクタル描画成功")
 
     def _start_animation_thread(self) -> None:
         """アニメーション用スレッドを開始
@@ -88,7 +86,7 @@ class StatusBarManager:
             )
             self._animation_state.thread.start()
         except Exception as e:
-            self.logger.log(LogLevel.ERROR, f"ステータスアニメーションスレッドの開始失敗: {e}")
+            self.logger.log(LogLevel.ERROR, "ステータスアニメーションスレッドの開始失敗", {"message": e})
             self._animation_state.stop()
 
     def _run_animation(self) -> None:

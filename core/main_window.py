@@ -95,6 +95,7 @@ class MainWindow:
         self.ui_settings = self.config.get("ui_settings", {})
 
         self.plugin_dir = self.config.get("system_settings",{}).get("plugin_dir", "plugins/fractal_types")
+        self.logger.log(LogLevel.INFO, "設定読込", {"plugin_dir": self.plugin_dir})
         self.fractal_loader = FractalTypeLoader(plugin_dir=self.plugin_dir, logger=self.logger)
 
         self.fractal_loader.scan_and_load_plugins()
@@ -196,10 +197,13 @@ class MainWindow:
         center_x = initial_zoom_config.get("center_x", 0.0)
         center_y = initial_zoom_config.get("center_y", 0.0)
         width = initial_zoom_config.get("width", 4.0)
-        # 高さは幅と比率から計算 (設定ファイルに height_ratio あり)
         height_ratio = initial_zoom_config.get("height_ratio", 9 / 16)
-        height = width * height_ratio
         rotation = initial_zoom_config.get("rotation", 0.0)
+        self.logger.log(LogLevel.DEBUG, "設定読込", {"center_x": center_x, "center_y": center_y, "width": width})
+        self.logger.log(LogLevel.DEBUG, "設定読込", {"height_ratio": height_ratio, "rotation": rotation})
+
+        # 高さは幅と比率から計算 (設定ファイルに height_ratio あり)
+        height = width * height_ratio
 
         self.zoom_params = {
             "center_x": center_x,       # 中心X座標
@@ -237,6 +241,7 @@ class MainWindow:
 
         initial_canvas_width = self.config.get("ui_settings", {}).get("initial_canvas_width", 1067)
         initial_canvas_height = self.config.get("ui_settings", {}).get("initial_canvas_height", 600)
+        self.logger.log(LogLevel.DEBUG, "設定読込", {"initial_canvas_width": initial_canvas_width, "initial_canvas_height": initial_canvas_height})
 
         self.fractal_canvas = FractalCanvas(
             self.canvas_frame,
@@ -280,8 +285,6 @@ class MainWindow:
 
         self.is_drawing = True
         self.status_bar_manager.start_animation()
-
-        self.logger.log(LogLevel.CALL, "新しい描画スレッドを開始")
         self.draw_thread = threading.Thread(
             target=self._update_fractal_thread,
             daemon=True
@@ -300,14 +303,14 @@ class MainWindow:
         try:
             panel_params = self.parameter_panel.get_parameters()
             if not panel_params:
-                 self.logger.log(LogLevel.ERROR, "パラメータ取得に失敗したため描画を中止します。")
+                 self.logger.log(LogLevel.ERROR, "パラメータ取得に失敗したので描画を中止")
                  self.status_bar_manager.stop_animation("エラー: パラメータ無効")
                  self.is_drawing = False
                  return
 
             current_params = self._merge_zoom_and_panel_params(panel_params)
 
-            # --- 選択されたフラクタルタイプの計算関数を取得 ---
+            # 選択されたフラクタルタイプの計算関数を取得
             selected_fractal_type_name = panel_params.get("fractal_type_name") # ParameterPanel が返す辞書に含める
             compute_function = self.fractal_loader.get_compute_function(selected_fractal_type_name)
 
@@ -316,7 +319,6 @@ class MainWindow:
                 self.status_bar_manager.stop_animation("エラー: 計算関数不明")
                 self.is_drawing = False
                 return
-            # ------------------------------------------------------
 
             fractal_image = render_fractal(current_params, compute_function, self.logger, config=self.config)
 
@@ -375,6 +377,7 @@ class MainWindow:
 
         new_width = w
         height_ratio = self.config.get("fractal_settings", {}).get("initial_zoom", {}).get("height_ratio", 9/16)
+        self.logger.log(LogLevel.DEBUG, "設定読込", {"height_ratio": height_ratio})
         new_height = new_width * height_ratio # 16:9 アスペクト比維持
 
         zoom_factor = self.zoom_params["width"] / new_width if new_width > 0 else 1
@@ -386,7 +389,7 @@ class MainWindow:
         else:
             # パラメータ取得に失敗した場合のデフォルト処理
             current_max_iter = self.config.get("fractal_settings", {}).get("parameter_panel", {}).get("max_iterations", 100)
-            self.logger.log(LogLevel.WARNING, "パラメータパネルから最大反復回数を取得できませんでした。設定ファイルのデフォルト値を使用します。")
+            self.logger.log(LogLevel.WARNING, "パラメータパネルから最大反復回数を取得できず。設定ファイルのデフォルト値を使用")
 
 
         new_max_iterations = self._calculate_max_iterations(current_max_iter, zoom_factor)
@@ -471,17 +474,20 @@ class MainWindow:
         # --- パラメータパネルの状態も初期化 ------------------
         # 初期表示のフラクタルタイプを取得
         default_fractal_type = self.config.get("fractal_settings", {}).get("parameter_panel", {}).get("fractal_type", None)
+        self.logger.log(LogLevel.DEBUG, "設定読込", {"default_fractal_type": default_fractal_type})
+
         if default_fractal_type is None and self.fractal_loader.get_available_types():
-             default_fractal_type = self.fractal_loader.get_available_types()[0] # ローダーから最初のタイプを取得
+            default_fractal_type = self.fractal_loader.get_available_types()[0] # ローダーから最初のタイプを取得
 
         if default_fractal_type:
-             self.parameter_panel.reset_to_defaults(default_fractal_type)
-             self.logger.log(LogLevel.CALL, f"パラメータパネルをデフォルト ({default_fractal_type}) にリセット")
+            self.parameter_panel.reset_to_defaults(default_fractal_type)
+            self.logger.log(LogLevel.CALL, f"パラメータパネルをデフォルト ({default_fractal_type}) にリセット")
         else:
-             self.logger.log(LogLevel.WARNING, "デフォルトのフラクタルタイプが見つからないため、パラメータパネルのリセットをスキップ")
-             reset_iter = self.config.get("fractal_settings", {}).get("reset_max_iterations", 200)
-             self.parameter_panel.max_iter_var.set(str(reset_iter)) # max_iter_var がまだ存在する場合
-             self.logger.log(LogLevel.CALL, f"最大反復回数のみリセット: {reset_iter}")
+            self.logger.log(LogLevel.WARNING, "デフォルトのフラクタルタイプが見つからないため、パラメータパネルのリセットをスキップ")
+            reset_iter = self.config.get("fractal_settings", {}).get("reset_max_iterations", 200)
+            self.logger.log(LogLevel.DEBUG, "設定読込", {"reset_iter": reset_iter})
+            self.parameter_panel.max_iter_var.set(str(reset_iter)) # max_iter_var がまだ存在する場合
+            self.logger.log(LogLevel.CALL, f"最大反復回数のみリセット: {reset_iter}")
         # -------------------------------------------------
 
         self.logger.log(LogLevel.CALL, "ZoomSelector の状態リセット開始")
