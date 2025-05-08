@@ -7,10 +7,10 @@ from debug import DebugLogger, LogLevel
 
 class RectManager:
     """ズーム領域の矩形（Rectangle）を管理するクラス
-    
+
     ズーム領域の作成、移動、リサイズ、回転などの操作を管理します。
     ピクセル単位での最小サイズ制限とアスペクト比の維持をサポートします。
-    
+
     Attributes:
         ax (Axes): Matplotlib の Axes オブジェクト
         logger (DebugLogger): ログ出力用の DebugLogger インスタンス
@@ -29,7 +29,7 @@ class RectManager:
         config: Dict[str, Any]
     ):
         """RectManager クラスのコンストラクタ
-        
+
         Args:
             ax (Axes): Matplotlib の Axes オブジェクト
             logger (DebugLogger): ログ出力用の DebugLogger インスタンス
@@ -47,11 +47,13 @@ class RectManager:
         self.ax = ax
         self.rect: Optional[patches.Rectangle] = None
         self._angle: float = 0.0
+
         # 直前の有効なサイズを保持 (ドラッグ中に無効サイズになった場合に使用)
         self._last_valid_size_px: Optional[Tuple[float, float]] = None
 
         # 設定ファイルから矩形関連の設定を読み込む
         self.ui_settings = config.get("ui_settings", {})
+
         # フォールバック用のデフォルト値を設定
         default_min_width = 5
         default_min_height = 5
@@ -64,22 +66,20 @@ class RectManager:
 
         # 読み込んだ値のバリデーション (例: 0以下でないか)
         if self.min_width_px <= 0:
-            self.logger.log(LogLevel.WARNING, f"設定ファイルの zoom_rect_min_width_px ({self.min_width_px}) が無効です。デフォルト値 ({default_min_width}) を使用します。")
+            self.logger.log(LogLevel.WARNING, f"設定ファイルの zoom_rect_min_width_px ({self.min_width_px}) が無効。デフォルト値 ({default_min_width}) を使用")
             self.min_width_px = default_min_width
         if self.min_height_px <= 0:
-            self.logger.log(LogLevel.WARNING, f"設定ファイルの zoom_rect_min_height_px ({self.min_height_px}) が無効です。デフォルト値 ({default_min_height}) を使用します。")
+            self.logger.log(LogLevel.WARNING, f"設定ファイルの zoom_rect_min_height_px ({self.min_height_px}) が無効。デフォルト値 ({default_min_height}) を使用")
             self.min_height_px = default_min_height
         if self.aspect_ratio_w_h <= 0:
-             self.logger.log(LogLevel.WARNING, f"設定ファイルの zoom_rect_aspect_ratio ({self.aspect_ratio_w_h}) が無効です。デフォルト値 ({default_aspect_ratio}) を使用します。")
+             self.logger.log(LogLevel.WARNING, f"設定ファイルの zoom_rect_aspect_ratio ({self.aspect_ratio_w_h}) が無効。デフォルト値 ({default_aspect_ratio}) を使用")
              self.aspect_ratio_w_h = default_aspect_ratio
 
-        self.logger.log(LogLevel.DEBUG, f"RectManager 初期設定: min_w={self.min_width_px}px, min_h={self.min_height_px}px, aspect={self.aspect_ratio_w_h:.4f}")
-
-        self.logger.log(LogLevel.INIT, "RectManager クラスのインスタンスを作成成功")
+        self.logger.log(LogLevel.DEBUG, f"初期設定 RectManager: min_w = {self.min_width_px} px, min_h = {self.min_height_px} px, aspect = {self.aspect_ratio_w_h:.4f}")
 
     def get_rect(self) -> Optional[patches.Rectangle]:
         """現在のズーム領域の矩形パッチを取得
-        
+
         Returns:
             Optional[patches.Rectangle]: 現在のズーム領域の Rectangle オブジェクト。
             ズーム領域が存在しない場合は None を返します。
@@ -88,9 +88,9 @@ class RectManager:
 
     def setup_rect(self, x: float, y: float) -> None:
         """ズーム領域の初期設定
-        
+
         初期状態の矩形を作成し、指定された位置に配置します。
-        
+
         Args:
             x (float): 矩形左上の x 座標 (データ座標)
             y (float): 矩形左上の y 座標 (データ座標)
@@ -109,13 +109,13 @@ class RectManager:
                                  target_x: float, target_y: float
                                  ) -> Tuple[float, float, float, float]:
         """基準点と目標点から、アスペクト比を維持した矩形の位置とサイズを計算
-        
+
         Args:
             ref_x (float): 基準点の x 座標 (データ座標)
             ref_y (float): 基準点の y 座標 (データ座標)
             target_x (float): 目標点の x 座標 (データ座標)
             target_y (float): 目標点の y 座標 (データ座標)
-        
+
         Returns:
             Tuple[float, float, float, float]: (左下 x, 左下 y, 幅, 高さ)
             アスペクト比を維持した矩形の位置とサイズを返します。
@@ -153,9 +153,9 @@ class RectManager:
     # setting_rect_size は _calculate_rect_geometry と _check_pixel_size を使うので、
     # これらの内部でインスタンス変数を使うように変更されていれば、このメソッド自体は変更不要
         """ズーム領域のサイズと位置を更新
-        
+
         ピクセルサイズチェックを行い、有効なサイズの場合は矩形を更新します。
-        
+
         Args:
             start_x (float): ドラッグ開始点の x 座標 (データ座標)
             start_y (float): ドラッグ開始点の y 座標 (データ座標)
@@ -187,7 +187,7 @@ class RectManager:
 
     def edge_change_editing(self) -> None:
         """ズーム領域のエッジを編集中のスタイルに変更
-        
+
         エッジの色と線種を編集中のスタイルに変更します。
         設定ファイルからエッジの色と線種を読み込みます。
         """
@@ -203,7 +203,7 @@ class RectManager:
 
     def edge_change_finishing(self) -> None:
         """ズーム領域のエッジを確定時のスタイルに変更
-        
+
         エッジの色と線種を確定時のスタイルに変更します。
         設定ファイルからエッジの色と線種を読み込みます。
         """
@@ -223,9 +223,9 @@ class RectManager:
                                  ) -> None:
     # resize_rect_from_corners も内部で _calculate_rect_geometry と _check_pixel_size を使うため、変更不要
         """固定された回転後の角と現在のマウス位置からズーム領域を更新
-        
+
         回転考慮のリサイズ操作を行い、ピクセルサイズチェックを行います。
-        
+
         Args:
             fixed_x_rotated (float): 固定された回転後の x 座標 (データ座標)
             fixed_y_rotated (float): 固定された回転後の y 座標 (データ座標)
@@ -285,7 +285,7 @@ class RectManager:
 
     def is_valid_size_in_pixels(self, width_px: float, height_px: float) -> bool:
         """指定されたピクセル幅と高さが有効か (最小ピクセルサイズ以上か)
-        
+
         Returns:
             bool: 幅と高さが最小ピクセルサイズ以上か
         """
@@ -298,7 +298,7 @@ class RectManager:
 
     def is_last_calculated_size_valid(self) -> bool:
         """最後に setting_rect_size または resize_rect_from_corners で計算・キャッシュされたピクセルサイズが有効かどうかを返す
-        
+
         Returns:
             bool: 最後の計算結果が有効なサイズだったか
         """
@@ -311,7 +311,7 @@ class RectManager:
 
     def _temporary_creation(self, start_x: float, start_y: float, end_x: float, end_y: float) -> bool:
         """ズーム領域作成完了時の処理 (ピクセルサイズチェックあり)
-        
+
         Returns:
             bool: 作成成功か (サイズが有効か)
         """
@@ -351,7 +351,7 @@ class RectManager:
 
     def move_rect_to(self, new_x: float, new_y: float):
         """ズーム領域を移動する
-        
+
         Args:
             new_x (float): 矩形左上の x 座標
             new_y (float): 矩形左上の y 座標
@@ -386,7 +386,7 @@ class RectManager:
 
     def get_properties(self) -> Optional[Tuple[float, float, float, float]]:
         """ズーム領域のプロパティ (x, y, width, height) を取得 (回転前の値)
-        
+
         Returns:
             Optional[Tuple[float, float, float, float]]: (x, y, width, height)。矩形がない場合は None
         """
@@ -402,7 +402,7 @@ class RectManager:
     # 最小サイズやアスペクト比自体は config から読むので、state に含める必要はない。
     # _last_valid_size_px は含めておくべき。
         """現在の状態 (Undo用) を取得
-        
+
         Returns:
             Optional[Dict[str, Any]]: 状態データ。矩形がない場合は None
         """
@@ -429,7 +429,7 @@ class RectManager:
 
     def set_state(self, state: Optional[Dict[str, Any]]):
         """指定された状態に矩形を復元 (Undo/Redo用)
-        
+
         Args:
             state (Optional[Dict[str, Any]]): 状態データ
         """
@@ -502,7 +502,7 @@ class RectManager:
 
     def get_center(self) -> Optional[Tuple[float, float]]:
         """ズーム領域の中心座標を取得 (回転前の座標系)
-        
+
         Returns:
             Optional[Tuple[float, float]]: 中心座標 (x, y)。矩形がない、または幅/高さが0の場合は None
         """
@@ -519,7 +519,7 @@ class RectManager:
 
     def get_rotated_corners(self) -> Optional[list[Tuple[float, float]]]:
         """回転後の四隅の絶対座標を取得する
-        
+
         Returns:
             Optional[list[Tuple[float, float]]]: 四隅の絶対座標 [(x1, y1), (x2, y2), (x3, y3), (x4, y4)]。
             矩形がない、プロパティがない、中心がない、または幅/高さが0の場合は None
@@ -554,7 +554,7 @@ class RectManager:
 
     def get_rotation(self) -> float:
         """現在の回転角度を取得 (度単位)
-        
+
         Returns:
             float: 回転角度 (度単位)
         """
@@ -562,7 +562,7 @@ class RectManager:
 
     def set_rotation(self, angle: float):
         """ズーム領域の回転角度を設定 (度単位)
-        
+
         Args:
             angle (float): 回転角度 (度単位)
         """
@@ -589,7 +589,7 @@ class RectManager:
 
     def get_patch(self) -> Optional[patches.Rectangle]:
         """ズーム領域パッチオブジェクトを取得
-        
+
         Returns:
             Optional[patches.Rectangle]: パッチオブジェクト。存在しない場合は None
         """
@@ -598,13 +598,13 @@ class RectManager:
     # --- 追加: ピクセルサイズ計算とチェックを行うヘルパーメソッド ---
     def _check_pixel_size(self, x: float, y: float, width: float, height: float) -> Tuple[bool, float, float]:
         """指定されたデータ座標の矩形のピクセルサイズを計算し、有効性を判定する
-        
+
         Args:
             x (float): 矩形の左下 x 座標 (データ座標)
             y (float): 矩形の左下 y 座標 (データ座標)
             width (float): 矩形の幅 (データ座標)
             height (float): 矩形の高さ (データ座標)
-        
+
         Returns:
             Tuple[bool, float, float]: (サイズが有効か, 計算されたピクセル幅, 計算されたピクセル高さ)
         """

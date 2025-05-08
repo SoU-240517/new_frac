@@ -28,19 +28,19 @@ def load_config(logger: DebugLogger, config_path: str) -> dict:
         Exception: その他の予期せぬエラーが発生した場合
     """
     if not os.path.exists(config_path):
-        logger.log(LogLevel.ERROR, f"設定ファイルなし: {config_path}")
+        logger.log(LogLevel.ERROR, "設定ファイルなし", {"FILE": config_path})
         return {}
 
     try:
         with open(config_path, 'r', encoding='utf-8') as f:
             config = json.load(f)
-            logger.log(LogLevel.SUCCESS, f"設定ファイル読込成功: {config_path}")
+            logger.log(LogLevel.SUCCESS, "設定ファイルロード成功", {"FILE": config_path})
             return config
     except json.JSONDecodeError as e:
-        logger.log(LogLevel.ERROR, f"JSON 解析エラー: {e}")
+        logger.log(LogLevel.ERROR, "JSON 解析エラー", {"message": e})
         return {}
     except Exception as e:
-        logger.log(LogLevel.ERROR, f"設定ファイル読込中に予期せぬエラー: {e}")
+        logger.log(LogLevel.ERROR, "設定ファイル読込中に予期せぬエラー", {"message": e})
         return {}
 
 class MainWindow:
@@ -119,11 +119,10 @@ class MainWindow:
         app_title = self.config.get("ui_settings", {}).get("app_title", "フラクタル描画アプリケーション")
         window_width = self.config.get("ui_settings", {}).get("window_width", 1280)
         window_height = self.config.get("ui_settings", {}).get("window_height", 800)
+        self.logger.log(LogLevel.DEBUG, "設定読込", {"app_title": app_title, "w": window_width, "h": window_height})
 
         self.root.title(app_title)
         self.root.geometry(f"{window_width}x{window_height}")
-
-        self.logger.log(LogLevel.SUCCESS, f"ルートウィンドウの基本設定に成功: title:{app_title}, w:{window_width} x h:{window_height}")
 
     def _setup_status_bar(self) -> None:
         """
@@ -143,6 +142,8 @@ class MainWindow:
             self.logger
         )
 
+        self.logger.log(LogLevel.SUCCESS, "ステータスバーの初期化成功")
+
     def _setup_parameter_frame(self) -> None:
         """
         パラメータパネルを配置するフレームを初期化し、ルートウィンドウの右側に配置する
@@ -153,7 +154,7 @@ class MainWindow:
         - ズームリセット機能
         """
         width = self.config.get("ui_settings", {}).get("parameter_panel_width", 300)
-        self.logger.log(LogLevel.DEBUG, f"パラメータパネルの幅: {width}")
+        self.logger.log(LogLevel.DEBUG, "設定読込", {"parameter_panel_width": width})
 
         self.parameter_frame = ttk.Frame(self.root, width=width)
         self.parameter_frame.pack(
@@ -173,6 +174,8 @@ class MainWindow:
             config=self.config,
             fractal_loader=self.fractal_loader # ローダーインスタンスを渡す
         )
+
+        self.logger.log(LogLevel.SUCCESS, "パラメータパネルの初期化成功")
 
     def _setup_zoom_params(self) -> None:
         """
@@ -208,7 +211,7 @@ class MainWindow:
 
         self.prev_zoom_params = None
 
-        self.logger.log(LogLevel.SUCCESS, "ズーム操作に関するパラメータを初期化成功", context=self.zoom_params)
+        self.logger.log(LogLevel.SUCCESS, "ズーム操作に関するパラメータの初期化成功", context=self.zoom_params)
 
     def _setup_canvas_frame(self) -> None:
         """
@@ -235,7 +238,6 @@ class MainWindow:
         initial_canvas_width = self.config.get("ui_settings", {}).get("initial_canvas_width", 1067)
         initial_canvas_height = self.config.get("ui_settings", {}).get("initial_canvas_height", 600)
 
-        self.logger.log(LogLevel.INIT, "FractalCanvas クラスのインスタンス作成開始")
         self.fractal_canvas = FractalCanvas(
             self.canvas_frame,
             width=initial_canvas_width,
@@ -246,7 +248,7 @@ class MainWindow:
             config=self.config
         )
 
-        self.logger.log(LogLevel.SUCCESS, "フラクタル描画領域を配置するフレームの初期化と配置成功")
+        self.logger.log(LogLevel.SUCCESS, "キャンバスフレームの初期化成功")
 
     def _start_initial_drawing(self) -> None:
         """
@@ -264,8 +266,6 @@ class MainWindow:
             daemon=True
         )
         self.draw_thread.start()
-
-        self.logger.log(LogLevel.SUCCESS, "アプリケーション起動時の初期描画成功")
 
     def update_fractal(self) -> None:
         """
@@ -298,8 +298,7 @@ class MainWindow:
         - エラー発生時はログ出力とステータスバーにエラーメッセージを表示
         """
         try:
-            self.logger.log(LogLevel.CALL, "描画パラメータ：取得開始（スレッド内）")
-            panel_params = self.parameter_panel.get_parameters() # 新しいメソッド名 (後で ParameterPanel に実装)
+            panel_params = self.parameter_panel.get_parameters()
             if not panel_params:
                  self.logger.log(LogLevel.ERROR, "パラメータ取得に失敗したため描画を中止します。")
                  self.status_bar_manager.stop_animation("エラー: パラメータ無効")
@@ -313,16 +312,14 @@ class MainWindow:
             compute_function = self.fractal_loader.get_compute_function(selected_fractal_type_name)
 
             if compute_function is None:
-                self.logger.log(LogLevel.CRITICAL, f"選択されたフラクタルタイプ '{selected_fractal_type_name}' の計算関数が見つかりません！")
+                self.logger.log(LogLevel.CRITICAL, f"選択されたフラクタルタイプ '{selected_fractal_type_name}' の計算関数がない")
                 self.status_bar_manager.stop_animation("エラー: 計算関数不明")
                 self.is_drawing = False
                 return
             # ------------------------------------------------------
 
-            self.logger.log(LogLevel.CALL, f"フラクタル計算 ({selected_fractal_type_name}) と着色処理を開始（スレッド内）")
             fractal_image = render_fractal(current_params, compute_function, self.logger, config=self.config)
 
-            self.logger.log(LogLevel.CALL, "メインスレッドでキャンバス更新要求（スレッド内）")
             # メインスレッドでキャンバス更新をスケジュール
             self.root.after(0, lambda: self.fractal_canvas.update_canvas(
                 fractal_image, current_params
@@ -508,22 +505,20 @@ class MainWindow:
 
         # フレームサイズが有効でない場合は処理をスキップ
         if frame_width_pixels <= 1 or frame_height_pixels <= 1: # 0以下だとエラーになる可能性があるので1以下でチェック
-            self.logger.log(LogLevel.INFO, f"Figure サイズ更新をスキップ：フレームサイズが無効 ({frame_width_pixels}x{frame_height_pixels})")
+            self.logger.log(LogLevel.WARNING, f"Figure サイズ更新をスキップ：無効なフレームサイズ ({frame_width_pixels}x{frame_height_pixels})")
             return
 
-        # 目標アスペクト比 (設定ファイルから読み込むことも可能だが、現状維持)
-        target_aspect = 16 / 9
-
         frame_aspect = frame_width_pixels / frame_height_pixels
+        target_aspect = 16 / 9
 
         if frame_aspect > target_aspect:
             new_height_pixels = frame_height_pixels
             new_width_pixels = int(new_height_pixels * target_aspect)
-            self.logger.log(LogLevel.DEBUG, f"横長フレーム：高さを基準に Figure サイズ計算 ({new_width_pixels}x{new_height_pixels})")
+            self.logger.log(LogLevel.DEBUG, f"横長フレーム：高さを基準に Figure サイズ計算 ({new_width_pixels} x {new_height_pixels})")
         else:
             new_width_pixels = frame_width_pixels
             new_height_pixels = int(new_width_pixels / target_aspect) if target_aspect > 0 else frame_height_pixels
-            self.logger.log(LogLevel.DEBUG, f"縦長/同等フレーム：幅を基準に Figure サイズ計算 ({new_width_pixels}x{new_height_pixels})")
+            self.logger.log(LogLevel.DEBUG, f"縦長/同等フレーム：幅を基準に Figure サイズ計算 ({new_width_pixels} x {new_height_pixels})")
 
         # Figureオブジェクトが存在するか確認
         if not (self.fractal_canvas and hasattr(self.fractal_canvas, 'fig') and self.fractal_canvas.fig):
@@ -534,7 +529,7 @@ class MainWindow:
 
         # ピクセル数が小さすぎる場合、インチ数がほぼゼロになりエラーになる可能性
         if new_width_pixels < 1 or new_height_pixels < 1:
-             self.logger.log(LogLevel.WARNING, f"計算後のピクセル数が小さすぎるため更新をスキップ: {new_width_pixels}x{new_height_pixels}")
+             self.logger.log(LogLevel.WARNING, f"計算後のピクセル数が小さすぎるため更新をスキップ: {new_width_pixels} x {new_height_pixels}")
              return
 
         new_width_inches = new_width_pixels / dpi
@@ -542,6 +537,6 @@ class MainWindow:
 
         try:
             self.fractal_canvas.fig.set_size_inches(new_width_inches, new_height_inches, forward=True)
-            self.logger.log(LogLevel.DEBUG, f"Matplotlib Figure サイズ更新完了: {new_width_inches:.2f}x{new_height_inches:.2f}インチ ({new_width_pixels}x{new_height_pixels}ピクセル)")
+            self.logger.log(LogLevel.SUCCESS, f"Matplotlib Figure サイズ更新成功: {new_width_inches:.2f} x {new_height_inches:.2f}インチ ({new_width_pixels} x {new_height_pixels}ピクセル)")
         except Exception as e:
             self.logger.log(LogLevel.ERROR, f"Matplotlib Figure サイズ更新中にエラー: {e}")

@@ -131,13 +131,13 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger, c
         non_diverge_cmap_name = params.get("non_diverge_colormap", "plasma") # デフォルト値
         cmap_func = plt.get_cmap(diverge_cmap_name)
         non_cmap_func = plt.get_cmap(non_diverge_cmap_name)
-        logger.log(LogLevel.DEBUG, f"カラーマップ取得: 発散部={diverge_cmap_name}, 非発散部={non_diverge_cmap_name}")
+        logger.log(LogLevel.DEBUG, "カラーマップ取得", {"diverge_cmap_name": diverge_cmap_name, "non_diverge_cmap_name": non_diverge_cmap_name})
     except ValueError as e:
-        logger.log(LogLevel.CRITICAL, f"無効なカラーマップ名が指定されました: {e}")
+        logger.log(LogLevel.CRITICAL, "無効なカラーマップ名", {"message": e})
         # 無効な場合、デフォルトに戻すかエラーにするか。ここではエラーにする。
         raise ColorAlgorithmError(f"Invalid colormap name specified: {e}") from e
     except Exception as e:
-        logger.log(LogLevel.CRITICAL, f"カラーマップ取得中に予期せぬエラー: {e}")
+        logger.log(LogLevel.CRITICAL, "カラーマップ取得中に予期せぬエラー", {"message": e})
         raise ColorAlgorithmError("Unexpected error while getting colormap.") from e
 
     # --- 3. 着色処理の実行 ---
@@ -147,7 +147,7 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger, c
 
         # --- 3.1 発散部分の着色 ---
         if np.any(divergent_mask): # 処理対象が存在するかチェック
-            logger.log(LogLevel.INFO, f"発散部分の着色開始: アルゴリズム='{divergent_algo_name}'")
+            logger.log(LogLevel.INFO, "着色開始 発散部", {"divergent_algo_name": divergent_algo_name})
 
             try:
                 # アルゴリズムに応じて必要な引数を渡す
@@ -163,7 +163,7 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger, c
                 else: # Linear, Logarithmic, Histogram など
                     # これらは iterations が必要
                     divergent_algo(colored, divergent_mask, iterations, cmap_func, params, logger)
-                logger.log(LogLevel.SUCCESS, f"発散部分の着色完了: '{divergent_algo_name}'")
+                logger.log(LogLevel.SUCCESS, "着色完了 発散部", {"divergent_algo_name": divergent_algo_name})
             except Exception as algo_e:
                 logger.log(LogLevel.ERROR, f"発散アルゴリズム '{divergent_algo_name}' 実行中にエラー: {algo_e}")
                 # エラーが発生した場合、この領域の着色はスキップされるか、
@@ -171,11 +171,11 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger, c
                 # ここではエラーを上に投げる
                 raise ColorAlgorithmError(f"Error during divergent algorithm '{divergent_algo_name}'.") from algo_e
         else:
-            logger.log(LogLevel.INFO, "発散領域が存在しないため、発散部分の着色をスキップします。")
+            logger.log(LogLevel.INFO, "発散領域が存在しないため、発散部分の着色をスキップ")
 
         # --- 3.2 非発散部分の着色 ---
         if np.any(non_divergent_mask): # 処理対象が存在するかチェック
-            logger.log(LogLevel.INFO, f"非発散部分の着色開始: アルゴリズム='{non_divergent_algo_name}'")
+            logger.log(LogLevel.INFO, "着色開始 非発散部", {"non_divergent_algo_name": non_divergent_algo_name})
 
             try:
                 # アルゴリズムに応じて必要な引数を渡す
@@ -183,7 +183,7 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger, c
                     # グラデーション用の値は事前に計算しておく必要がある
                     logger.log(LogLevel.DEBUG, "グラデーション値を計算します...")
                     gradient_values = compute_gradient(image_shape, logger)
-                    logger.log(LogLevel.DEBUG, f"グラデーション値 計算完了: shape={gradient_values.shape}")
+                    logger.log(LogLevel.DEBUG, "グラデーション値 計算完了", {"shape": gradient_values.shape})
                     # Gradient 関数は mask, iterations, gradient_values, cmap, params, logger を受け取る想定
                     non_divergent_algo(colored, non_divergent_mask, iterations, gradient_values, non_cmap_func, params, logger)
                 elif non_divergent_algo_name == '統計分布（Histogram Equalization）':
@@ -199,7 +199,7 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger, c
                 else:
                     # 他の多くの非発散アルゴリズムは z_vals が必要と想定
                     non_divergent_algo(colored, non_divergent_mask, z_vals, non_cmap_func, params, logger)
-                logger.log(LogLevel.SUCCESS, f"非発散部分の着色完了: '{non_divergent_algo_name}'")
+                logger.log(LogLevel.SUCCESS, "着色完了 非発散部", {"non_divergent_algo_name": non_divergent_algo_name})
             except Exception as algo_e:
                 logger.log(LogLevel.ERROR, f"非発散アルゴリズム '{non_divergent_algo_name}' 実行中にエラー: {algo_e}")
                 raise ColorAlgorithmError(f"Error during non-divergent algorithm '{non_divergent_algo_name}'.") from algo_e
@@ -226,7 +226,7 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger, c
         raise
     except Exception as e:
         # 予期せぬエラー (アルゴリズム実行前など)
-        logger.log(LogLevel.CRITICAL, f"色付け処理の準備または後処理中に予期しないエラーが発生しました: {e}", exc_info=True) # スタックトレースも記録
+        logger.log(LogLevel.CRITICAL, f"色付け処理の準備または後処理中に予期しないエラーが発生: {e}", exc_info=True) # スタックトレースも記録
         # エラーが発生した場合、安全な値 (例: 真っ黒な画像) を返すか、エラーを投げるか
         # ここではエラーを投げる
         raise ColorAlgorithmError("Coloring failed due to an unexpected internal error.") from e

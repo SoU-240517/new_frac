@@ -38,20 +38,20 @@ class CursorManager:
         Args:
             zoom_selector: ZoomSelectorインスタンス
             logger: ログ出力用の DebugLogger インスタンス
-        
+
         Raises:
             ValueError: Tkinter ウィジェットが取得できない場合
         """
         self.zoom_selector = zoom_selector
         self.logger = logger
-        self.logger.log(LogLevel.INIT, "EventValidator クラスのインスタンスを作成開始")
+
         self.validator = EventValidator(logger)
+
         self._current_cursor = CURSORS['default']
+
         self._canvas_widget = getattr(zoom_selector.canvas, 'get_tk_widget', lambda: None)()
         if self._canvas_widget is None:
             raise ValueError("Tkinter ウィジェット取得不可：FigureCanvasTkAgg の使用を要確認")
-
-        self.logger.log(LogLevel.INIT, "CursorManager クラスのインスタンスを作成成功")
 
     def cursor_update(self,
                       event: Optional[MouseEvent],

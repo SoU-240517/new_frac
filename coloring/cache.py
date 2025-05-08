@@ -30,13 +30,13 @@ class ColorCache:
         coloring_settings = config.get("coloring_settings", {})
         # フォールバック用のデフォルト値を設定
         default_max_size = 100
-        self.max_size = coloring_settings.get("cache_max_size", default_max_size)
+        self.cache_max_size = coloring_settings.get("cache_max_size", default_max_size)
         # max_size が非正数の場合の処理
-        if self.max_size <= 0:
-            self.logger.log(LogLevel.WARNING, f"設定ファイルの cache_max_size ({self.max_size}) が無効です。デフォルト値 ({default_max_size}) を使用します。")
-            self.max_size = default_max_size
+        if self.cache_max_size <= 0:
+            self.logger.log(LogLevel.WARNING, f"設定ファイルの cache_max_size ({self.cache_max_size}) が無効なのでデフォルト値 ({default_max_size}) を使用")
+            self.cache_max_size = default_max_size
         else:
-             self.logger.log(LogLevel.DEBUG, f"キャッシュ最大サイズ設定: {self.max_size}")
+             self.logger.log(LogLevel.DEBUG, "設定読込", {"cache_max_size": self.cache_max_size})
 
     def _create_cache_key(self, params: Dict) -> str:
         """キャッシュキーを生成 (パラメータ辞書をソートして文字列化)
@@ -83,11 +83,11 @@ class ColorCache:
         cached_item = self.cache.get(key)
         key_short = key[:80] + "..." if len(key) > 80 else key # ログ用短縮キー
         if cached_item:
-            self.logger.log(LogLevel.INFO, f"キャッシュヒット: {key_short}")
+            self.logger.log(LogLevel.INFO, "キャッシュヒット", {"key_short": key_short})
             # キャッシュアイテムの構造が変わる可能性を考慮
             return cached_item.get('image') if isinstance(cached_item, dict) else None
         else:
-            self.logger.log(LogLevel.INFO, f"キャッシュミス: {key_short}")
+            self.logger.log(LogLevel.INFO, "キャッシュミス", {"key_short": key_short})
             return None
 
     def put_cache(self, params: Dict, data: np.ndarray) -> None:
@@ -98,7 +98,7 @@ class ColorCache:
             params (dict): 画像に関連付けられた計算パラメータ
             data (np.ndarray): キャッシュする画像データ
         """
-        if self.max_size <= 0: # キャッシュ無効の場合
+        if self.cache_max_size <= 0: # キャッシュ無効の場合
              self.logger.log(LogLevel.DEBUG, "キャッシュ最大サイズが0以下なので保存をスキップします。")
              return
 
@@ -109,7 +109,7 @@ class ColorCache:
         if key in self.cache:
              self.logger.log(LogLevel.DEBUG, f"既存キャッシュキーを更新: {key_short}")
         # 新しいキーで、かつキャッシュが満杯の場合
-        elif len(self.cache) >= self.max_size:
+        elif len(self.cache) >= self.cache_max_size:
             try:
                 # 最も古いキーを取得して削除 (Python 3.7+ 前提)
                 first_key = next(iter(self.cache))
@@ -125,4 +125,4 @@ class ColorCache:
 
         # キャッシュにデータを保存 (params も含めておくとデバッグに役立つ場合がある)
         self.cache[key] = {'params': params, 'image': data}
-        self.logger.log(LogLevel.DEBUG, f"キャッシュに保存: {key_short}")
+        self.logger.log(LogLevel.DEBUG, f"キャッシュに保存成功: {key_short}")

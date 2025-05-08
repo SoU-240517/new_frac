@@ -56,6 +56,7 @@ class FractalCanvas:
         self.parent = master
         self.config = config
         self.facecolor = self.config.get("canvas_settings", {}).get("facecolor", "black")
+        self.logger.log(LogLevel.DEBUG, "設定読込", {"facecolor": self.facecolor})
 
         # FigureとAxesの初期化
         self._setup_figure(width, height)
@@ -66,8 +67,6 @@ class FractalCanvas:
 
         # 背景色の設定
         self._set_black_background()
-
-        self.logger.log(LogLevel.INIT, "FractalCanvas クラスのインスタンス作成成功")
 
     def _setup_figure(self, width: int, height: int) -> None:
         """
@@ -81,6 +80,7 @@ class FractalCanvas:
             ValueError: DPIの設定が不正な場合
         """
         config_dpi = self.config.get("canvas_settings", {}).get("config_dpi", 100)
+        self.logger.log(LogLevel.DEBUG, "設定読込", {"config_dpi": config_dpi})
 
         # Figure の設定
         self.fig = Figure(
@@ -121,7 +121,6 @@ class FractalCanvas:
         # ZoomSelector を遅延インポート
         from ui.zoom_function.zoom_selector import ZoomSelector
 
-        self.logger.log(LogLevel.INIT, "ZoomSelector クラスのインスタンスを作成開始")
         self.zoom_selector = ZoomSelector(
             self.ax,
             on_zoom_confirm=self.zoom_confirmed,
@@ -208,7 +207,7 @@ class FractalCanvas:
         # 16:9のアスペクト比を維持するための計算
         width = params["width"]
         height = width * (9 / 16) # 16:9のアスペクト比を維持
-        self.logger.log(LogLevel.SUCCESS, f"描画範囲の計算結果: width={width:.4f}, height={height:.4f} (目標16:9)")
+        self.logger.log(LogLevel.SUCCESS, f"描画範囲の計算結果: width = {width:.4f}, height = {height:.4f} (目標16:9)")
 
         self.ax.set_aspect("auto") # アスペクト比を自動調整
 

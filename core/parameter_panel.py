@@ -84,7 +84,7 @@ class ParameterPanel:
         ui_settings = self.config.get("ui_settings", {})
         self.COLORBAR_WIDTH = ui_settings.get("colorbar_width", 150)
         self.COLORBAR_HEIGHT = ui_settings.get("colorbar_height", 15)
-        self.logger.log(LogLevel.DEBUG, f"カラーバーサイズ設定完了: {self.COLORBAR_WIDTH} x {self.COLORBAR_HEIGHT}")
+        self.logger.log(LogLevel.DEBUG, "設定読込", {"COLORBAR_WIDTH": self.COLORBAR_WIDTH, "COLORBAR_HEIGHT": self.COLORBAR_HEIGHT})
 
         # カラーマップリストを設定ファイルから取得
         self.colormaps = self.config.get("coloring_options", {}).get("available_colormaps", [])
@@ -95,10 +95,10 @@ class ParameterPanel:
                 # `_r` で終わるリバースカラーマップを除外してソートする
                 self.colormaps = sorted([m for m in plt.colormaps() if not m.endswith('_r')])
             except ImportError:
-                self.logger.log(LogLevel.ERROR, "matplotlib インポート不可。カラーマップリストは空")
+                self.logger.log(LogLevel.ERROR, "カラーマップリストが空なので matplotlib インポート不可")
                 self.colormaps = [] # matplotlib がない場合は空リスト
             except Exception as e:
-                self.logger.log(LogLevel.ERROR, f"matplotlib からカラーマップ取得中にエラー: {e}")
+                self.logger.log(LogLevel.ERROR, "matplotlib からカラーマップ取得中にエラー", {"message": e})
                 self.colormaps = [] # その他のエラーでも空リスト
 
         self.logger.log(LogLevel.DEBUG, f"カラーマップロード数: {len(self.colormaps)} 個")
@@ -158,7 +158,7 @@ class ParameterPanel:
         combo = self._add_combobox(row, 1, self.fractal_type_var, fractal_types)
         combo.bind("<<ComboboxSelected>>", self._on_fractal_type_selected)
 
-        self.logger.log(LogLevel.DEBUG, f"default_fractal_type: {default_fractal_type}")
+        self.logger.log(LogLevel.DEBUG, "初期設定：フラクタルタイプ", {"default_fractal_type": default_fractal_type})
 
         return row + 1
 
@@ -183,7 +183,7 @@ class ParameterPanel:
         self.formula_label = ttk.Label(self.parent, textvariable=self.formula_var, font=(Panel_font, panel_font_size), wraplength=self.config.get("ui_settings",{}).get("parameter_panel_width", 300)-20) # 折返し追加
         self.formula_label.grid(row=row, column=0, columnspan=2, sticky=tk.W, padx=10, pady=2)
 
-        self.logger.log(LogLevel.DEBUG, f"数式表示セクション Panel_font and size: {Panel_font}, {panel_font_size}")
+        self.logger.log(LogLevel.DEBUG, "初期設定：数式表示フォント", {"Panel_font": Panel_font, "panel_font_size": panel_font_size})
 
         return row + 1
 
@@ -218,14 +218,15 @@ class ParameterPanel:
             event (Optional[tk.Event]): イベントオブジェクト
         """
         selected_type_name = self.fractal_type_var.get()
-        self.logger.log(LogLevel.INFO, f"フラクタルタイプ変更: {selected_type_name}")
+        self.logger.log(LogLevel.INFO, "フラクタルタイプ変更", {"selected_type_name": selected_type_name})
 
         # 1. 以前のパラメータウィジェットを削除
         self._clear_dynamic_parameters()
 
         # 2. 選択されたタイプのパラメータ設定を取得
         self.current_plugin_params = self.fractal_loader.get_parameters_config(selected_type_name) or []
-        self.logger.log(LogLevel.SUCCESS, f"パラメータロード成功 ({selected_type_name}): {self.current_plugin_params}")
+#        self.logger.log(LogLevel.SUCCESS, "パラメータロードに成功", {"selected_type_name": selected_type_name})
+        self.logger.log(LogLevel.SUCCESS, "パラメータロードに成功", {"current_plugin_params": self.current_plugin_params})
 
         # 3. 新しいパラメータウィジェットを生成
         if self.param_frame: # param_frame が作成されているか確認
@@ -283,7 +284,7 @@ class ParameterPanel:
         # 5. 推奨カラーリング設定を適用
         recommended = self.fractal_loader.get_recommended_coloring(selected_type_name)
         if recommended:
-             self.logger.log(LogLevel.DEBUG, f"推奨カラーリング設定を適用: {recommended}")
+             self.logger.log(LogLevel.DEBUG, f"カラーリング設定を適用: {recommended}")
              if recommended.get("divergent_algorithm"):
                  self.diverge_algo_var.set(recommended["divergent_algorithm"])
              if recommended.get("divergent_colormap"):
@@ -337,7 +338,7 @@ class ParameterPanel:
         self._add_label("着色アルゴリズム:", row, 0, pady=(5,0))
         default_diverge_algo = param_defaults.get("diverge_algorithm", "スムージング")
 
-        self.logger.log(LogLevel.DEBUG, f"発散部 default_diverge_algo: {default_diverge_algo}")
+        self.logger.log(LogLevel.DEBUG, "初期設定：発散部 標準着色方法", {"default_diverge_algo": default_diverge_algo})
 
         if not hasattr(self, 'diverge_algo_var'):
              self.diverge_algo_var = tk.StringVar()
@@ -370,7 +371,7 @@ class ParameterPanel:
         self._add_label("カラーマップ:", row, 0, pady=(2,5))
         default_diverge_cmap = param_defaults.get("diverge_colormap", "viridis")
 
-        self.logger.log(LogLevel.DEBUG, f"発散部 default_diverge_cmap: {default_diverge_cmap}")
+        self.logger.log(LogLevel.DEBUG, "初期設定：発散部 標準カラーマップ", {"default_diverge_cmap": default_diverge_cmap})
 
         # diverge_colormap_var はクラス変数として持つ
         if not hasattr(self, 'diverge_colormap_var'):
@@ -408,7 +409,7 @@ class ParameterPanel:
         self._add_label("着色アルゴリズム:", row, 0, pady=(5,0))
         default_non_diverge_algo = param_defaults.get("non_diverge_algorithm", "単色")
 
-        self.logger.log(LogLevel.DEBUG, f"非発散部 default_non_diverge_algo: {default_non_diverge_algo}")
+        self.logger.log(LogLevel.DEBUG, "初期設定：非発散部 標準着色方法", {"default_non_diverge_algo": default_non_diverge_algo})
 
         # non_diverge_algo_var はクラス変数として持つ
         if not hasattr(self, 'non_diverge_algo_var'):
@@ -451,7 +452,7 @@ class ParameterPanel:
         self._add_label("カラーマップ:", row, 0, pady=(2,5))
         default_non_diverge_cmap = param_defaults.get("non_diverge_colormap", "magma")
 
-        self.logger.log(LogLevel.DEBUG, f"非発散部 default_non_diverge_cmap: {default_non_diverge_cmap}")
+        self.logger.log(LogLevel.DEBUG, "初期設定：非発散部 標準カラーマップ", {"default_non_diverge_cmap": default_non_diverge_cmap})
 
         # non_diverge_colormap_var はクラス変数として持つ
         if not hasattr(self, 'non_diverge_colormap_var'):
@@ -583,7 +584,7 @@ class ParameterPanel:
             rgba_image = np.uint8(np.tile(colors, (self.COLORBAR_HEIGHT, 1, 1)) * 255)
             pil_image = Image.fromarray(rgba_image, 'RGBA')
             photo_image = ImageTk.PhotoImage(pil_image)
-            self.logger.log(LogLevel.DEBUG, f"カラーバー生成完了: {cmap_name}")
+            self.logger.log(LogLevel.DEBUG, "カラーバー生成完了", {"cmap_name": cmap_name})
             return photo_image
         except ValueError:
             self.logger.log(LogLevel.WARNING, f"無効なカラーマップ名: {cmap_name}：ダミー画像を表示する")
@@ -621,7 +622,7 @@ class ParameterPanel:
             max_iter_str = self.max_iter_var.get()
             max_iterations = int(max_iter_str)
             if max_iterations <= 0:
-                self.logger.log(LogLevel.WARNING, f"最大反復回数({max_iterations})は正の整数が必要なので、100に補正")
+                self.logger.log(LogLevel.WARNING, f"最大反復回数({max_iterations})は正の整数が必要なので 100 に補正")
                 max_iterations = 100
             panel_params["max_iterations"] = max_iterations
 

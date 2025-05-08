@@ -11,7 +11,7 @@ class EventHandlersPrivate:
     - 矩形の作成、移動、リサイズ、回転などの具体的な操作を実行する
     - イベント処理の状態管理と履歴管理を行う
     - カーソルの更新や描画の更新などのUI関連処理を行う
-    
+
     Attributes:
         core: 親である EventHandler インスタンス
         logger: ログ出力機能
@@ -28,8 +28,6 @@ class EventHandlersPrivate:
             core: 親である EventHandler インスタンス
         """
         self.core = core
-
-        self.core.logger.log(LogLevel.INIT, "EventHandlersPrivate クラスのインスタンスを作成成功")
 
     # --- プライベートハンドラメソッド ---
     # --- Press イベントハンドラ ---
@@ -259,10 +257,10 @@ class EventHandlersPrivate:
         - 回転中心とマウスの移動から回転角度を計算し、矩形を回転する
         - 回転角度の変化が閾値を超えた場合のみ更新を行う
         - 回転感度を考慮した角度調整を行う
-        
+
         Args:
             event: MouseEvent オブジェクト
-        
+
         Notes:
             - 回転中心、前回の角度、現在のマウス座標が有効な場合のみ処理を行う
             - 角度変化が rotation_threshold を超えた場合のみ更新を行う
@@ -347,15 +345,15 @@ class EventHandlersPrivate:
         """RESIZING 状態でのマウス解放: リサイズ完了またはキャンセル/Undo
         - 矩形のリサイズを確定、または無効なリサイズの場合Undoを実行し、状態を更新する
         - リサイズ後の矩形サイズの有効性チェックを行う
-        
+
         Args:
             event: MouseEvent オブジェクト
-            
+
         Returns:
             ZoomState: 次の状態
             - EDIT: リサイズが成功した場合
             - NO_RECT: リサイズが失敗してUndoされた場合
-            
+
         Notes:
             - 最後に計算されたピクセルサイズが有効かチェック
             - 無効なサイズになった場合はUndoを試行
@@ -393,10 +391,10 @@ class EventHandlersPrivate:
         """Escapeキー押下処理
         - 現在の状態に応じて、適切なキャンセル処理を行う
         - ズーム確定キャンセル、Undo、編集キャンセルなどの処理を実行
-        
+
         Args:
             event: KeyEvent オブジェクト
-            
+
         Notes:
             - NO_RECT 状態: ズーム確定キャンセル
             - EDIT 状態: Undoまたは編集キャンセル

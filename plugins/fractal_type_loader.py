@@ -26,7 +26,6 @@ class FractalTypeLoader:
         self.logger = logger
         self.plugin_dir = plugin_dir
         self.loaded_plugins: Dict[str, Dict[str, Any]] = {} # プラグイン名 -> プラグイン情報の辞書
-        self.logger.log(LogLevel.SUCCESS, f"fractal fype plugin_dir: {plugin_dir}")
 
     def scan_and_load_plugins(self) -> None:
         """
@@ -39,17 +38,18 @@ class FractalTypeLoader:
         """
         self.loaded_plugins = {} # ロード前にクリア
 
+        self.logger.log(LogLevel.INFO, "プラグインロード開始", {"plugin_dir": self.plugin_dir})
         if not os.path.isdir(self.plugin_dir):
-            self.logger.log(LogLevel.ERROR, f"プラグインディレクトリなし: {self.plugin_dir}")
+            self.logger.log(LogLevel.ERROR, "プラグインディレクトリなし", {"plugin_dir": self.plugin_dir})
             return
 
         for item in os.scandir(self.plugin_dir):
             if item.is_dir():
                 plugin_name = item.name
-                self.logger.log(LogLevel.INFO, f"検出プラグイン: {plugin_name}")
+                self.logger.log(LogLevel.INFO, "プラグイン検出", {"plugin_name": plugin_name})
                 self._load_single_plugin(plugin_name, item.path)
 
-        self.logger.log(LogLevel.SUCCESS, f"{len(self.loaded_plugins)} 個のプラグインをロード成功")
+        self.logger.log(LogLevel.SUCCESS, f"{len(self.loaded_plugins)} 個のプラグインのロードに成功")
 
     def _load_single_plugin(self, plugin_name: str, plugin_path: str) -> None:
         """
@@ -84,22 +84,22 @@ class FractalTypeLoader:
         try:
             with open(json_path, 'r', encoding='utf-8') as f:
                 config = json.load(f)
-            self.logger.log(LogLevel.DEBUG, f"{plugin_name} の JSON 設定読込完了")
+            self.logger.log(LogLevel.DEBUG, f"{plugin_name} の JSON 読込完了")
 
             # --- JSON設定の必須キーを検証 ---
             required_keys = ["name", "description", "module_name", "function_name", "parameters"]
             if not all(key in config for key in required_keys):
                 missing_keys = [key for key in required_keys if key not in config]
-                self.logger.log(LogLevel.ERROR, f"{plugin_name} 用 JSON の設定情報不足でスキップ: {missing_keys}")
+                self.logger.log(LogLevel.ERROR, f"{plugin_name} : JSON の設定情報不足でスキップ: {missing_keys}")
                 return
             if config["module_name"] != plugin_name:
-                 self.logger.log(LogLevel.WARNING, f"{plugin_name} 用 JSON の module_name がディレクトリ名と不一致: {config['module_name']}")
+                 self.logger.log(LogLevel.WARNING, f"{plugin_name} : JSON の module_name がディレクトリ名と不一致: {config['module_name']}")
 
         except json.JSONDecodeError as e:
-            self.logger.log(LogLevel.ERROR, f"{plugin_name} 用 JSON の解析エラーによりスキップ: {e}")
+            self.logger.log(LogLevel.ERROR, f"{plugin_name} : JSON 解析エラーによりスキップ: {e}")
             return
         except Exception as e:
-            self.logger.log(LogLevel.ERROR, f"{plugin_name} 用 JSON の読込中に予期せぬエラーでスキップ: {e}")
+            self.logger.log(LogLevel.ERROR, f"{plugin_name} : JSON 読込中に予期せぬエラーでスキップ: {e}")
             return
 
         # 2. Pythonモジュールのインポートと関数の取得
@@ -109,7 +109,7 @@ class FractalTypeLoader:
 
             # importlib を使ってモジュールを動的にインポート
             module = importlib.import_module(module_spec_path)
-            self.logger.log(LogLevel.DEBUG, f"{plugin_name} モジュールインポート完了: {module_spec_path}")
+            self.logger.log(LogLevel.DEBUG, f"{plugin_name} のモジュールインポート完了")
 
             # JSON で指定された関数を取得
             function_name = config["function_name"]
@@ -119,7 +119,7 @@ class FractalTypeLoader:
                 self.logger.log(LogLevel.ERROR, f"{plugin_name} モジュールに関数 {function_name} が見つからないか、呼び出し不可能でスキップ")
                 return
 
-            self.logger.log(LogLevel.DEBUG, f"{plugin_name} の関数 {function_name} を取得完了")
+            self.logger.log(LogLevel.DEBUG, f"{plugin_name} の関数 '{function_name}' を取得完了")
 
         except ImportError as e:
             self.logger.log(LogLevel.ERROR, f"{plugin_name} モジュールインポートエラーでスキップ: {e}")
@@ -141,7 +141,7 @@ class FractalTypeLoader:
             "plugin_dir_name": plugin_name # 必要であればディレクトリ名も保持
         }
 
-        self.logger.log(LogLevel.SUCCESS, f"リスト表示名: {plugin_display_name} (plugin 名： {plugin_name}) のロード成功")
+        self.logger.log(LogLevel.SUCCESS, f"{plugin_name} のロード成功: リスト表示名: {plugin_display_name}")
 
     def get_available_types(self) -> List[str]:
         """

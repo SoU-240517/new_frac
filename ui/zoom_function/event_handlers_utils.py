@@ -11,10 +11,10 @@ class EventHandlersUtils:
     - 角度計算などの共通処理
     - 編集履歴の管理 (Undo/Redo)
     - 各種内部状態のリセット
-    
+
     Attributes:
         core: 親である EventHandler インスタンス
-        
+
     Note:
         このクラスは EventHandler クラスの補助クラスとして設計されており、
         イベント処理に関連する共通のユーティリティ機能を提供します。
@@ -22,31 +22,29 @@ class EventHandlersUtils:
 
     def __init__(self, core: 'EventHandler'):
         """EventHandlersUtils クラスのコンストラクタ
-        
+
         Args:
             core: 親である EventHandler インスタンス
-            
+
         Note:
             インスタンス作成時に初期化処理を行い、
             親インスタンスへの参照を設定します。
         """
         self.core = core # 親インスタンスへの参照
 
-        self.core.logger.log(LogLevel.INIT, "EventHandlersUtils クラスのインスタンスを作成成功")
-
     # --- ヘルパーメソッド ---
     def _calculate_angle(self, cx: float, cy: float, px: float, py: float) -> float:
         """中心点から点へのベクトル角度を計算
-        
+
         Args:
             cx: 中心点 x 座標
             cy: 中心点 y 座標
             px: 点 x 座標
             py: 点 y 座標
-            
+
         Returns:
             ベクトル角度 (度, -180から180)
-            
+
         Note:
             このメソッドは回転操作時の角度計算に使用されます。
             atan2関数を使用して正確な角度を計算します。
@@ -56,14 +54,14 @@ class EventHandlersUtils:
 
     def _normalize_angle_diff(self, angle1: float, angle2: float) -> float:
         """角度差を -180度から180度の範囲に正規化
-        
+
         Args:
             angle1: 角度1
             angle2: 角度2
-            
+
         Returns:
             正規化した角度差
-            
+
         Note:
             このメソッドは回転操作時の角度差の正規化に使用されます。
             360度周期の角度差を -180度から180度の範囲に正規化します。
@@ -78,10 +76,10 @@ class EventHandlersUtils:
     # --- Undo 関連メソッド ---
     def _add_history(self, state: Optional[Dict[str, Any]]) -> None:
         """編集履歴に状態を追加
-        
+
         Args:
             state: 状態情報
-            
+
         Note:
             このメソッドは編集操作の履歴を記録します。
             将来的にはメモリリークを防ぐための履歴数制限の実装も検討されています。
@@ -95,10 +93,10 @@ class EventHandlersUtils:
 
     def _remove_last_history(self) -> Optional[Dict[str, Any]]:
         """最後の履歴を削除
-        
+
         Returns:
             削除された状態情報
-            
+
         Note:
             履歴が存在しない場合は None を返します。
         """
@@ -110,7 +108,7 @@ class EventHandlersUtils:
 
     def clear_edit_history(self):
         """編集履歴をクリア
-        
+
         Note:
             このメソッドは編集履歴を完全にクリアします。
             通常、新しい編集操作の開始時に呼び出されます。
@@ -120,7 +118,7 @@ class EventHandlersUtils:
 
     def _undo_last_edit(self):
         """最後に行った編集操作を元に戻す
-        
+
         Note:
             履歴が存在しない場合は警告ログを出力します。
             Undo 操作後は canvas の再描画が行われます。
@@ -138,7 +136,7 @@ class EventHandlersUtils:
 
     def _undo_or_cancel_edit(self):
         """ESCキーによるUndoまたは編集キャンセル
-        
+
         Note:
             履歴の状態に応じて以下の動作を行います：
             - 履歴が2つ以上: 最後の編集をUndo
@@ -167,7 +165,7 @@ class EventHandlersUtils:
     # --- 状態リセットメソッド群 ---
     def reset_internal_state(self):
         """全ての内部状態と編集履歴をリセット
-        
+
         Note:
             このメソッドは以下の操作を行います：
             1. 各種内部状態のリセット
@@ -184,7 +182,7 @@ class EventHandlersUtils:
 
     def _reset_create_state(self):
         """矩形作成関連の内部状態をリセット
-        
+
         Note:
             矩形作成開始位置とログ状態をリセットします。
         """
@@ -194,7 +192,7 @@ class EventHandlersUtils:
 
     def _reset_move_state(self):
         """矩形移動関連の内部状態をリセット
-        
+
         Note:
             移動開始位置と矩形の初期位置をリセットします。
         """
@@ -205,7 +203,7 @@ class EventHandlersUtils:
 
     def _reset_resize_state(self):
         """矩形リサイズ関連の内部状態をリセット
-        
+
         Note:
             リサイズ操作に関連する角の位置情報をリセットします。
         """
@@ -215,7 +213,7 @@ class EventHandlersUtils:
 
     def _reset_rotate_state(self):
         """矩形回転関連の内部状態をリセット
-        
+
         Note:
             回転操作に関連するマウス位置、中心点、角度情報をリセットします。
         """

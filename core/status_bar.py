@@ -88,7 +88,7 @@ class StatusBarManager:
             )
             self._animation_state.thread.start()
         except Exception as e:
-            self.logger.log(LogLevel.ERROR, f"アニメーションスレッドの開始失敗: {e}")
+            self.logger.log(LogLevel.ERROR, f"ステータスアニメーションスレッドの開始失敗: {e}")
             self._animation_state.stop()
 
     def _run_animation(self) -> None:
@@ -190,7 +190,7 @@ class StatusBarManager:
             self._cancel_time_update()
             self._show_final_message(final_message)
             self._reset_state()
-            self.logger.log(LogLevel.SUCCESS, "ステータスアニメーション停止完了")
+            self.logger.log(LogLevel.SUCCESS, "ステータスアニメーション停止成功")
 
     def _wait_for_thread(self) -> None:
         """アニメーションスレッドの終了を待機
@@ -198,12 +198,12 @@ class StatusBarManager:
         - タイムアウトしても終了しない場合は、警告ログを出力する
         """
         if self._animation_state.thread and self._animation_state.thread.is_alive():
-            self.logger.log(LogLevel.DEBUG, "アニメーションスレッドの終了を待機...")
+            self.logger.log(LogLevel.DEBUG, "ステータスアニメーションスレッドの終了を待機...")
             self._animation_state.thread.join(timeout=0.2)
             if self._animation_state.thread.is_alive():
-                self.logger.log(LogLevel.WARNING, "アニメーションスレッドが終了不可 (タイムアウト)")
+                self.logger.log(LogLevel.WARNING, "ステータスアニメーションスレッドが終了不可 (タイムアウト)")
             else:
-                self.logger.log(LogLevel.SUCCESS, "アニメーションスレッド停止完了")
+                self.logger.log(LogLevel.SUCCESS, "ステータスアニメーションスレッド停止成功")
 
     def _show_final_message(self, message: str) -> None:
         """最終メッセージを表示

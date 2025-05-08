@@ -17,12 +17,13 @@ class ZoomSelector:
     - ズーム操作の状態管理
     """
 
-    def __init__(self,
-                ax: Axes,
-                on_zoom_confirm: Callable[[float, float, float, float, float], None],
-                on_zoom_cancel: Callable[[], None],
-                logger: DebugLogger,
-                config: Dict[str, Any]
+    def __init__(
+        self,
+        ax: Axes,
+        on_zoom_confirm: Callable[[float, float, float, float, float], None],
+        on_zoom_cancel: Callable[[], None],
+        logger: DebugLogger,
+        config: Dict[str, Any]
     ):
         """ZoomSelector クラスのコンストラクタ
         - ZoomSelectorの初期化
@@ -38,8 +39,6 @@ class ZoomSelector:
         self._initialize_components(ax, logger)
         self._setup_callbacks(on_zoom_confirm, on_zoom_cancel)
         self._connect_events()
-
-        self.logger.log(LogLevel.INIT, "ZoomSelector クラスのインスタンス作成成功")
 
     def _initialize_components(self, ax: Axes, logger: DebugLogger) -> None:
         """コンポーネントの初期化
@@ -57,54 +56,14 @@ class ZoomSelector:
         self._cached_rect_patch: Optional[patches.Rectangle] = None # 最後に描画された矩形パッチをキャッシュ
         self._last_cursor_inside_state: Optional[bool] = None # 最後に記録されたカーソルが矩形内にあるかの状態
 
-        # 依存コンポーネントの初期化
-        self._initialize_state_handler()
-        self._initialize_rect_manager()
-        self._initialize_cursor_manager()
-        self._initialize_event_handler()
-
-    def _setup_callbacks(self, on_zoom_confirm, on_zoom_cancel) -> None:
-        """コールバック関数の設定
-        - ズーム確定時とキャンセル時に呼び出すコールバック関数を登録する
-        Args:
-            on_zoom_confirm: ズーム確定時に呼び出すコールバック関数
-            on_zoom_cancel: ズームキャンセル時に呼び出すコールバック関数
-        """
-        self.on_zoom_confirm = on_zoom_confirm
-        self.on_zoom_cancel = on_zoom_cancel
-
-    def _initialize_state_handler(self) -> None:
-        """ZoomStateHandlerの初期化
-        - ズーム操作の状態を管理する ZoomStateHandler のインスタンスを生成する
-        """
-        self.logger.log(LogLevel.INIT, "ZoomStateHandler クラスのインスタンスを作成開始")
         self.state_handler = ZoomStateHandler(
             initial_state=ZoomState.NO_RECT,
             logger=self.logger,
             canvas=self.canvas
         )
-
-    def _initialize_rect_manager(self) -> None:
-        """RectManagerの初期化
-        - ズーム領域の矩形描画と変形を管理する RectManager のインスタンスを生成する
-        """
-        self.logger.log(LogLevel.INIT, "RectManager クラスのインスタンスを作成開始")
         self.rect_manager = RectManager(self.ax, self.logger, self.config)
-
-    def _initialize_cursor_manager(self) -> None:
-        """CursorManagerの初期化
-        - カーソルの表示を管理する CursorManager のインスタンスを生成する
-        """
-        self.logger.log(LogLevel.INIT, "CursorManager クラスのインスタンスを作成開始")
         self.cursor_manager = CursorManager(self, self.logger)
-
-    def _initialize_event_handler(self) -> None:
-        """EventHandlerの初期化
-        - マウスイベントを処理する EventHandler のインスタンスを生成し、各コンポーネントとの連携を設定する
-        """
-        self.logger.log(LogLevel.INIT, "EventValidator クラスのインスタンスを作成開始")
         self.validator = EventValidator(self.logger)
-        self.logger.log(LogLevel.INIT, "EventHandler クラスのインスタンスを作成開始")
         self.event_handler = EventHandler(
             self,
             self.state_handler,
@@ -117,11 +76,20 @@ class ZoomSelector:
         )
         self.state_handler.event_handler = self.event_handler
 
+    def _setup_callbacks(self, on_zoom_confirm, on_zoom_cancel) -> None:
+        """コールバック関数の設定
+        - ズーム確定時とキャンセル時に呼び出すコールバック関数を登録する
+        Args:
+            on_zoom_confirm: ズーム確定時に呼び出すコールバック関数
+            on_zoom_cancel: ズームキャンセル時に呼び出すコールバック関数
+        """
+        self.on_zoom_confirm = on_zoom_confirm
+        self.on_zoom_cancel = on_zoom_cancel
+
     def _connect_events(self) -> None:
         """イベントハンドラの接続
         - 各種イベントをイベントハンドラに接続し、マウス操作を監視する
         """
-        self.logger.log(LogLevel.CALL, "全イベント接続開始")
         self.event_handler.connect()
         self.cursor_manager.set_default_cursor()
 

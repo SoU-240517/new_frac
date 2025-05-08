@@ -61,7 +61,7 @@ class DebugLogger:
 
         # 初期化完了ログ (force=True で必ず表示)
         self._log_internal(
-            LogLevel.SUCCESS,
+            LogLevel.DEBUG,
             f"DebugLogger クラスインスタンス作成完了：debug_enabled={self.debug_enabled}, min_level={self.min_log_level.name}",
             force=True,
             stacklevel=2 # 呼び出し元を調整
@@ -262,5 +262,5 @@ class DebugLogger:
             else:
                 # 長すぎる文字列は省略するなどしても良い
                 formatted_v = str(v)
-            items.append(f"{escape(str(k))}={escape(formatted_v)}") # キーもエスケープ
+            items.append(f"{escape(str(k))} = {escape(formatted_v)}") # キーもエスケープ
         return ", ".join(items)

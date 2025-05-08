@@ -45,7 +45,7 @@ def _calculate_dynamic_resolution(width: float, config: Dict[str, Any], logger: 
     min_res = dr_config.get("min", 400)
     max_res = dr_config.get("max", 1200)
     log_factor = dr_config.get("log_factor", 5.0) # 対数計算用係数
-    logger.log(LogLevel.DEBUG, f"動的解像度パラメータ: base={base_res}, min={min_res}, max={max_res}, factor={log_factor}")
+    logger.log(LogLevel.DEBUG, "設定読込：動的解像度パラメータ", {"base_res": base_res, "min_res": min_res, "max_res": max_res, "log_factor": log_factor})
 
     # 対数スケールでズームファクターを計算
     # width=4.0 を基準 (widthが大きいほどズームアウト)
@@ -62,7 +62,7 @@ def _calculate_dynamic_resolution(width: float, config: Dict[str, Any], logger: 
 
     # zoom_factorにbase_resを掛けて基本解像度を決定
     resolution = int(base_res * zoom_factor_log)
-    logger.log(LogLevel.DEBUG, f"基本解像度計算結果: {resolution}")
+    logger.log(LogLevel.DEBUG, "基本解像度計算結果", {"resolution": resolution})
 
     # 最小解像度と最大解像度でクリップ
     final_resolution = np.clip(resolution, min_res, max_res)
@@ -163,7 +163,7 @@ def _compute_fractal(
 
     fractal_type_name = params.get("fractal_type_name", "Unknown") # ParameterPanel から渡される名前
     max_iter = params.get("max_iterations", 100)
-    logger.log(LogLevel.INFO, f"フラクタル計算開始: タイプ={fractal_type_name}, 最大反復={max_iter}")
+    logger.log(LogLevel.INFO, "フラクタル計算開始", {"fractal_type_name": fractal_type_name, "max_iter": max_iter})
 
     # パラメータから計算関数に必要な引数を抽出する
     # ここは少し工夫が必要。現状の compute_julia と compute_mandelbrot の引数シグネチャが異なるため。
@@ -378,14 +378,14 @@ def render_fractal(
 
     # グリッド作成
     Z = _create_fractal_grid(params, super_resolution_x, super_resolution_y, logger)
-    logger.log(LogLevel.SUCCESS, f"フラクタル計算用の複素数グリッドを作成完了: shape={Z.shape}")
+    logger.log(LogLevel.SUCCESS, "フラクタル計算用の複素数グリッドを作成完了", {"shape": Z.shape})
 
     # フラクタル計算 (計算関数を渡す)
     results = _compute_fractal(Z, params, compute_function, logger)
 
     # --- 追加: 計算失敗時の処理 ---
     if results is None:
-        logger.log(LogLevel.ERROR, "フラクタル計算に失敗したため、エラー画像を表示します。")
+        logger.log(LogLevel.ERROR, "フラクタルの計算に失敗したのでエラー画像を表示")
         # エラー画像 (例: 赤色) を返す
         error_color = [255, 0, 0, 255] # 赤色
         # 最終的な解像度で作成
@@ -418,13 +418,13 @@ def render_fractal(
         # 正方形を仮定していても X/Y は同じ値
         colored = _downsample_image(
             colored_high_res,
-            resolution, resolution,          # 目標解像度 X, Y
+            resolution, resolution, # 目標解像度 X, Y
             samples_per_pixel, samples_per_pixel, # サンプル数 X, Y
             logger
         )
     else:
         # サンプル数1の場合はダウンサンプリング不要
-        logger.log(LogLevel.DEBUG, "サンプル数1のためダウンサンプリングをスキップ")
+        logger.log(LogLevel.DEBUG, "ダウンサンプリングをスキップ（サンプル数 1 のため）")
         colored = colored_high_res # そのまま使う
 
     # 最終的な結果を uint8 [0, 255] に変換
@@ -434,10 +434,10 @@ def render_fractal(
          colored = np.clip(colored, 0, 255).astype(np.uint8)
     elif colored.dtype != np.uint8:
         # 既に整数型だが uint8 でない場合 (uint16 など)、警告を出して変換
-        logger.log(LogLevel.WARNING, f"最終画像のデータ型が uint8 ではありません ({colored.dtype})。変換します。")
+        logger.log(LogLevel.WARNING, f"最終画像のデータ型が uint8 でない ({colored.dtype}) ので変換実行。")
         colored = np.clip(colored, 0, 255).astype(np.uint8)
 
-    logger.log(LogLevel.DEBUG, f"最終的な render_fractal 出力 dtype: {colored.dtype}, shape: {colored.shape}")
+    logger.log(LogLevel.DEBUG, "最終的な render_fractal 出力", {"dtype": colored.dtype, "shape": colored.shape})
 
     # メモリ解放を促す (大きな配列を使った後)
     del Z, results, colored_high_res
