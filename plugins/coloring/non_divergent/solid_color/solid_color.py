@@ -1,3 +1,11 @@
+FILE_NAME = "solid_color.py"
+
+# 表示名 (UIのコンボボックスで使われる)
+DISPLAY_NAME = "単色"
+
+# このプラグインのメインの着色関数の名前
+COLORING_FUNCTION_NAME = "apply_solid_color"
+
 import numpy as np
 from typing import Dict
 from debug import DebugLogger, LogLevel

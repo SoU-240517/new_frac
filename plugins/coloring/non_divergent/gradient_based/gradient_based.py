@@ -1,3 +1,11 @@
+FILE_NAME = "gradient_based.py"
+
+# 表示名 (UIのコンボボックスで使われる)
+DISPLAY_NAME = "グラデーション"
+
+# このプラグインのメインの着色関数の名前
+COLORING_FUNCTION_NAME = "apply_gradient_based"
+
 import numpy as np
 from matplotlib.colors import Colormap
 from typing import Dict

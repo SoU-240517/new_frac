@@ -1,3 +1,11 @@
+FILE_NAME = "potential.py"
+
+# 表示名 (UIのコンボボックスで使われる)
+DISPLAY_NAME = "ポテンシャル関数法"
+
+# このプラグインのメインの着色関数の名前
+COLORING_FUNCTION_NAME = "apply_potential"
+
 import numpy as np
 from matplotlib.colors import Colormap
 from typing import Dict

@@ -1,33 +1,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import time
-from typing import Dict, Callable, Any
+from typing import Dict, Callable, Any, Optional
 from debug import DebugLogger,LogLevel
 from .utils import ColorAlgorithmError
 from .gradient import compute_gradient
 from .cache import ColorCache # キャッシュ管理クラス
-from plugins.coloring.divergent import angle as div_angle
-from plugins.coloring.divergent import distance as div_distance
-from plugins.coloring.divergent import histogram as div_histogram
-from plugins.coloring.divergent import linear as div_linear
-from plugins.coloring.divergent import logarithmic as div_logarithmic
-from plugins.coloring.divergent import orbit_trap as div_orbit_trap
-from plugins.coloring.divergent import potential as div_potential
-from plugins.coloring.divergent import smoothing as div_smoothing
-from plugins.coloring.non_divergent import chaotic_orbit as ndiv_chaotic_orbit
-from plugins.coloring.non_divergent import complex_potential as ndiv_complex_potential
-from plugins.coloring.non_divergent import convergence_speed as ndiv_convergence_speed
-from plugins.coloring.non_divergent import derivative as ndiv_derivative
-from plugins.coloring.non_divergent import fourier_pattern as ndiv_fourier_pattern
-from plugins.coloring.non_divergent import fractal_texture as ndiv_fractal_texture
-from plugins.coloring.non_divergent import gradient_based as ndiv_gradient
-from plugins.coloring.non_divergent import histogram_equalization as ndiv_histogram_equalization
-from plugins.coloring.non_divergent import internal_distance as ndiv_internal_distance
-from plugins.coloring.non_divergent import orbit_trap_circle as ndiv_orbit_trap_circle
-from plugins.coloring.non_divergent import palam_c_z as ndiv_palam_c_z
-from plugins.coloring.non_divergent import phase_symmetry as ndiv_phase_symmetry
-from plugins.coloring.non_divergent import quantum_entanglement as ndiv_quantum_entanglement
-from plugins.coloring.non_divergent import solid_color as ndiv_solid
 
 def _load_algorithms_from_config(config: Dict) -> tuple[Dict[str, Callable], Dict[str, Callable]]:
     """
@@ -56,15 +34,22 @@ def _load_algorithms_from_config(config: Dict) -> tuple[Dict[str, Callable], Dic
     return divergent_algos, non_divergent_algos
 
 
-def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger, config: Dict[str, Any]) -> np.ndarray:
+def apply_coloring_algorithm(
+    results: Dict,
+    params: Dict,
+    logger: DebugLogger,
+    config: Dict[str, Any],
+    coloring_plugin_loader: Any # ColoringPluginLoader インスタンス
+) -> np.ndarray:
     """フラクタルの着色アルゴリズムを適用するディスパッチャ関数
-    - 設定ファイルからアルゴリズム定義を動的に読み込み、適用する
+    - ColoringPluginLoader からアルゴリズム関数を取得し、適用する
     - 結果をキャッシュし、パフォーマンスを向上させる
     Args:
         results (dict): フラクタル計算結果。'iterations' (反復回数), 'mask' (発散マスク), 'z_vals' (複素数値) を含む
         params (dict): 着色パラメータ。使用するアルゴリズム名やカラーマップなどを含む
         logger (DebugLogger): デバッグログ用ロガー
         config (Dict[str, Any]): config.json から読み込んだ設定データ
+        coloring_plugin_loader (ColoringPluginLoader): カラーリングプラグインローダーのインスタンス
     Returns:
         np.ndarray: 着色されたRGBA配列 (形状: (h, w, 4), dtype=float32, 値域: 0-255)
     Raises:
@@ -81,21 +66,19 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger, c
         logger.log(LogLevel.INFO, "キャッシュされた画像を返す")
         return cached_image
 
-    # --- 2. アルゴリズムの動的読み込み ---
+    # --- 2. アルゴリズム関数の取得 (ColoringPluginLoader から) ---
     try:
-        divergent_algos, non_divergent_algos = _load_algorithms_from_config(config)
-
         # 使用するアルゴリズムの取得
         divergent_algo_name = params.get('diverge_algorithm', default_divergent_algo_name)
         non_divergent_algo_name = params.get('non_diverge_algorithm', default_non_divergent_algo_name)
 
-        divergent_algo = divergent_algos.get(divergent_algo_name)
-        non_divergent_algo = non_divergent_algos.get(non_divergent_algo_name)
+        divergent_algo = coloring_plugin_loader.get_divergent_function(divergent_algo_name)
+        non_divergent_algo = coloring_plugin_loader.get_non_divergent_function(non_divergent_algo_name)
 
         if divergent_algo is None:
-            raise ColorAlgorithmError(f"Invalid divergent algorithm: {divergent_algo_name}")
+            raise ColorAlgorithmError(f"発散部アルゴリズム '{divergent_algo_name}' がない")
         if non_divergent_algo is None:
-            raise ColorAlgorithmError(f"Invalid non-divergent algorithm: {non_divergent_algo_name}")
+            raise ColorAlgorithmError(f"非発散部アルゴリズム '{non_divergent_algo_name}' がない")
 
     except Exception as e:
         logger.log(LogLevel.ERROR, f"Failed to load algorithms: {str(e)}")

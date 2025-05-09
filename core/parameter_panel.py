@@ -50,7 +50,8 @@ class ParameterPanel:
         reset_callback: Callable,
         logger: DebugLogger,
         config: Dict[str, Any],
-        fractal_loader: FractalTypeLoader
+        fractal_loader: FractalTypeLoader,
+        coloring_plugin_loader: Any # ColoringPluginLoader のインスタンスを受け取る
     ):
         """ParameterPanel クラスのコンストラクタ
 
@@ -68,6 +69,7 @@ class ParameterPanel:
         self.update_callback = update_callback
         self.reset_callback = reset_callback
         self.fractal_loader = fractal_loader # ローダーを保持
+        self.coloring_plugin_loader = coloring_plugin_loader # カラーリングプラグインローダーを保持
 
         self.current_plugin_params: List[Dict[str, Any]] = [] # 現在表示中のプラグインパラメータ設定
         self.param_vars: Dict[str, tk.StringVar] = {} # パラメータID -> StringVar の辞書
@@ -98,7 +100,6 @@ class ParameterPanel:
         self.logger.log(LogLevel.INFO, f"カラーマップロード数: {len(self.colormaps)} 個")
 
         self._setup_panel()
-#        self._update_colorbars() # 初期カラーバー表示
 
     def _setup_panel(self) -> None:
         """パネルのセットアップ
@@ -340,20 +341,13 @@ class ParameterPanel:
              self.diverge_algo_var = tk.StringVar()
         self.diverge_algo_var.set(default_diverge_algo)
 
-        self.diverge_algorithms = list(fractal_settings.get("coloring_algorithms_settings", {}).get("divergent_list", {}).keys())
+        # --- coloring_plugin_loader からアルゴリズム名リストを取得 ---
+        self.diverge_algorithms = self.coloring_plugin_loader.get_divergent_algorithm_names()
+
         if not self.diverge_algorithms:
-            self.logger.log(LogLevel.WARNING, "設定ファイルに発散部アルゴリズムリストが無いか空なので、デフォルトリストを使用")
-            # フォールバック
-            self.diverge_algorithms = [
-                "スムージング",
-                "反復回数線形マッピング",
-                "反復回数対数マッピング",
-                "ヒストグラム平坦化法",
-                "距離カラーリング",
-                "角度カラーリング",
-                "ポテンシャル関数法",
-                "軌道トラップ法"
-            ]
+            self.logger.log(LogLevel.WARNING, "読み込まれた発散部カラーリングアルゴリズムがありません。")
+            self.diverge_algorithms = ["(なし)"] # フォールバック
+            if default_diverge_algo not in self.diverge_algorithms : self.diverge_algo_var.set(self.diverge_algorithms[0])
         combo = self._add_combobox(row, 1, self.diverge_algo_var, self.diverge_algorithms)
         combo.bind("<<ComboboxSelected>>", self._common_callback)
 
@@ -413,28 +407,12 @@ class ParameterPanel:
              self.non_diverge_algo_var = tk.StringVar()
         self.non_diverge_algo_var.set(default_non_diverge_algo)
 
-        # アルゴリズムリストを設定ファイルから取得
-        self.non_diverge_algorithms = list(fractal_settings.get("coloring_algorithms_settings", {}).get("non_divergent_list", {}).keys())
+        # --- coloring_plugin_loader からアルゴリズム名リストを取得 ---
+        self.non_diverge_algorithms = self.coloring_plugin_loader.get_non_divergent_algorithm_names()
         if not self.non_diverge_algorithms:
-            self.logger.log(LogLevel.WARNING, "設定ファイルに非発散部アルゴリズムリストが見つからないか空なので、デフォルトリストを使用")
-            # フォールバック
-            self.non_diverge_algorithms = [
-                "単色",
-                "グラデーション",
-                "内部距離（Escape Time Distance）",
-                "軌道トラップ(円)（Orbit Trap Coloring）",
-                "位相对称（Phase Angle Symmetry）",
-                "反復収束速度（Convergence Speed）",
-                "微分係数（Derivative Coloring）",
-                "統計分布（Histogram Equalization）",
-                "複素ポテンシャル（Complex Potential Mapping）",
-                "カオス軌道混合（Chaotic Orbit Mixing）",
-                "フーリエ干渉（Fourier Pattern）",
-                "フラクタルテクスチャ（Fractal Texture）",
-                "量子もつれ（Quantum Entanglement）",
-                "パラメータ(C)",
-                "パラメータ(Z)"
-            ]
+            self.logger.log(LogLevel.WARNING, "読み込まれた非発散部カラーリングアルゴリズムがありません。")
+            self.non_diverge_algorithms = ["(なし)"] # フォールバック
+            if default_non_diverge_algo not in self.non_diverge_algorithms : self.non_diverge_algo_var.set(self.non_diverge_algorithms[0])
         combo = self._add_combobox(row, 1, self.non_diverge_algo_var, self.non_diverge_algorithms)
         combo.bind("<<ComboboxSelected>>", self._common_callback)
 

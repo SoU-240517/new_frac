@@ -1,3 +1,11 @@
+FILE_NAME = "phase_symmetry.py"
+
+# 表示名 (UIのコンボボックスで使われる)
+DISPLAY_NAME = "位相对称"
+
+# このプラグインのメインの着色関数の名前
+COLORING_FUNCTION_NAME = "apply_phase_symmetry"
+
 import numpy as np
 from matplotlib.colors import Colormap
 from typing import Dict

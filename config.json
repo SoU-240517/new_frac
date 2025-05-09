@@ -20,9 +20,9 @@
       "panel_font_size": 10,
       "fractal_type": "Julia",
       "max_iterations": 200,
-      "diverge_algorithm": "スムージング",
+      "diverge_algorithm": "Smoothing",
       "diverge_colormap": "viridis",
-      "non_diverge_algorithm": "単色",
+      "non_diverge_algorithm": "Solid Color",
       "non_diverge_colormap": "magma"
     },
     "dynamic_resolution_settings": {
@@ -37,35 +37,8 @@
       "high_samples": 4
     },
     "coloring_algorithms_settings": {
-      "default_divergent_algo_name": "スムージング",
-      "default_non_divergent_algo_name": "単色",
-      "divergent_list": {
-        "角度カラーリング": "div_angle.apply_angle_coloring",
-        "距離カラーリング": "div_distance.apply_distance_coloring",
-        "ヒストグラム平坦化法": "div_histogram.apply_histogram_flattening",
-        "反復回数線形マッピング": "div_linear.apply_linear_mapping",
-        "反復回数対数マッピング": "div_logarithmic.apply_logarithmic_mapping",
-        "軌道トラップ法": "div_orbit_trap.apply_orbit_trap",
-        "ポテンシャル関数法": "div_potential.apply_potential",
-        "スムージング": "div_smoothing.apply_smoothing"
-      },
-      "non_divergent_list": {
-        "カオス軌道混合（Chaotic Orbit Mixing）": "ndiv_chaotic_orbit.apply_chaotic_orbit",
-        "複素ポテンシャル（Complex Potential Mapping）": "ndiv_complex_potential.apply_complex_potential",
-        "反復収束速度（Convergence Speed）": "ndiv_convergence_speed.apply_convergence_speed",
-        "微分係数（Derivative Coloring）": "ndiv_derivative.apply_derivative_coloring",
-        "フーリエ干渉（Fourier Pattern）": "ndiv_fourier_pattern.apply_fourier_pattern",
-        "フラクタルテクスチャ（Fractal Texture）": "ndiv_fractal_texture.apply_fractal_texture",
-        "グラデーション": "ndiv_gradient.apply_gradient_based",
-        "統計分布（Histogram Equalization）": "ndiv_histogram_equalization.apply_histogram_equalization",
-        "内部距離（Escape Time Distance）": "ndiv_internal_distance.apply_internal_distance",
-        "軌道トラップ(円)（Orbit Trap Coloring）": "ndiv_orbit_trap_circle.apply_orbit_trap_circle",
-        "パラメータ(C)": "ndiv_palam_c_z.apply_parameter_coloring",
-        "パラメータ(Z)": "ndiv_palam_c_z.apply_parameter_coloring",
-        "位相对称（Phase Angle Symmetry）": "ndiv_phase_symmetry.apply_phase_symmetry",
-        "量子もつれ（Quantum Entanglement）": "ndiv_quantum_entanglement.apply_quantum_entanglement",
-        "単色": "ndiv_solid.apply_solid_color"
-      }
+      "default_divergent_algo_name": "Smoothing",
+      "default_non_divergent_algo_name": "Solid Color"
     }
   },
   "ui_settings": {

@@ -1,3 +1,11 @@
+FILE_NAME = "fractal_texture.py"
+
+# 表示名 (UIのコンボボックスで使われる)
+DISPLAY_NAME = "フラクタルテクスチャ"
+
+# このプラグインのメインの着色関数の名前
+COLORING_FUNCTION_NAME = "apply_fractal_texture"
+
 import numpy as np
 from matplotlib.colors import Colormap
 from typing import Dict, Tuple

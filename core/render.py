@@ -251,7 +251,8 @@ def render_fractal(
     params: dict,
     compute_function: Callable, # 計算関数を受け取る
     logger: DebugLogger,
-    config: Dict[str, Any]
+    config: Dict[str, Any],
+    coloring_plugin_loader: Any # ColoringPluginLoader インスタンスを追加
 ) -> np.ndarray:
     """
     フラクタル画像を生成
@@ -273,6 +274,7 @@ def render_fractal(
         compute_function (Callable): フラクタル計算関数
         logger (DebugLogger): デバッグログ出力用
         config (Dict[str, Any]): config.json から読み込んだ設定データ
+        coloring_plugin_loader (ColoringPluginLoader): カラーリングプラグインローダーのインスタンス
 
     Returns:
         np.ndarray: RGBA形式のフラクタル画像 (uint8 [0, 255])
@@ -342,7 +344,14 @@ def render_fractal(
 
     try:
         # 着色処理
-        colored_high_res = manager.apply_coloring_algorithm(results, params, logger, config)
+        colored_high_res = manager.apply_coloring_algorithm(
+            results,
+            params,
+            logger,
+            config,
+            coloring_plugin_loader=coloring_plugin_loader # ローダーを渡す
+        )
+
         # 着色エラーハンドリング
         if not isinstance(colored_high_res, np.ndarray):
              raise TypeError(f"着色処理がndarrayを返さない: {type(colored_high_res)}")

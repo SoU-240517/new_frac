@@ -1,3 +1,11 @@
+FILE_NAME = "histogram.py"
+
+# 表示名 (UIのコンボボックスで使われる)
+DISPLAY_NAME = "ヒストグラム平坦化法"
+
+# このプラグインのメインの着色関数の名前
+COLORING_FUNCTION_NAME = "apply_histogram_flattening"
+
 import numpy as np
 from matplotlib.colors import Colormap
 from typing import Dict, Tuple
