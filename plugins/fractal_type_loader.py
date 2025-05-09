@@ -42,13 +42,13 @@ class FractalTypeLoader:
             self.logger.log(LogLevel.ERROR, "プラグインディレクトリなし", {"plugin_dir": self.plugin_dir})
             return
 
-        self.logger.log(LogLevel.INFO, "fractal type plugin ロード開始")
+        self.logger.log(LogLevel.INFO, "プラグインのスキャンとロード開始")
         for item in os.scandir(self.plugin_dir):
             if item.is_dir():
                 plugin_name = item.name
                 self.logger.log(LogLevel.DEBUG, "プラグイン検出", {"plugin_name": plugin_name})
                 self._load_single_plugin(plugin_name, item.path)
-        self.logger.log(LogLevel.SUCCESS, f"{len(self.loaded_plugins)} 個の fractal type plugin のロードに成功")
+        self.logger.log(LogLevel.SUCCESS, f"{len(self.loaded_plugins)} 個のロードに成功")
 
     def _load_single_plugin(self, plugin_name: str, plugin_path: str) -> None:
         """

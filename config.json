@@ -1,6 +1,6 @@
 {
   "system_settings": {
-    "plugin_dir": "plugins/fractal_types",
+    "fractal_type_plugin_dir": "plugins/fractal_types",
     "coloring_plugin_dirs": {
       "divergent_plugin_dir": "plugins/coloring/divergent",
       "non_divergent_plugin_dir": "plugins/coloring/non_divergent"

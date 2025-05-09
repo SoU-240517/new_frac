@@ -76,7 +76,7 @@ class ColoringPluginLoader:
             self.logger.log(LogLevel.ERROR, f"{plugin_type_name} のプラグインディレクトリが見つかりません: {directory}")
             return loaded_algos
 
-        self.logger.log(LogLevel.INFO, f"{plugin_type_name} のプラグインをスキャン中: {directory}")
+        self.logger.log(LogLevel.DEBUG, f"{plugin_type_name} のプラグインをスキャン中: {directory}")
 
         # importlib.import_module で正しくモジュールをインポートするためには、
         # プラグインディレクトリの親ディレクトリ (この場合は 'plugins') がPythonの検索パスに含まれているか、
@@ -111,9 +111,9 @@ class ColoringPluginLoader:
                 continue # .pyファイルまたは関連ディレクトリでなければスキップ
 
             try:
-                self.logger.log(LogLevel.DEBUG, f"モジュール '{full_module_path}' のインポート試行")
+                self.logger.log(LogLevel.DEBUG, f"モジュール '{plugin_filename}' のインポート試行")
                 module = importlib.import_module(full_module_path)
-                self.logger.log(LogLevel.DEBUG, f"モジュールインポート成功: {full_module_path}")
+                self.logger.log(LogLevel.DEBUG, f"モジュールインポート成功: {plugin_filename}")
 
                 # プラグインファイル内の規約に基づいて情報を取得
                 # 1. 表示名: モジュール内の DISPLAY_NAME 変数、なければファイル名から生成
@@ -144,7 +144,7 @@ class ColoringPluginLoader:
                     if display_name in loaded_algos:
                         self.logger.log(LogLevel.WARNING, f"{plugin_type_name} プラグインで表示名 '{display_name}' が重複 ({plugin_filename})。上書きします。")
                     loaded_algos[display_name] = coloring_function
-                    self.logger.log(LogLevel.SUCCESS, f"{plugin_type_name} プラグイン読み込み: '{display_name}' (from {plugin_filename}, func: {coloring_function.__name__})")
+                    self.logger.log(LogLevel.SUCCESS, f"{plugin_type_name} {display_name} のロード成功 ({plugin_filename}, {coloring_function.__name__})")
                 else:
                     self.logger.log(LogLevel.WARNING, f"{plugin_type_name} プラグイン '{plugin_filename}' に適切なカラーリング関数が見つかりません。")
 
@@ -157,7 +157,7 @@ class ColoringPluginLoader:
 
     def scan_and_load_plugins(self):
         """発散部と非発散部の両方のカラーリングプラグインをスキャンして読み込む"""
-        self.logger.log(LogLevel.INFO, "カラーリングプラグインのスキャンと読み込みを開始します。")
+        self.logger.log(LogLevel.INFO, "カラーリングプラグインのスキャンとロード開始")
         # プロジェクトのルートディレクトリを sys.path に追加する必要があるかもしれません。
         # これにより、`plugins.coloring.divergent`のようなインポートが可能になります。
         # main_window.py が core ディレクトリにあるため、
@@ -169,7 +169,7 @@ class ColoringPluginLoader:
 
         self.divergent_algorithms = self._load_plugins_from_dir(self.divergent_dir, "発散部")
         self.non_divergent_algorithms = self._load_plugins_from_dir(self.non_divergent_dir, "非発散部")
-        self.logger.log(LogLevel.SUCCESS, f"カラーリングプラグインの読み込み完了。発散部: {len(self.divergent_algorithms)}個, 非発散部: {len(self.non_divergent_algorithms)}個")
+        self.logger.log(LogLevel.SUCCESS, f"発散部: {len(self.divergent_algorithms)}個, 非発散部: {len(self.non_divergent_algorithms)}個 のロード成功")
 
     def get_divergent_algorithm_names(self) -> List[str]:
         """読み込まれた発散部アルゴリズムの表示名リストを返す"""
@@ -238,10 +238,10 @@ class MainWindow:
 
         self.ui_settings = self.config.get("ui_settings", {})
 
-        self.plugin_dir = self.config.get("system_settings",{}).get("plugin_dir", "plugins/fractal_types")
-        self.logger.log(LogLevel.DEBUG, "設定読込", {"plugin_dir": self.plugin_dir})
+        self.fractal_type_plugin_dir = self.config.get("system_settings",{}).get("fractal_type_plugin_dir", "plugins/fractal_types")
+        self.logger.log(LogLevel.DEBUG, "設定読込", {"fractal_type_plugin_dir": self.fractal_type_plugin_dir})
 
-        self.fractal_loader = FractalTypeLoader(plugin_dir=self.plugin_dir, logger=self.logger)
+        self.fractal_loader = FractalTypeLoader(plugin_dir=self.fractal_type_plugin_dir, logger=self.logger)
 
         self.fractal_loader.scan_and_load_plugins()
 
