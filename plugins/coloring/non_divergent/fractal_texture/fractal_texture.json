@@ -1,0 +1,8 @@
+{
+  "basic_settings": {
+    "file_name": "fractal_texture.py",
+    "display_name": "フラクタルテクスチャ",
+    "coloring_func_name": "apply_fractal_texture",
+    "argument_type": 5
+  }
+}

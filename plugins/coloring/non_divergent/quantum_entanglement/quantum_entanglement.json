@@ -1,0 +1,8 @@
+{
+  "basic_settings": {
+    "file_name": "quantum_entanglement.py",
+    "display_name": "量子もつれ",
+    "coloring_func_name": "apply_quantum_entanglement",
+    "argument_type": 5
+  }
+}

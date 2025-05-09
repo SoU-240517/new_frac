@@ -1,0 +1,8 @@
+{
+  "basic_settings": {
+    "file_name": "distance.py",
+    "display_name": "距離カラーリング",
+    "coloring_func_name": "apply_distance_coloring",
+    "argument_type": 2
+  }
+}

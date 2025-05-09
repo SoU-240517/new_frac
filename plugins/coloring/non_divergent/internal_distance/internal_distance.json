@@ -1,0 +1,8 @@
+{
+  "basic_settings": {
+    "file_name": "internal_distance.py",
+    "display_name": "内部距離",
+    "coloring_func_name": "apply_internal_distance",
+    "argument_type": 5
+  }
+}

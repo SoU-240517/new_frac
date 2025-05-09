@@ -1,0 +1,8 @@
+{
+  "basic_settings": {
+    "file_name": "complex_potential.py",
+    "display_name": "複素ポテンシャル",
+    "coloring_func_name": "apply_complex_potential",
+    "argument_type": 5
+  }
+}

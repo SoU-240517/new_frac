@@ -1,0 +1,8 @@
+{
+  "basic_settings": {
+    "file_name": "chaotic_orbit.py",
+    "display_name": "カオス軌道混合",
+    "coloring_func_name": "apply_chaotic_orbit",
+    "argument_type": 5
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "basic_settings": {
+    "file_name": "potential.py",
+    "display_name": "ポテンシャル関数法",
+    "coloring_func_name": "apply_potential",
+    "argument_type": 2
+  }
+}

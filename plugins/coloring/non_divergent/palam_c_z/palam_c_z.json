@@ -1,0 +1,8 @@
+{
+  "basic_settings": {
+    "file_name": "palam_c_z.py",
+    "display_name": "パラメータ(C/Z)",
+    "coloring_func_name": "apply_parameter_coloring",
+    "argument_type": 4
+  }
+}

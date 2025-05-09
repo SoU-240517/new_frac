@@ -1,0 +1,8 @@
+{
+  "basic_settings": {
+    "file_name": "convergence_speed.py",
+    "display_name": "反復収束速度",
+    "coloring_func_name": "apply_convergence_speed",
+    "argument_type": 5
+  }
+}

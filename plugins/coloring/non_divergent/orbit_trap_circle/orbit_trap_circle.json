@@ -1,0 +1,8 @@
+{
+  "basic_settings": {
+    "file_name": "orbit_trap_circle.py",
+    "display_name": "軌道トラップ(円)",
+    "coloring_func_name": "apply_orbit_trap_circle",
+    "argument_type": 5
+  }
+}

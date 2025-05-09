@@ -1,0 +1,8 @@
+{
+  "basic_settings": {
+    "file_name": "derivative.py",
+    "display_name": "微分係数",
+    "coloring_func_name": "apply_derivative_coloring",
+    "argument_type": 5
+  }
+}

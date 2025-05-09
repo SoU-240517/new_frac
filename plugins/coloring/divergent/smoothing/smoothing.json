@@ -1,36 +1,8 @@
 {
+  "basic_settings": {
     "file_name": "smoothing.py",
-    "description": "z = z^2 + c (cは固定、z0は座標)",
-    "module_name": "julia",
-    "function_name": "compute_julia",
-    "parameters": [
-      {
-        "id": "c_real",
-        "label": "C (実部)",
-        "type": "float",
-        "default": -0.8
-      },
-      {
-        "id": "c_imag",
-        "label": "C (虚部)",
-        "type": "float",
-        "default": 0.156
-      }
-    ],
-    "recommended_coloring": {
-      "divergent_algorithm": "スムージング",
-      "divergent_colormap": "viridis",
-      "non_divergent_algorithm": "単色",
-      "non_divergent_colormap": "magma"
-    }
+    "display_name": "スムージング",
+    "coloring_func_name": "apply_smoothing",
+    "argument_type": 1
   }
-
-
-
-FILE_NAME = "smoothing.py"
-
-# 表示名 (UIのコンボボックスで使われる)
-DISPLAY_NAME = "スムージング"
-
-# このプラグインのメインの着色関数の名前
-COLORING_FUNCTION_NAME = "apply_smoothing"
+}

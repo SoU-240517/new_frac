@@ -1,0 +1,8 @@
+{
+  "basic_settings": {
+    "file_name": "linear.py",
+    "display_name": "反復回数線形マッピング",
+    "coloring_func_name": "apply_linear_mapping",
+    "argument_type": 3
+  }
+}

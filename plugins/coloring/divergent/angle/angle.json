@@ -1,0 +1,8 @@
+{
+  "basic_settings": {
+    "file_name": "angle.py",
+    "display_name": "角度カラーリング",
+    "coloring_func_name": "apply_angle_coloring",
+    "argument_type": 2
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "basic_settings": {
+    "file_name": "gradient_based.py",
+    "display_name": "グラデーション",
+    "coloring_func_name": "apply_gradient_based",
+    "argument_type": 1
+  }
+}
