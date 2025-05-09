@@ -4,24 +4,22 @@ from coloring import manager
 from typing import Dict, Any, Callable, Optional
 from debug import DebugLogger, LogLevel
 
-"""フラクタル画像生成エンジン
+"""
+フラクタル画像生成エンジン
+
 このモジュールはフラクタル画像の生成を担当する
+
 主な機能：
-1. 動的解像度制御
-   - ズームレベルに応じて最適な解像度を自動調整
-   - パフォーマンスと品質のバランスを取る
-2. フラクタル計算
-   - Mandelbrot集合とJulia集合の生成
-   - 高精度な複素数計算
-3. レンダリング最適化
-   - スーパーサンプリングによる高品質画像生成
-   - パフォーマンス最適化された計算
+- 動的解像度制御
+- フラクタル計算
+- レンダリング最適化
 """
 
 def _calculate_dynamic_resolution(width: float, config: Dict[str, Any], logger: DebugLogger) -> int:
-    """ズームレベルに応じて描画解像度を動的に計算
+    """
+    ズームレベルに応じて描画解像度を動的に計算
 
-    対数スケールで解像度を調整し、ズームインするほど高解像度になる
+    対数スケールで解像度を調整し、ズームインするほど解像度が上がる
 
     Args:
         width (float): 描画範囲の幅 (ズームレベルの指標)
@@ -43,7 +41,8 @@ def _calculate_dynamic_resolution(width: float, config: Dict[str, Any], logger: 
     min_res = dr_config.get("min", 400)
     max_res = dr_config.get("max", 1200)
     log_factor = dr_config.get("log_factor", 5.0) # 対数計算用係数
-    logger.log(LogLevel.DEBUG, "設定読込：動的解像度パラメータ", {"base_res": base_res, "min_res": min_res, "max_res": max_res, "log_factor": log_factor})
+    logger.log(LogLevel.DEBUG, "設定読込：動的解像度パラメータ",
+                {"base_res": base_res, "min_res": min_res, "max_res": max_res, "log_factor": log_factor})
 
     # width が非常に小さい場合に log 引数が負にならないようにクリップ
     safe_width = max(width, 1e-9) # ゼロ割防止も兼ねる
@@ -60,8 +59,14 @@ def _calculate_dynamic_resolution(width: float, config: Dict[str, Any], logger: 
 
     return final_resolution
 
-def _create_fractal_grid(params: dict, super_resolution_x: int, super_resolution_y: int, logger: DebugLogger) -> np.ndarray:
-    """フラクタル計算用の複素数グリッドを生成
+def _create_fractal_grid(
+    params: dict,
+    super_resolution_x: int,
+    super_resolution_y: int,
+    logger: DebugLogger
+) -> np.ndarray:
+    """
+    フラクタル計算用の複素数グリッドを生成
 
     Args:
         params (dict): フラクタルのパラメータ
@@ -119,10 +124,11 @@ def _create_fractal_grid(params: dict, super_resolution_x: int, super_resolution
 def _compute_fractal(
     Z: np.ndarray,
     params: dict,
-    compute_function: Callable[[np.ndarray, complex, int, DebugLogger], Dict[str, np.ndarray]],
+    compute_function: Callable[[np.ndarray, dict, DebugLogger], Dict[str, np.ndarray]],
     logger: DebugLogger
 ) -> Optional[Dict[str, np.ndarray]]:
-    """フラクタル計算を実行
+    """
+    フラクタルの計算
 
     Args:
         Z (np.ndarray): 複素数グリッド
@@ -133,9 +139,8 @@ def _compute_fractal(
             - max_iterations: 最大反復回数
         compute_function (Callable): フラクタル計算関数
             - 第1引数: 複素数グリッド (np.ndarray)
-            - 第2引数: 複素数パラメータ (complex)
-            - 第3引数: 最大反復回数 (int)
-            - 第4引数: デバッグログ (DebugLogger)
+            - 第2引数: フラクタルのパラメータ (dict)
+            - 第3引数: デバッグログ (DebugLogger)
         logger (DebugLogger): デバッグログ出力用
 
     Returns:
@@ -156,44 +161,15 @@ def _compute_fractal(
           * TypeError: 計算関数の引数型チェック
           * その他の例外: 計算中の予期せぬエラー
     """
-    start_time = time.perf_counter()
-
-    fractal_type_name = params.get("fractal_type_name", "Unknown") # ParameterPanel から渡される名前
-    max_iter = params.get("max_iterations", 100)
-    logger.log(LogLevel.INFO, "フラクタル計算開始", {"fractal_type_name": fractal_type_name, "max_iter": max_iter})
-
-    # パラメータから計算関数に必要な引数を抽出する
     try:
-        func_args = [Z] # 最初の引数は Z グリッド
-
-        if fractal_type_name == "Julia":
-             c_real = params.get("c_real", -0.8)
-             c_imag = params.get("c_imag", 0.156)
-             func_args.append(complex(c_real, c_imag))
-        elif fractal_type_name == "Mandelbrot":
-             z0_real = params.get("z0_real", 0.0)
-             z0_imag = params.get("z0_imag", 0.0)
-             func_args.append(complex(z0_real, z0_imag))
-        func_args.append(max_iter)
-        func_args.append(logger)
-
-        # 計算関数を呼び出し
-        results = compute_function(*func_args)
-
-        # results が辞書であることを確認 (より厳密なチェックが望ましい)
+        results = compute_function(Z, params, logger)
         if not isinstance(results, dict):
-             logger.log(LogLevel.ERROR, f"フラクタル計算関数 '{compute_function.__name__}' が辞書を返さない")
-             return None
-
-        logger.log(LogLevel.SUCCESS, f"{fractal_type_name} 計算完了 ({time.perf_counter() - start_time:.3f}秒)")
+            logger.log(LogLevel.ERROR, f"計算関数が辞書を返さない: {type(results)}")
+            return None
         return results
-
-    except TypeError as e:
-         logger.log(LogLevel.CRITICAL, f"フラクタル計算関数の呼び出しで TypeError: {e}。引数の確認が必要")
-         return None
     except Exception as e:
-         logger.log(LogLevel.CRITICAL, f"フラクタル計算中に予期せぬエラー ({fractal_type_name}): {e}")
-         return None
+        logger.log(LogLevel.CRITICAL, f"計算中にエラー: {e}")
+        return None
 
 def _downsample_image(
     high_res_image: np.ndarray,
@@ -203,7 +179,8 @@ def _downsample_image(
     samples_per_pixel_y: int,
     logger: DebugLogger
 ) -> np.ndarray:
-    """高解像度画像をダウンサンプリングしてアンチエイリアシング
+    """
+    高解像度画像をダウンサンプリングしてアンチエイリアシング
 
     Args:
         high_res_image (np.ndarray): 高解像度画像 (RGBA想定)
@@ -270,7 +247,8 @@ def render_fractal(
     logger: DebugLogger,
     config: Dict[str, Any]
 ) -> np.ndarray:
-    """フラクタル画像を生成
+    """
+    フラクタル画像を生成
 
     Args:
         params (dict): フラクタルのパラメータ

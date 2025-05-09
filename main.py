@@ -1,13 +1,7 @@
 """
-main.py
+アプリケーションのエントリーポイント
 
-このファイルはアプリケーションのエントリーポイントです。
-Tkinterを使用したGUIアプリケーションの起動と初期化を行います。
-
-主な機能:
-- 設定ファイルの読み込み
-- デバッグロガーの初期化
-- メインウィンドウの作成と起動
+Tkinterを使用したGUIアプリケーションの起動と初期化を行う
 """
 
 import tkinter as tk
@@ -21,8 +15,6 @@ if __name__ == "__main__":
 
     # 設定ファイルの読み込み
     config = load_config(temp_logger, "config.json")
-
-    # 設定内容から DebugLogger 用の情報取得
     logging_config = config.get("logging", {})
 
     logger = DebugLogger(
