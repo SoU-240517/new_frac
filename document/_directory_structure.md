@@ -27,7 +27,8 @@ Directory structure:
     │   └── _user_ profile.md
     ├── plugins/
     │   ├── __init__.py
-    │   ├── fractal_type_loader.py
+    │   ├── coloring.md
+    │   ├── plugin_loader.py
     │   ├── coloring/
     │   │   ├── divergent/
     │   │   │   ├── angle/
