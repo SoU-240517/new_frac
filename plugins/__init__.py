@@ -5,8 +5,8 @@
     - プラグインディレクトリからフラクタルタイププラグインをスキャンしてロードします。
 """
 
-from .fractal_type_loader import FractalTypeLoader
+from .plugin_loader import FractalTypeLoader, ColoringPluginLoader
 
-__all__ = ['FractalTypeLoader']
+__all__ = ['FractalTypeLoader', 'ColoringPluginLoader']
 
 __version__ = '0.0.0'
