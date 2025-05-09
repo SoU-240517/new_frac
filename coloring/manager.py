@@ -73,7 +73,9 @@ def apply_coloring_algorithm(
         non_divergent_algo_name = params.get('non_diverge_algorithm', default_non_divergent_algo_name)
 
         divergent_algo = coloring_plugin_loader.get_divergent_function(divergent_algo_name)
+        logger.log(LogLevel.WARNING, f"divergent_algo_name: {divergent_algo_name}")
         non_divergent_algo = coloring_plugin_loader.get_non_divergent_function(non_divergent_algo_name)
+        logger.log(LogLevel.WARNING, f"non_divergent_algo_name: {non_divergent_algo_name}")
 
         if divergent_algo is None:
             raise ColorAlgorithmError(f"発散部アルゴリズム '{divergent_algo_name}' がない")
@@ -156,7 +158,7 @@ def apply_coloring_algorithm(
                     gradient_values = compute_gradient(image_shape, logger)
                     logger.log(LogLevel.DEBUG, "グラデーション値 計算完了", {"shape": gradient_values.shape})
                     non_divergent_algo(colored, non_divergent_mask, iterations, gradient_values, non_cmap_func, params, logger)
-                elif non_divergent_algo_name == '統計分布（Histogram Equalization）':
+                elif non_divergent_algo_name == '統計分布':
                     non_divergent_algo(colored, non_divergent_mask, iterations, non_cmap_func, params, logger)
                 elif non_divergent_algo_name == '単色':
                     non_divergent_algo(colored, non_divergent_mask, params, logger)
