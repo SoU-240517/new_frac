@@ -30,31 +30,73 @@ Directory structure:
     │   ├── fractal_type_loader.py
     │   ├── coloring/
     │   │   ├── divergent/
-    │   │   │   ├── __init__.py
-    │   │   │   ├── angle.py
-    │   │   │   ├── distance.py
-    │   │   │   ├── histogram.py
-    │   │   │   ├── linear.py
-    │   │   │   ├── logarithmic.py
-    │   │   │   ├── orbit_trap.py
-    │   │   │   ├── potential.py
-    │   │   │   └── smoothing.py
+    │   │   │   ├── angle/
+    │   │   │   │   ├── __init__.py
+    │   │   │   │   └── angle.py
+    │   │   │   ├── distance/
+    │   │   │   │   ├── __init__.py
+    │   │   │   │   └── distance.py
+    │   │   │   ├── histogram/
+    │   │   │   │   ├── __init__.py
+    │   │   │   │   └── histogram.py
+    │   │   │   ├── linear/
+    │   │   │   │   ├── __init__.py
+    │   │   │   │   └── linear.py
+    │   │   │   ├── logarithmic/
+    │   │   │   │   ├── __init__.py
+    │   │   │   │   └── logarithmic.py
+    │   │   │   ├── orbit_trap/
+    │   │   │   │   ├── __init__.py
+    │   │   │   │   └── orbit_trap.py
+    │   │   │   ├── potential/
+    │   │   │   │   ├── __init__.py
+    │   │   │   │   └── potential.py
+    │   │   │   └── smoothing/
+    │   │   │       ├── __init__.py
+    │   │   │       └── smoothing.py
     │   │   └── non_divergent/
-    │   │       ├── __init__.py
-    │   │       ├── chaotic_orbit.py
-    │   │       ├── complex_potential.py
-    │   │       ├── convergence_speed.py
-    │   │       ├── derivative.py
-    │   │       ├── fourier_pattern.py
-    │   │       ├── fractal_texture.py
-    │   │       ├── gradient_based.py
-    │   │       ├── histogram_equalization.py
-    │   │       ├── internal_distance.py
-    │   │       ├── orbit_trap_circle.py
-    │   │       ├── palam_c_z.py
-    │   │       ├── phase_symmetry.py
-    │   │       ├── quantum_entanglement.py
-    │   │       └── solid_color.py
+    │   │       ├── chaotic_orbit/
+    │   │       │   ├── __init__.py
+    │   │       │   └── chaotic_orbit.py
+    │   │       ├── complex_potential/
+    │   │       │   ├── __init__.py
+    │   │       │   └── complex_potential.py
+    │   │       ├── convergence_speed/
+    │   │       │   ├── __init__.py
+    │   │       │   └── convergence_speed.py
+    │   │       ├── derivative/
+    │   │       │   ├── __init__.py
+    │   │       │   └── derivative.py
+    │   │       ├── fourier_pattern/
+    │   │       │   ├── __init__.py
+    │   │       │   └── fourier_pattern.py
+    │   │       ├── fractal_texture/
+    │   │       │   ├── __init__.py
+    │   │       │   └── fractal_texture.py
+    │   │       ├── gradient_based/
+    │   │       │   ├── __init__.py
+    │   │       │   └── gradient_based.py
+    │   │       ├── histogram_equalization/
+    │   │       │   ├── __init__.py
+    │   │       │   └── histogram_equalization.py
+    │   │       ├── internal_distance/
+    │   │       │   ├── __init__.py
+    │   │       │   └── internal_distance.py
+    │   │       ├── orbit_trap_circle/
+    │   │       │   ├── __init__.py
+    │   │       │   └── orbit_trap_circle.py
+    │   │       ├── palam_c_z/
+    │   │       │   ├── __init__.py
+    │   │       │   └── palam_c_z.py
+    │   │       ├── phase_symmetry/
+    │   │       │   ├── __init__.py
+    │   │       │   └── phase_symmetry.py
+    │   │       ├── quantum_entanglement/
+    │   │       │   ├── __init__.py
+    │   │       │   └── quantum_entanglement.py
+    │   │       └── solid_color/
+    │   │           ├── __init__.py
+    │   │           └── solid_color.py
     │   └── fractal_types/
     │       ├── julia/
     │       │   ├── __init__.py
