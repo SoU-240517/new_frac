@@ -236,7 +236,7 @@ class MainWindow:
         self.logger.log(LogLevel.INFO, "ズーム操作用パラメータ設定開始")
 
         # 初期ズームパラメータを設定ファイルから読み込む
-        initial_zoom_config = self.config.get("fractal_settings", {}).get("initial_zoom", {})
+        initial_zoom_config = self.config.get("fractal_settings", {}).get("initial_zoom_settings", {})
         center_x = initial_zoom_config.get("center_x", 0.0)
         center_y = initial_zoom_config.get("center_y", 0.0)
         width = initial_zoom_config.get("width", 4.0)
@@ -379,7 +379,7 @@ class MainWindow:
         self.prev_zoom_params = self.zoom_params.copy()
 
         new_width = w
-        height_ratio = self.config.get("fractal_settings", {}).get("initial_zoom", {}).get("height_ratio", 9/16)
+        height_ratio = self.config.get("fractal_settings", {}).get("initial_zoom_settings", {}).get("height_ratio", 9/16)
         self.logger.log(LogLevel.DEBUG, "設定読込", {"height_ratio": height_ratio})
         new_height = new_width * height_ratio # 16:9 アスペクト比維持
 
@@ -391,7 +391,7 @@ class MainWindow:
             current_max_iter = panel_params.get("max_iterations", 100) # デフォルト値を追加
         else:
             # パラメータ取得に失敗した場合のデフォルト処理
-            current_max_iter = self.config.get("fractal_settings", {}).get("parameter_panel", {}).get("max_iterations", 100)
+            current_max_iter = self.config.get("fractal_settings", {}).get("parameter_panel_settings", {}).get("max_iterations", 100)
             self.logger.log(LogLevel.WARNING, "パラメータパネルから最大反復回数を取得できず。設定ファイルのデフォルト値を使用")
 
 
@@ -476,7 +476,7 @@ class MainWindow:
 
         # --- パラメータパネルの状態も初期化 ------------------
         # 初期表示のフラクタルタイプを取得
-        default_fractal_type = self.config.get("fractal_settings", {}).get("parameter_panel", {}).get("fractal_type", None)
+        default_fractal_type = self.config.get("fractal_settings", {}).get("parameter_panel_settings", {}).get("fractal_type", None)
         self.logger.log(LogLevel.DEBUG, "設定読込", {"default_fractal_type": default_fractal_type})
 
         if default_fractal_type is None and self.fractal_loader.get_available_types():

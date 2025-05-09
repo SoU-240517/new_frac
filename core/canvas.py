@@ -56,7 +56,7 @@ class FractalCanvas:
         self.parent = master
         self.config = config
 
-        self.facecolor = self.config.get("canvas_settings", {}).get("facecolor", "black")
+        self.facecolor = self.config.get("canvas_settings", {}).get("canvas_bg_color", "black")
         self.logger.log(LogLevel.DEBUG, "設定読込", {"facecolor": self.facecolor})
 
         # FigureとAxesの初期化

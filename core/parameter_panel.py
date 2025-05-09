@@ -19,32 +19,24 @@ class ParameterPanel:
         update_callback (Callable): 描画更新コールバック関数
         reset_callback (Callable): 描画リセットコールバック関数
         logger (DebugLogger): デバッグロガーインスタンス
+        config (Dict[str, Any]): 設定データ
+        fractal_loader (FractalTypeLoader): フラクタルタイプローダー
         render_mode (str): 描画モード ("quick" or "full")
         fractal_type_var (tk.StringVar): フラクタルタイプの選択
         formula_var (tk.StringVar): 数式表示
         formula_label (ttk.Label): 数式表示ラベル
         max_iter_var (tk.StringVar): 最大反復回数
-        z_real_var (tk.StringVar): Z (実部)
-        z_imag_var (tk.StringVar): Z (虚部)
-        c_real_var (tk.StringVar): C (実部)
-        c_imag_var (tk.StringVar): C (虚部)
         diverge_algo_var (tk.StringVar): 発散部着色アルゴリズム
         diverge_colorbar_label (tk.Label): 発散部カラーバー表示ラベル
         diverge_colormap_var (tk.StringVar): 発散部カラーマップ
         non_diverge_algo_var (tk.StringVar): 非発散部着色アルゴリズム
         non_diverge_colorbar_label (tk.Label): 非発散部カラーバー表示ラベル
         non_diverge_colormap_var (tk.StringVar): 非発散部カラーマップ
-        _fractal_type_row (int): フラクタルタイプ選択行
-        _formula_row (int): 数式表示行
-        _param_section_last_row (int): パラメータセクション最終行
-        _diverge_section_last_row (int): 発散部セクション最終行
-        _non_diverge_section_last_row (int): 非発散部セクション最終行
         colormaps (List[str]): 利用可能なカラーマップリスト
         diverge_algorithms (List[str]): 発散部着色アルゴリズムリスト
         non_diverge_algorithms (List[str]): 非発散部着色アルゴリズムリスト
         COLORBAR_WIDTH (int): カラーバーの幅
         COLORBAR_HEIGHT (int): カラーバーの高さ
-        config (Dict[str, Any]): 設定データ
         current_plugin_params (List[Dict[str, Any]]): 現在表示中のプラグインパラメータ設定
         param_vars (Dict[str, tk.StringVar]): パラメータID -> StringVar の辞書
         param_widgets (Dict[str, tk.Widget]): パラメータID -> Widget の辞書
@@ -89,7 +81,7 @@ class ParameterPanel:
         self.logger.log(LogLevel.DEBUG, "設定読込", {"COLORBAR_WIDTH": self.COLORBAR_WIDTH, "COLORBAR_HEIGHT": self.COLORBAR_HEIGHT})
 
         # カラーマップリストを設定ファイルから取得
-        self.colormaps = self.config.get("coloring_options", {}).get("available_colormaps", [])
+        self.colormaps = self.config.get("coloring_options", {}).get("available_colormaps_list", [])
         if not self.colormaps:
             # 設定ファイルにない、または空の場合のフォールバック処理
             self.logger.log(LogLevel.WARNING, "設定ファイルにカラーマップリストが無いか空なので、matplotlibから取得する")
@@ -149,7 +141,7 @@ class ParameterPanel:
             fractal_types = ["(ロード失敗)"] # エラー表示
 
         # デフォルト値もローダーから取得するか、config から読む
-        default_fractal_type = self.config.get("fractal_settings", {}).get("parameter_panel", {}).get("fractal_type", None)
+        default_fractal_type = self.config.get("fractal_settings", {}).get("parameter_panel_settings", {}).get("fractal_type", None)
         self.logger.log(LogLevel.DEBUG, "設定読込", {"default_fractal_type": default_fractal_type})
 
         # デフォルトがリストにない場合や未設定の場合は最初のタイプを選択
@@ -193,7 +185,7 @@ class ParameterPanel:
             self._add_label("最大反復回数:", param_row, 0, parent=self.param_frame)
 
             # デフォルト値は config かプラグインJSONか？ -> config優先
-            default_max_iter = str(self.config.get("fractal_settings", {}).get("parameter_panel", {}).get("max_iterations", 100))
+            default_max_iter = str(self.config.get("fractal_settings", {}).get("parameter_panel_settings", {}).get("max_iterations", 100))
             self.logger.log(LogLevel.DEBUG, "設定読込", {"default_max_iter": default_max_iter})
 
             # max_iter_var はクラス変数として持つ
@@ -286,8 +278,8 @@ class ParameterPanel:
         row = start_row
 
         # 設定ファイルからフォント名とサイズを取得
-        Panel_font = self.config.get("fractal_settings", {}).get("parameter_panel", {}).get("panel_font", "Courier")
-        panel_font_size = self.config.get("fractal_settings", {}).get("parameter_panel", {}).get("panel_font_size", 10)
+        Panel_font = self.config.get("fractal_settings", {}).get("parameter_panel_settings", {}).get("panel_font", "Courier")
+        panel_font_size = self.config.get("fractal_settings", {}).get("parameter_panel_settings", {}).get("panel_font_size", 10)
         self.logger.log(LogLevel.DEBUG, "設定読込", {"Panel_font": Panel_font, "panel_font_size": panel_font_size})
 
         self.formula_var = tk.StringVar()
@@ -334,7 +326,7 @@ class ParameterPanel:
         row += 1
 
         self._add_label("--- 発散部 ---", row, 0, columnspan=2, pady=(10, 0))
-        param_defaults = self.config.get("fractal_settings", {}).get("parameter_panel", {})
+        param_defaults = self.config.get("fractal_settings", {}).get("parameter_panel_settings", {})
         fractal_settings = self.config.get("fractal_settings", {})
 
         # 着色アルゴリズム
@@ -348,7 +340,7 @@ class ParameterPanel:
              self.diverge_algo_var = tk.StringVar()
         self.diverge_algo_var.set(default_diverge_algo)
 
-        self.diverge_algorithms = list(fractal_settings.get("coloring_algorithms", {}).get("divergent", {}).keys())
+        self.diverge_algorithms = list(fractal_settings.get("coloring_algorithms_settings", {}).get("divergent_list", {}).keys())
         if not self.diverge_algorithms:
             self.logger.log(LogLevel.WARNING, "設定ファイルに発散部アルゴリズムリストが無いか空なので、デフォルトリストを使用")
             # フォールバック
@@ -406,7 +398,7 @@ class ParameterPanel:
         row += 1
 
         self._add_label("--- 非発散部 ---", row, 0, columnspan=2, pady=(10, 0))
-        param_defaults = self.config.get("fractal_settings", {}).get("parameter_panel", {})
+        param_defaults = self.config.get("fractal_settings", {}).get("parameter_panel_settings", {})
         fractal_settings = self.config.get("fractal_settings", {})
 
         # 着色アルゴリズム
@@ -422,7 +414,7 @@ class ParameterPanel:
         self.non_diverge_algo_var.set(default_non_diverge_algo)
 
         # アルゴリズムリストを設定ファイルから取得
-        self.non_diverge_algorithms = list(fractal_settings.get("coloring_algorithms", {}).get("non_divergent", {}).keys())
+        self.non_diverge_algorithms = list(fractal_settings.get("coloring_algorithms_settings", {}).get("non_divergent_list", {}).keys())
         if not self.non_diverge_algorithms:
             self.logger.log(LogLevel.WARNING, "設定ファイルに非発散部アルゴリズムリストが見つからないか空なので、デフォルトリストを使用")
             # フォールバック
@@ -698,7 +690,7 @@ class ParameterPanel:
         self.max_iter_var.set(str(reset_iter))
 
         # 3. (オプション) カラーリングも config のデフォルト値に戻す (推奨設定ではなく)
-        param_defaults = self.config.get("fractal_settings", {}).get("parameter_panel", {})
+        param_defaults = self.config.get("fractal_settings", {}).get("parameter_panel_settings", {})
         self.diverge_algo_var.set(param_defaults.get("diverge_algorithm", "スムージング"))
         self.diverge_colormap_var.set(param_defaults.get("diverge_colormap", "viridis"))
         self.non_diverge_algo_var.set(param_defaults.get("non_diverge_algorithm", "単色"))

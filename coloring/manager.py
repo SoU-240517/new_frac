@@ -29,11 +29,6 @@ from plugins.coloring.non_divergent import phase_symmetry as ndiv_phase_symmetry
 from plugins.coloring.non_divergent import quantum_entanglement as ndiv_quantum_entanglement
 from plugins.coloring.non_divergent import solid_color as ndiv_solid
 
-# --- アルゴリズム関数をマッピングする辞書 ---
-# Callable[[np.ndarray, np.ndarray, Any, Any, Dict, DebugLogger], None] のような型ヒントも可能だが、簡潔さのため省略
-DEFAULT_DIVERGENT_ALGO_NAME = "スムージング" # フォールバック
-DEFAULT_NON_DIVERGENT_ALGO_NAME = "単色" # フォールバック
-
 def _load_algorithms_from_config(config: Dict) -> tuple[Dict[str, Callable], Dict[str, Callable]]:
     """
     設定ファイルからアルゴリズム定義を読み込み、関数オブジェクトに変換する
@@ -43,17 +38,17 @@ def _load_algorithms_from_config(config: Dict) -> tuple[Dict[str, Callable], Dic
 
     # fractal_settings の下に coloring_algorithms があることを確認
     fractal_settings = config.get('fractal_settings', {})
-    if 'coloring_algorithms' not in fractal_settings:
-        raise ColorAlgorithmError("'coloring_algorithms' section not found in fractal_settings")
+    if 'coloring_algorithms_settings' not in fractal_settings:
+        raise ColorAlgorithmError("'coloring_algorithms_settings' section not found in fractal_settings")
 
-    algorithms = fractal_settings['coloring_algorithms']
+    algorithms = fractal_settings['coloring_algorithms_settings']
 
-    for algo_name, func_path in algorithms['divergent'].items():
+    for algo_name, func_path in algorithms['divergent_list'].items():
         module_name, func_name = func_path.rsplit('.', 1)
         module = globals()[module_name]
         divergent_algos[algo_name] = getattr(module, func_name)
 
-    for algo_name, func_path in algorithms['non_divergent'].items():
+    for algo_name, func_path in algorithms['non_divergent_list'].items():
         module_name, func_name = func_path.rsplit('.', 1)
         module = globals()[module_name]
         non_divergent_algos[algo_name] = getattr(module, func_name)
@@ -75,6 +70,9 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger, c
     Raises:
         ColorAlgorithmError: 対応するアルゴリズムが見つからない場合や、着色処理中にエラーが発生した場合
     """
+    default_divergent_algo_name = config.get('coloring_algorithms_settings', {}).get('default_divergent_algo_name')
+    default_non_divergent_algo_name = config.get('coloring_algorithms_settings', {}).get('default_non_divergent_algo_name')
+
     # --- 1. キャッシュ管理クラスの初期化とキャッシュ確認 ---
     cache = ColorCache(config=config, logger=logger)
     cache_params = params.copy()
@@ -88,8 +86,8 @@ def apply_coloring_algorithm(results: Dict, params: Dict, logger: DebugLogger, c
         divergent_algos, non_divergent_algos = _load_algorithms_from_config(config)
 
         # 使用するアルゴリズムの取得
-        divergent_algo_name = params.get('diverge_algorithm', DEFAULT_DIVERGENT_ALGO_NAME)
-        non_divergent_algo_name = params.get('non_diverge_algorithm', DEFAULT_NON_DIVERGENT_ALGO_NAME)
+        divergent_algo_name = params.get('diverge_algorithm', default_divergent_algo_name)
+        non_divergent_algo_name = params.get('non_diverge_algorithm', default_non_divergent_algo_name)
 
         divergent_algo = divergent_algos.get(divergent_algo_name)
         non_divergent_algo = non_divergent_algos.get(non_divergent_algo_name)

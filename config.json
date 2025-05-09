@@ -2,52 +2,44 @@
   "system_settings": {
     "plugin_dir": "plugins/fractal_types",
     "coloring_plugin_dirs": {
-      "divergent": "plugins/coloring/divergent",
-      "non_divergent": "plugins/coloring/non_divergent"
+      "divergent_plugin_dir": "plugins/coloring/divergent",
+      "non_divergent_plugin_dir": "plugins/coloring/non_divergent"
     }
   },
   "fractal_settings": {
-    "initial_zoom": {
+    "reset_max_iterations": 200,
+    "initial_zoom_settings": {
       "center_x": 0.0,
       "center_y": 0.0,
       "width": 4.0,
       "height_ratio": 0.5625,
       "rotation": 0.0
     },
-    "available_fractal_types": [
-      "Julia",
-      "Mandelbrot"
-    ],
-    "parameter_panel": {
+    "parameter_panel_settings": {
       "panel_font": "Courier",
       "panel_font_size": 10,
       "fractal_type": "Julia",
       "max_iterations": 200,
-      "z_real": 0.0,
-      "z_imag": 0.0,
-      "c_real": -0.8,
-      "c_imag": 0.156,
       "diverge_algorithm": "スムージング",
       "diverge_colormap": "viridis",
       "non_diverge_algorithm": "単色",
       "non_diverge_colormap": "magma"
     },
-    "dynamic_resolution": {
+    "dynamic_resolution_settings": {
       "base": 600,
       "min": 300,
       "max": 1200,
       "log_factor": 5.0
     },
-    "super_sampling": {
+    "super_sampling_settings": {
       "zoom_threshold": 0.8,
       "low_samples": 2,
       "high_samples": 4
     },
-    "reset_max_iterations": 200,
-    "coloring_algorithms": {
-      "default_divergent": "smoothing",
-      "default_non_divergent": "solid_color",
-      "divergent": {
+    "coloring_algorithms_settings": {
+      "default_divergent_algo_name": "スムージング",
+      "default_non_divergent_algo_name": "単色",
+      "divergent_list": {
         "角度カラーリング": "div_angle.apply_angle_coloring",
         "距離カラーリング": "div_distance.apply_distance_coloring",
         "ヒストグラム平坦化法": "div_histogram.apply_histogram_flattening",
@@ -57,7 +49,7 @@
         "ポテンシャル関数法": "div_potential.apply_potential",
         "スムージング": "div_smoothing.apply_smoothing"
       },
-      "non_divergent": {
+      "non_divergent_list": {
         "カオス軌道混合（Chaotic Orbit Mixing）": "ndiv_chaotic_orbit.apply_chaotic_orbit",
         "複素ポテンシャル（Complex Potential Mapping）": "ndiv_complex_potential.apply_complex_potential",
         "反復収束速度（Convergence Speed）": "ndiv_convergence_speed.apply_convergence_speed",
@@ -85,8 +77,8 @@
     "colorbar_width": 150,
     "colorbar_height": 15,
     "parameter_panel_width": 300,
-    "zoom_rect_min_width_px": 10,
-    "zoom_rect_min_height_px": 10,
+    "zoom_rect_min_width_px": 5,
+    "zoom_rect_min_height_px": 5,
     "zoom_rect_aspect_ratio": 1.7777777777777777,
     "rotation_threshold": 2.0,
     "rotation_sensitivity": 1.0,
@@ -97,7 +89,7 @@
     "fix_edge_linestyle": "-"
   },
   "canvas_settings": {
-    "canvas_background_color": "black",
+    "canvas_bg_color": "black",
     "config_dpi": 100,
     "quick_mode_resolution_factor": 0.5,
     "samples_per_pixel": 1
@@ -106,7 +98,7 @@
     "cache_max_size": 150
   },
   "coloring_options": {
-    "available_colormaps": [
+    "available_colormaps_list": [
       "viridis", "plasma", "inferno", "magma", "cividis",
       "twilight", "twilight_shifted", "turbo",
       "Blues", "BrBG", "BuGn", "BuPu", "CMRmap", "GnBu",
@@ -122,7 +114,7 @@
       "seismic", "spring", "summer", "terrain", "winter"
     ]
   },
-  "logging": {
+  "logging_settings": {
     "debug_enabled": true,
     "min_level": "DEBUG"
   }

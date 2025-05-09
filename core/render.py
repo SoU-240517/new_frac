@@ -1,19 +1,25 @@
+"""
+フラクタル画像生成エンジン
+
+このモジュールはフラクタル画像の生成を担当し、以下の主要な機能を提供します：
+
+主な機能：
+- 動的解像度制御：ズームレベルに応じた最適な解像度の自動調整
+- フラクタル計算：Mandelbrot集合とJulia集合の計算
+- レンダリング最適化：スーパーサンプリングによる高品質な画像生成
+- カラーリング：複数の着色アルゴリズムとカラーマップのサポート
+
+特徴：
+- 精度とパフォーマンスのバランスを考慮したデータ型選択
+- 回転角度のサポートによる柔軟な視点制御
+- エラーハンドリングとデバッグログの充実
+"""
+
 import numpy as np
 import time
 from coloring import manager
 from typing import Dict, Any, Callable, Optional
 from debug import DebugLogger, LogLevel
-
-"""
-フラクタル画像生成エンジン
-
-このモジュールはフラクタル画像の生成を担当する
-
-主な機能：
-- 動的解像度制御
-- フラクタル計算
-- レンダリング最適化
-"""
 
 def _calculate_dynamic_resolution(width: float, config: Dict[str, Any], logger: DebugLogger) -> int:
     """
@@ -36,7 +42,7 @@ def _calculate_dynamic_resolution(width: float, config: Dict[str, Any], logger: 
         - log_factor は解像度調整の感度を制御（大きいほど解像度の変化が緩やか）
     """
     # 設定ファイルから動的解像度のパラメータを取得
-    dr_config = config.get("fractal_settings", {}).get("dynamic_resolution", {})
+    dr_config = config.get("fractal_settings", {}).get("dynamic_resolution_settings", {})
     base_res = dr_config.get("base", 600)
     min_res = dr_config.get("min", 400)
     max_res = dr_config.get("max", 1200)
@@ -286,7 +292,7 @@ def render_fractal(
     resolution = _calculate_dynamic_resolution(current_width, config, logger)
 
     # 簡易モードでは解像度をさらに下げる
-    quick_mode_resolution_factor = config.get("fractal_settings", {}).get("quick_mode_resolution_factor", 0.5)
+    quick_mode_resolution_factor = config.get("canvas_settings", {}).get("quick_mode_resolution_factor", 0.5)
     logger.log(LogLevel.DEBUG, "設定読込", {"quick_mode_resolution_factor": quick_mode_resolution_factor})
 
     if render_mode == "quick":
@@ -295,7 +301,7 @@ def render_fractal(
         resolution = max(resolution, dpi)
 
     # アンチエイリアシング設定 (設定ファイルから読み込む)
-    ss_config = config.get("fractal_settings", {}).get("super_sampling", {})
+    ss_config = config.get("fractal_settings", {}).get("super_sampling_settings", {})
     zoom_threshold = ss_config.get("zoom_threshold", 0.8)
     low_samples = ss_config.get("low_samples", 2)
     high_samples = ss_config.get("high_samples", 4)

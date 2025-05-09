@@ -15,7 +15,7 @@ if __name__ == "__main__":
 
     # 設定ファイルの読み込み
     config = load_config(temp_logger, "config.json")
-    logging_config = config.get("logging", {})
+    logging_config = config.get("logging_settings", {})
 
     logger = DebugLogger(
         debug_enabled=logging_config.get("debug_enabled", True),
