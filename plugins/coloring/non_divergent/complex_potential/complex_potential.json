@@ -2,7 +2,9 @@
   "basic_settings": {
     "file_name": "complex_potential.py",
     "display_name": "複素ポテンシャル",
-    "coloring_func_name": "apply_complex_potential",
-    "argument_type": 5
-  }
+    "coloring_func_name": "apply_complex_potential"
+  },
+  "argument_list": [
+    "colored", "non_divergent_mask", "z_vals", "non_cmap_func", "params", "logger"
+  ]
 }

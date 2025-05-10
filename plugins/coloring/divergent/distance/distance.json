@@ -2,7 +2,9 @@
   "basic_settings": {
     "file_name": "distance.py",
     "display_name": "距離カラーリング",
-    "coloring_func_name": "apply_distance_coloring",
-    "argument_type": 2
-  }
+    "coloring_func_name": "apply_distance_coloring"
+  },
+  "argument_list": [
+    "colored", "divergent_mask", "z_vals", "cmap_func", "params", "logger"
+  ]
 }

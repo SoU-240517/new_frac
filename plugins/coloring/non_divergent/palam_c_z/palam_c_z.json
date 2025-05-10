@@ -2,7 +2,9 @@
   "basic_settings": {
     "file_name": "palam_c_z.py",
     "display_name": "パラメータ(C/Z)",
-    "coloring_func_name": "apply_parameter_coloring",
-    "argument_type": 4
-  }
+    "coloring_func_name": "apply_parameter_coloring"
+  },
+  "argument_list": [
+    "colored", "non_divergent_mask", "z_vals", "non_cmap_func", "params", "logger"
+  ]
 }

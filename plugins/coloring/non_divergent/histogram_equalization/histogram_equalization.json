@@ -2,7 +2,9 @@
   "basic_settings": {
     "file_name": "histogram_equalization.py",
     "display_name": "統計分布",
-    "coloring_func_name": "apply_histogram_equalization",
-    "argument_type": 2
-  }
+    "coloring_func_name": "apply_histogram_equalization"
+  },
+  "argument_list": [
+    "colored", "non_divergent_mask", "iterations", "non_cmap_func", "params", "logger"
+  ]
 }

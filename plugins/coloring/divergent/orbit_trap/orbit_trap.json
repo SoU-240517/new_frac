@@ -2,7 +2,9 @@
   "basic_settings": {
     "file_name": "orbit_trap.py",
     "display_name": "軌道トラップ法",
-    "coloring_func_name": "apply_orbit_trap",
-    "argument_type": 1
-  }
+    "coloring_func_name": "apply_orbit_trap"
+  },
+  "argument_list": [
+    "colored", "divergent_mask", "iterations", "z_vals", "cmap_func", "params", "logger"
+  ]
 }

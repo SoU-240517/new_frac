@@ -2,7 +2,9 @@
   "basic_settings": {
     "file_name": "phase_symmetry.py",
     "display_name": "位相对称",
-    "coloring_func_name": "apply_phase_symmetry",
-    "argument_type": 5
-  }
+    "coloring_func_name": "apply_phase_symmetry"
+  },
+  "argument_list": [
+    "colored", "non_divergent_mask", "z_vals", "non_cmap_func", "params", "logger"
+  ]
 }

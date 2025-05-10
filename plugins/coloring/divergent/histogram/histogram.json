@@ -2,7 +2,9 @@
   "basic_settings": {
     "file_name": "histogram.py",
     "display_name": "ヒストグラム平坦化法",
-    "coloring_func_name": "apply_histogram_flattening",
-    "argument_type": 3
-  }
+    "coloring_func_name": "apply_histogram_flattening"
+  },
+  "argument_list": [
+    "colored", "divergent_mask", "iterations", "cmap_func", "params", "logger"
+  ]
 }

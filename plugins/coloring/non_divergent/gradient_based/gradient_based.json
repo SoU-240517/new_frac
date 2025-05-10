@@ -2,7 +2,9 @@
   "basic_settings": {
     "file_name": "gradient_based.py",
     "display_name": "グラデーション",
-    "coloring_func_name": "apply_gradient_based",
-    "argument_type": 1
-  }
+    "coloring_func_name": "apply_gradient_based"
+  },
+  "argument_list": [
+    "colored", "non_divergent_mask", "iterations", "gradient_values", "non_cmap_func", "params", "logger"
+  ]
 }
