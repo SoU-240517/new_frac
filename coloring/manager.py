@@ -7,33 +7,6 @@ from .utils import ColorAlgorithmError
 from .gradient import compute_gradient
 from .cache import ColorCache # キャッシュ管理クラス
 
-def _load_algorithms_from_config(config: Dict) -> tuple[Dict[str, Callable], Dict[str, Callable]]:
-    """
-    設定ファイルからアルゴリズム定義を読み込み、関数オブジェクトに変換する
-    """
-    divergent_algos = {}
-    non_divergent_algos = {}
-
-    # fractal_settings の下に coloring_algorithms があることを確認
-    fractal_settings = config.get('fractal_settings', {})
-    if 'coloring_algorithms_settings' not in fractal_settings:
-        raise ColorAlgorithmError("'coloring_algorithms_settings' section not found in fractal_settings")
-
-    algorithms = fractal_settings['coloring_algorithms_settings']
-
-    for algo_name, func_path in algorithms['divergent_list'].items():
-        module_name, func_name = func_path.rsplit('.', 1)
-        module = globals()[module_name]
-        divergent_algos[algo_name] = getattr(module, func_name)
-
-    for algo_name, func_path in algorithms['non_divergent_list'].items():
-        module_name, func_name = func_path.rsplit('.', 1)
-        module = globals()[module_name]
-        non_divergent_algos[algo_name] = getattr(module, func_name)
-
-    return divergent_algos, non_divergent_algos
-
-
 def apply_coloring_algorithm(
     results: Dict,
     params: Dict,
@@ -92,7 +65,7 @@ def apply_coloring_algorithm(
         if non_divergent_algo is None:
             raise ColorAlgorithmError(f"非発散部アルゴリズム '{non_divergent_algo_name}' がない")
     except Exception as e:
-        logger.log(LogLevel.ERROR, f"Failed to load algorithms: {str(e)}")
+        logger.log(LogLevel.ERROR, f"アルゴリズムの読み込みに失敗: {str(e)}")
         raise ColorAlgorithmError(f"Failed to load algorithms: {str(e)}")
 
     # --- 3. 必要なデータの準備 ---

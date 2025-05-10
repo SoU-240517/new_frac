@@ -7,13 +7,6 @@ from typing import Dict, Any, Optional, Callable, List
 
 from debug import DebugLogger, LogLevel
 
-# --- ユーティリティ関数 ---
-def _filename_to_display_name(filename: str) -> str:
-    """ファイル名から表示名を生成するヘルパー関数 (例: some_plugin.py -> Some Plugin)"""
-    name_without_ext = os.path.splitext(filename)[0] # 拡張子を除去
-    return name_without_ext.replace("_", " ").title()
-
-# --- プラグインローダーの基底クラス ---
 class PluginLoaderBase:
     """
     プラグインローダーの基本クラス
@@ -65,13 +58,13 @@ class PluginLoaderBase:
                 self.logger.log(LogLevel.DEBUG, f"モジュールインポート成功: {context_name_for_log}")
             return module
         except ImportError as e:
-            if self.logger:
-                # エラーメッセージにインポートしようとしたパスを含める
-                self.logger.log(LogLevel.ERROR, f"'{context_name_for_log}' のモジュール '{module_import_path}' のインポートエラー: {e}")
+            # エラーメッセージにインポートしようとしたパスを含める
+            if self.logger: self.logger.log(LogLevel.ERROR,
+                f"'{context_name_for_log}' のモジュール '{module_import_path}' のインポートエラー: {e}")
             return None
         except Exception as e: # その他の予期せぬエラーもキャッチ
-            if self.logger:
-                self.logger.log(LogLevel.ERROR, f"'{context_name_for_log}' のモジュール '{module_import_path}' のロード中に予期せぬエラー: {e}")
+            if self.logger: self.logger.log(LogLevel.ERROR,
+                f"'{context_name_for_log}' のモジュール '{module_import_path}' のロード中に予期せぬエラー: {e}")
             return None
 
     def _get_callable_from_module(self, module: Any, function_name: str, context_name_for_log: str) -> Optional[Callable]:
@@ -90,23 +83,22 @@ class PluginLoaderBase:
             func_candidate = getattr(module, function_name, None)
 
             if func_candidate is None:
-                if self.logger:
-                    self.logger.log(LogLevel.ERROR, f"'{context_name_for_log}' モジュールに属性 '{function_name}' が見つかりません。")
+                if self.logger: self.logger.log(LogLevel.ERROR,f"'{context_name_for_log}' モジュールに属性 '{function_name}' がない")
                 return None
             if not callable(func_candidate):
-                if self.logger:
-                    self.logger.log(LogLevel.ERROR, f"'{context_name_for_log}' モジュールの属性 '{function_name}' は呼び出し可能ではありません。")
+                if self.logger: self.logger.log(LogLevel.ERROR,
+                    f"'{context_name_for_log}' モジュールの属性 '{function_name}' は呼出不可能")
                 return None
             if self.logger:
                 self.logger.log(LogLevel.DEBUG, f"関数取得成功: {function_name}")
             return func_candidate
         except AttributeError:
-            if self.logger:
-                self.logger.log(LogLevel.ERROR, f"'{context_name_for_log}' モジュールに属性 '{function_name}' が見つかりません (AttributeError)。")
+            if self.logger: self.logger.log(LogLevel.ERROR,
+                f"'{context_name_for_log}' モジュールに属性 '{function_name}' がない (AttributeError)")
             return None
         except Exception as e:
-            if self.logger:
-                self.logger.log(LogLevel.ERROR, f"'{context_name_for_log}' モジュールから関数 '{function_name}' を取得中に予期せぬエラー: {e}")
+            if self.logger: self.logger.log(LogLevel.ERROR,
+                f"'{context_name_for_log}' モジュールから関数 '{function_name}' を取得中に予期せぬエラー: {e}")
             return None
 
     def _scan_and_process_directory(
@@ -124,8 +116,8 @@ class PluginLoaderBase:
                 引数は (item_name: str, item_path: str, scanned_directory_path: str)。
         """
         if not os.path.isdir(directory_path):
-            if self.logger:
-                self.logger.log(LogLevel.ERROR, f"スキャン対象ディレクトリ {directory_path} がない:")
+            if self.logger: self.logger.log(LogLevel.ERROR,
+                f"スキャン対象ディレクトリ {directory_path} がない:")
             return
 
         if self.logger:
@@ -136,10 +128,9 @@ class PluginLoaderBase:
             try:
                 item_processor_callback(item_name, item_path, directory_path)
             except Exception as e:
-                if self.logger:
-                    self.logger.log(LogLevel.ERROR, f"アイテム '{item_name}' の処理中にエラー発生 ({directory_path}): {e}", exc_info=True)
+                if self.logger: self.logger.log(LogLevel.ERROR,
+                    f"アイテム '{item_name}' の処理中にエラー発生 ({directory_path}): {e}", exc_info=True)
 
-# ---  fractal_type_plugin ローダー ---
 class FractalTypeLoader(PluginLoaderBase):
     """
      fractal_type_plugin をロードし、管理するクラス
@@ -156,14 +147,14 @@ class FractalTypeLoader(PluginLoaderBase):
         """
         self.loaded_plugins = {} # ロード前にクリア
 
-        if self.logger:
-            self.logger.log(LogLevel.INFO, "fractal_type_plugin  のスキャンとロード開始")
+        if self.logger: self.logger.log(LogLevel.INFO,
+            "fractal_type_plugin  のスキャンとロード開始")
 
         # _scan_and_process_directory を使用してディレクトリをスキャン
         self._scan_and_process_directory(self.plugin_dir, self._process_fractal_plugin_item)
 
-        if self.logger:
-            self.logger.log(LogLevel.SUCCESS, f"{len(self.loaded_plugins)} 個の fractal_type_plugin のロードに成功")
+        if self.logger: self.logger.log(LogLevel.SUCCESS,
+            f"{len(self.loaded_plugins)} 個の fractal_type_plugin のロードに成功")
 
     def _process_fractal_plugin_item(self, item_name: str, item_path: str, scanned_directory_path: str) -> None:
         """
@@ -185,14 +176,17 @@ class FractalTypeLoader(PluginLoaderBase):
         init_path = os.path.join(plugin_path, "__init__.py")
 
         if not os.path.exists(init_path):
-            if self.logger: self.logger.log(LogLevel.WARNING, f"fractal_type_plugin '{plugin_name}' に __init__.py がないのでスキップ")
+            if self.logger: self.logger.log(LogLevel.WARNING,
+                f"fractal_type_plugin '{plugin_name}' に __init__.py がないのでスキップ")
             return
         if not os.path.exists(json_path):
-            if self.logger: self.logger.log(LogLevel.WARNING, f"fractal_type_plugin '{plugin_name}' の {plugin_name}.json 未検出でスキップ")
+            if self.logger: self.logger.log(LogLevel.WARNING,
+                f"fractal_type_plugin '{plugin_name}' の {plugin_name}.json 未検出でスキップ")
             return
         # py_path の存在チェックはJSONの file_name と照合後でも良いが、基本的な構造として先にチェック
         if not os.path.exists(py_path):
-             if self.logger: self.logger.log(LogLevel.WARNING, f"fractal_type_plugin '{plugin_name}' の Pythonファイル {plugin_name}.py が見つからないためスキップ")
+             if self.logger: self.logger.log(LogLevel.WARNING,
+                f"fractal_type_plugin '{plugin_name}' の Pythonファイル {plugin_name}.py が見つからないためスキップ")
              return
 
         try:
@@ -204,15 +198,19 @@ class FractalTypeLoader(PluginLoaderBase):
             required_keys = ["name", "description", "module_name", "function_name", "parameters"]
             if not all(key in config for key in required_keys):
                 missing_keys = [key for key in required_keys if key not in config]
-                if self.logger: self.logger.log(LogLevel.ERROR, f"fractal_type_plugin '{plugin_name}' : JSON の設定情報不足でスキップ: {missing_keys}")
+                if self.logger: self.logger.log(LogLevel.ERROR,
+                    f"fractal_type_plugin '{plugin_name}' : JSON の設定情報不足でスキップ: {missing_keys}")
                 return
             if config["module_name"] != plugin_name: # 通常、モジュール名とプラグインディレクトリ名は一致させる
-                 if self.logger: self.logger.log(LogLevel.WARNING, f"fractal_type_plugin '{plugin_name}' : JSON の module_name ('{config['module_name']}') がディレクトリ名と不一致")
+                 if self.logger: self.logger.log(LogLevel.WARNING,
+                    f"fractal_type_plugin '{plugin_name}' : JSON の module_name ('{config['module_name']}') がディレクトリ名と不一致")
         except json.JSONDecodeError as e:
-            if self.logger: self.logger.log(LogLevel.ERROR, f"fractal_type_plugin '{plugin_name}' : JSON 解析エラーによりスキップ: {e}")
+            if self.logger: self.logger.log(LogLevel.ERROR,
+                f"fractal_type_plugin '{plugin_name}' : JSON 解析エラーによりスキップ: {e}")
             return
         except Exception as e: # その他のJSON読み込みエラー
-            if self.logger: self.logger.log(LogLevel.ERROR, f"fractal_type_plugin '{plugin_name}' : JSON 読込中に予期せぬエラーでスキップ: {e}")
+            if self.logger: self.logger.log(LogLevel.ERROR,
+                f"fractal_type_plugin '{plugin_name}' : JSON 読込中に予期せぬエラーでスキップ: {e}")
             return
 
         try:
@@ -230,7 +228,8 @@ class FractalTypeLoader(PluginLoaderBase):
                 return
 
         except Exception as e:
-            if self.logger: self.logger.log(LogLevel.ERROR, f"fractal_type_plugin '{plugin_name}' モジュール処理中に予期せぬエラーでスキップ: {e}", exc_info=True)
+            if self.logger: self.logger.log(LogLevel.ERROR,
+                f"fractal_type_plugin '{plugin_name}' モジュール処理中に予期せぬエラーでスキップ: {e}", exc_info=True)
             return
 
         plugin_display_name = config["name"]
@@ -239,7 +238,8 @@ class FractalTypeLoader(PluginLoaderBase):
             "compute_function": compute_function,
             "plugin_dir_name": plugin_name
         }
-        if self.logger: self.logger.log(LogLevel.SUCCESS, f"fractal_type_plugin '{plugin_name}' のロード成功: 表示名: {plugin_display_name}")
+        if self.logger: self.logger.log(LogLevel.SUCCESS,
+            f"fractal_type_plugin '{plugin_name}' のロード成功: 表示名: {plugin_display_name}")
 
     def get_available_types(self) -> List[str]:
         return list(self.loaded_plugins.keys())
@@ -263,8 +263,6 @@ class FractalTypeLoader(PluginLoaderBase):
         plugin = self.get_plugin(name)
         return plugin.get("config", {}).get("recommended_coloring") if plugin else None
 
-
-# --- カラーリングプラグインローダー ---
 class ColoringPluginLoader(PluginLoaderBase):
     """
     カラーリングアルゴリズムのプラグインを読み込むクラス
@@ -279,18 +277,15 @@ class ColoringPluginLoader(PluginLoaderBase):
         self._current_loaded_algos_temp: Dict[str, Callable] = {}
         self._current_plugin_type_name_temp: str = ""
 
-
     def scan_and_load_plugins(self):
         """発散部と非発散部の両方のカラーリングプラグインをスキャンして読み込む"""
-        if self.logger:
-            self.logger.log(LogLevel.INFO, "coloring_plugin のスキャンとロード開始")
+        if self.logger: self.logger.log(LogLevel.INFO, "coloring_plugin のスキャンとロード開始")
 
         self.divergent_algorithms = self._load_plugins_for_type(self.divergent_dir, "発散部")
         self.non_divergent_algorithms = self._load_plugins_for_type(self.non_divergent_dir, "非発散部")
 
-        if self.logger:
-            self.logger.log(LogLevel.SUCCESS,
-                              f"coloring_plugin ロード完了 - 発散部: {len(self.divergent_algorithms)}個, 非発散部: {len(self.non_divergent_algorithms)}個")
+        if self.logger: self.logger.log(LogLevel.SUCCESS,
+                f"coloring_plugin ロード完了 - 発散部: {len(self.divergent_algorithms)}個, 非発散部: {len(self.non_divergent_algorithms)}個")
 
     def _load_plugins_for_type(self, directory: str, plugin_type_name: str) -> Dict[str, Callable]:
         """指定されたディレクトリから特定のタイプのカラーリングプラグインを読み込む内部メソッド"""
@@ -332,11 +327,10 @@ class ColoringPluginLoader(PluginLoaderBase):
                 # インポートパス例: "plugins.coloring.divergent.smoothing.smoothing"
                 # .pyファイル名 (module_name_simple) がモジュールとしてインポートされる
                 full_module_path_to_import = f"{module_base_path}.{module_name_simple}.{module_name_simple}"
-                if self.logger:
-                    self.logger.log(LogLevel.DEBUG, f"{self._current_plugin_type_name_temp} の plugin を検出: dir = {module_name_simple}")
+                if self.logger: self.logger.log(LogLevel.DEBUG,
+                    f"{self._current_plugin_type_name_temp} の plugin を検出: dir = {module_name_simple}")
             else:
-                if self.logger:
-                    self.logger.log(LogLevel.WARNING, f"coloring_plugin '{item_name}' は不適切な構造のためスキップ")
+                if self.logger: self.logger.log(LogLevel.WARNING, f"coloring_plugin '{item_name}' は不適切な構造のためスキップ")
                 return
         elif os.path.isfile(item_path) and item_name.endswith(".py") and item_name != "__init__.py": # ファイルベースのプラグインか？ (例: linear.py)
             module_name_simple = item_name[:-3] # ".py" を除去 (例: "linear")
@@ -348,21 +342,21 @@ class ColoringPluginLoader(PluginLoaderBase):
                 json_config_path = potential_json_file
                 # インポートパス例: "plugins.coloring.divergent.linear"
                 full_module_path_to_import = f"{module_base_path}.{module_name_simple}"
-                if self.logger:
-                    self.logger.log(LogLevel.DEBUG, f"coloring_plugin  (単一ファイル形式) を検出: {module_name_simple} ({self._current_plugin_type_name_temp})")
+                if self.logger: self.logger.log(LogLevel.DEBUG,
+                    f"coloring_plugin  (単一ファイル形式) を検出: {module_name_simple} ({self._current_plugin_type_name_temp})")
             else:
-                if self.logger:
-                    self.logger.log(LogLevel.DEBUG, f"単一ファイル形式プラグイン '{item_name}' に対応するJSONファイル '{module_name_simple}.json' が見つからないためスキップ。")
+                if self.logger: self.logger.log(LogLevel.DEBUG,
+                    f"単一ファイル形式プラグイン '{item_name}' に対応する '{module_name_simple}.json' が無いためスキップ。")
                 return
         else: # プラグインとして認識できないもの
-            if self.logger:
-                self.logger.log(LogLevel.DEBUG, f"アイテム '{item_name}' はカラーリングプラグインとして認識されませんでした ({self._current_plugin_type_name_temp})。スキップします。")
+            if self.logger: self.logger.log(LogLevel.DEBUG,
+                f"アイテム '{item_name}' は coloring_plugin として認識できない ({self._current_plugin_type_name_temp}) のでスキップ")
             return
 
         # --- JSONファイルから設定を読み込む ---
         if not json_config_path or not os.path.exists(json_config_path): #念のため再チェック
-            if self.logger:
-                self.logger.log(LogLevel.ERROR, f"coloring_plugin  '{module_name_simple}': JSONファイルパスが見つからないか存在しません: {json_config_path}")
+            if self.logger: self.logger.log(LogLevel.ERROR,
+                f"coloring_plugin  '{module_name_simple}': JSON ファイルパスがない: {json_config_path}")
             return
 
         plugin_config = {}
@@ -371,8 +365,8 @@ class ColoringPluginLoader(PluginLoaderBase):
                 json_data = json.load(f)
             plugin_config = json_data.get("basic_settings", {}) # "basic_settings" の中身を取得
             if not plugin_config:
-                if self.logger:
-                    self.logger.log(LogLevel.ERROR, f"coloring_plugin  '{module_name_simple}': JSONファイルに 'basic_settings' がないか空です ({json_config_path})。スキップします。")
+                if self.logger: self.logger.log(LogLevel.ERROR,
+                    f"coloring_plugin  '{module_name_simple}': JSON ファイルに 'basic_settings' がない ({json_config_path}) のでスキップ")
 
                 return
 
@@ -381,25 +375,25 @@ class ColoringPluginLoader(PluginLoaderBase):
             # json_py_filename = plugin_config.get("file_name") # 必要ならpy_file_path_to_checkと比較
 
             if not display_name or not target_function_name_from_json:
-                if self.logger:
-                    self.logger.log(LogLevel.ERROR, f"coloring_plugin '{module_name_simple}': JSON内の 'display_name' または 'coloring_func_name' が不足しています。スキップします。")
+                if self.logger: self.logger.log(LogLevel.ERROR,
+                    f"coloring_plugin '{module_name_simple}': JSON 内の 'display_name' または 'coloring_func_name' が不足しているのでスキップ")
                 return
 
             # --- argument_list の読み込み ---
             argument_list = json_data.get("argument_list", [])
             if not argument_list:
-                if self.logger:
-                    self.logger.log(LogLevel.WARNING, f"coloring_plugin '{module_name_simple}' (表示名: {display_name}): JSONに 'argument_list' が見つからないか空です。引数なしとして扱います。")
+                if self.logger: self.logger.log(LogLevel.WARNING,
+                    f"coloring_plugin '{module_name_simple}' (表示名: {display_name}): JSON に 'argument_list' がない。引数なしとして扱う")
 
             if self.logger: self.logger.log(LogLevel.DEBUG, f"JSON 読取完了: {module_name_simple}")
 
         except json.JSONDecodeError as e:
-            if self.logger:
-                self.logger.log(LogLevel.ERROR, f"coloring_plugin '{module_name_simple}': JSON解析エラー ({json_config_path}): {e}。スキップします。")
+            if self.logger: self.logger.log(LogLevel.ERROR,
+                f"coloring_plugin '{module_name_simple}': JSON 解析エラー ({json_config_path}): {e} でスキップ")
             return
         except Exception as e:
-            if self.logger:
-                self.logger.log(LogLevel.ERROR, f"coloring_plugin '{module_name_simple}': JSON読み込み中に予期せぬエラー ({json_config_path}): {e}。スキップします。")
+            if self.logger: self.logger.log(LogLevel.ERROR,
+                f"coloring_plugin '{module_name_simple}': JSON 読み込み中に予期せぬエラー ({json_config_path}): {e} でスキップ")
             return
 
         # --- モジュールロードと関数取得 ---
@@ -416,7 +410,7 @@ class ColoringPluginLoader(PluginLoaderBase):
         if coloring_function and callable(coloring_function):
             if display_name in self._current_loaded_algos_temp:
                 if self.logger: self.logger.log(LogLevel.WARNING,
-                    f"{self._current_plugin_type_name_temp} プラグインで表示名 '{display_name}' が重複 ({module_name_simple}.py)。上書きします。")
+                    f"{self._current_plugin_type_name_temp} プラグインで表示名 '{display_name}' が重複 ({module_name_simple}.py) してるので上書き")
 
             # --- 辞書に格納する情報を変更 ---
             self._current_loaded_algos_temp[display_name] = {
@@ -425,10 +419,10 @@ class ColoringPluginLoader(PluginLoaderBase):
                 "config": plugin_config # basic_settings 部分
             }
             if self.logger: self.logger.log(LogLevel.SUCCESS,
-                    f"{self._current_plugin_type_name_temp} coloring_plugin '{display_name}' のロード成功 ({module_name_simple}.py, 関数名: {target_function_name_from_json}, 引数: {argument_list})")
+                f"{self._current_plugin_type_name_temp} coloring_plugin '{display_name}' のロード成功 ({module_name_simple}.py, 関数名: {target_function_name_from_json}, 引数: {argument_list})")
         else:
             if self.logger: self.logger.log(LogLevel.WARNING,
-                    f"{self._current_plugin_type_name_temp} coloring_plugin'{module_name_simple}.py' (表示名: {display_name}) の関数 '{target_function_name_from_json}' が見つからないか呼び出し可能ではありません。")
+                f"{self._current_plugin_type_name_temp} coloring_plugin'{module_name_simple}.py' (表示名: {display_name}) の関数 '{target_function_name_from_json}' がない")
 
     def get_divergent_algorithm_info(self, name: str) -> Optional[Dict[str, Any]]:
         return self.divergent_algorithms.get(name)

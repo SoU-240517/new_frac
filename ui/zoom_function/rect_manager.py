@@ -104,10 +104,11 @@ class RectManager:
         self._last_valid_size_px = None # 新規作成時はリセット
         self.logger.log(LogLevel.SUCCESS, "初期のズーム領域設置完了", {"x": x, "y": y})
 
-    def _calculate_rect_geometry(self,
-                                 ref_x: float, ref_y: float,
-                                 target_x: float, target_y: float
-                                 ) -> Tuple[float, float, float, float]:
+    def _calculate_rect_geometry(
+        self,
+        ref_x: float, ref_y: float,
+        target_x: float, target_y: float
+    ) -> Tuple[float, float, float, float]:
         """基準点と目標点から、アスペクト比を維持した矩形の位置とサイズを計算
 
         Args:
