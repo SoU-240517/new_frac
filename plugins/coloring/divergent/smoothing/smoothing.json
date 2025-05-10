@@ -4,5 +4,8 @@
     "display_name": "スムージング",
     "coloring_func_name": "apply_smoothing",
     "argument_type": 1
-  }
+  },
+  "argument_list": [
+    "colored", "divergent_mask", "iterations", "z_vals", "cmap_func", "params", "logger"
+  ]
 }
