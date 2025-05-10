@@ -1,11 +1,3 @@
-FILE_NAME = "fourier_pattern.py"
-
-# 表示名 (UIのコンボボックスで使われる)
-DISPLAY_NAME = "フーリエ干渉"
-
-# このプラグインのメインの着色関数の名前
-COLORING_FUNCTION_NAME = "apply_fourier_pattern"
-
 import numpy as np
 from matplotlib.colors import Colormap
 from typing import Dict, Tuple

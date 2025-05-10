@@ -1,11 +1,3 @@
-FILE_NAME = "internal_distance.py"
-
-# 表示名 (UIのコンボボックスで使われる)
-DISPLAY_NAME = "内部距離"
-
-# このプラグインのメインの着色関数の名前
-COLORING_FUNCTION_NAME = "apply_internal_distance"
-
 import numpy as np
 from matplotlib.colors import Colormap
 from typing import Dict, Tuple

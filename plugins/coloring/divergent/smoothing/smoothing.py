@@ -1,11 +1,3 @@
-FILE_NAME = "smoothing.py"
-
-# 表示名 (UIのコンボボックスで使われる)
-DISPLAY_NAME = "スムージング"
-
-# このプラグインのメインの着色関数の名前
-COLORING_FUNCTION_NAME = "apply_smoothing"
-
 import numpy as np
 from matplotlib.colors import Colormap
 from typing import Dict

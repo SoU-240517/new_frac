@@ -1,11 +1,3 @@
-FILE_NAME = "linear.py"
-
-# 表示名 (UIのコンボボックスで使われる)
-DISPLAY_NAME = "反復回数線形マッピング"
-
-# このプラグインのメインの着色関数の名前
-COLORING_FUNCTION_NAME = "apply_linear_mapping"
-
 import numpy as np
 from matplotlib.colors import Normalize, Colormap
 from typing import Dict

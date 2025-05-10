@@ -1,11 +1,3 @@
-FILE_NAME = "logarithmic.py"
-
-# 表示名 (UIのコンボボックスで使われる)
-DISPLAY_NAME = "反復回数対数マッピング"
-
-# このプラグインのメインの着色関数の名前
-COLORING_FUNCTION_NAME = "apply_logarithmic_mapping"
-
 import numpy as np
 from matplotlib.colors import Colormap, Normalize
 from typing import Dict

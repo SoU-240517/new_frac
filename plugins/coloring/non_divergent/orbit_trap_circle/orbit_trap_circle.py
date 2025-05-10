@@ -1,11 +1,3 @@
-FILE_NAME = "orbit_trap_circle.py"
-
-# 表示名 (UIのコンボボックスで使われる)
-DISPLAY_NAME = "軌道トラップ(円)"
-
-# このプラグインのメインの着色関数の名前
-COLORING_FUNCTION_NAME = "apply_orbit_trap_circle"
-
 import numpy as np
 from matplotlib.colors import Colormap
 from typing import Dict
