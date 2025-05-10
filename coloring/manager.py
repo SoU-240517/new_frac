@@ -72,16 +72,25 @@ def apply_coloring_algorithm(
         divergent_algo_name = params.get('diverge_algorithm', default_divergent_algo_name)
         non_divergent_algo_name = params.get('non_diverge_algorithm', default_non_divergent_algo_name)
 
-        divergent_algo = coloring_plugin_loader.get_divergent_function(divergent_algo_name)
-        logger.log(LogLevel.WARNING, f"divergent_algo_name: {divergent_algo_name}")
-        non_divergent_algo = coloring_plugin_loader.get_non_divergent_function(non_divergent_algo_name)
-        logger.log(LogLevel.WARNING, f"non_divergent_algo_name: {non_divergent_algo_name}")
+        # --- アルゴリズム情報（関数と引数リスト）を取得 ---
+        divergent_algo_info = coloring_plugin_loader.get_divergent_algorithm_info(divergent_algo_name)
+        non_divergent_algo_info = coloring_plugin_loader.get_non_divergent_algorithm_info(non_divergent_algo_name)
+
+        if not divergent_algo_info:
+            raise ColorAlgorithmError(f"発散部アルゴリズム '{divergent_algo_name}' の情報が見つかりません")
+        if not non_divergent_algo_info:
+            raise ColorAlgorithmError(f"非発散部アルゴリズム '{non_divergent_algo_name}' の情報が見つかりません")
+
+        divergent_algo = divergent_algo_info.get('function')
+        divergent_arg_list = divergent_algo_info.get('argument_list', [])
+
+        non_divergent_algo = non_divergent_algo_info.get('function')
+        non_divergent_arg_list = non_divergent_algo_info.get('argument_list', [])
 
         if divergent_algo is None:
             raise ColorAlgorithmError(f"発散部アルゴリズム '{divergent_algo_name}' がない")
         if non_divergent_algo is None:
             raise ColorAlgorithmError(f"非発散部アルゴリズム '{non_divergent_algo_name}' がない")
-
     except Exception as e:
         logger.log(LogLevel.ERROR, f"Failed to load algorithms: {str(e)}")
         raise ColorAlgorithmError(f"Failed to load algorithms: {str(e)}")
@@ -123,20 +132,39 @@ def apply_coloring_algorithm(
         logger.log(LogLevel.CRITICAL, "カラーマップ取得中に予期せぬエラー", {"message": e})
         raise ColorAlgorithmError("Unexpected error while getting colormap.") from e
 
+    # --- 全ての利用可能な引数をマップとして準備 ---
+    gradient_values = None # グラデーションアルゴリズム用に事前に準備
+    # 'グラデーション'アルゴリズムが選択され、かつその引数リストに'gradient_values'が含まれている場合に計算
+    # (non_divergent_algo_name だけでなく、実際の引数リストも参照することがより堅牢)
+    if non_divergent_algo_name == 'グラデーション' and 'gradient_values' in non_divergent_arg_list:
+        logger.log(LogLevel.DEBUG, "グラデーション値を計算します...")
+        gradient_values = compute_gradient(image_shape, logger)
+        logger.log(LogLevel.DEBUG, "グラデーション値 計算完了", {"shape": gradient_values.shape if gradient_values is not None else "None"})
+
+    all_available_args = {
+        "colored": colored,
+        "iterations": iterations,
+        "z_vals": z_vals,
+        "params": params,
+        "logger": logger,
+        "divergent_mask": divergent_mask,   # 発散アルゴリズム用
+        "cmap_func": cmap_func,             # 発散アルゴリズム用
+        "non_divergent_mask": non_divergent_mask, # 非発散アルゴリズム用
+        "non_cmap_func": non_cmap_func,         # 非発散アルゴリズム用
+        "gradient_values": gradient_values,
+    }
+
     # --- 3. 着色処理の実行 ---
     try:
         start_perf_counter = time.perf_counter()
-
         # --- 3.1 発散部分の着色 ---
         if np.any(divergent_mask): # 処理対象が存在するかチェック
             try:
-                # アルゴリズムに応じて必要な引数を渡す
-                if divergent_algo_name in ['スムージング', '軌道トラップ法']:
-                    divergent_algo(colored, divergent_mask, iterations, z_vals, cmap_func, params, logger)
-                elif divergent_algo_name in ['距離カラーリング', '角度カラーリング', 'ポテンシャル関数法']:
-                    divergent_algo(colored, divergent_mask, z_vals, cmap_func, params, logger)
-                else: # Linear, Logarithmic, Histogram など
-                    divergent_algo(colored, divergent_mask, iterations, cmap_func, params, logger)
+                args_to_pass = [all_available_args[arg_name] for arg_name in divergent_arg_list if arg_name in all_available_args]
+                if len(args_to_pass) != len(divergent_arg_list):
+                    missing_args = [arg for arg in divergent_arg_list if arg not in all_available_args]
+                    raise ColorAlgorithmError(f"発散部アルゴリズム '{divergent_algo_name}' の引数不足: {missing_args}")
+                divergent_algo(*args_to_pass)
                 logger.log(LogLevel.SUCCESS, "着色完了 発散部", {"divergent_algo_name": divergent_algo_name})
             except Exception as algo_e:
                 logger.log(LogLevel.ERROR, f"発散アルゴリズム '{divergent_algo_name}' 実行中にエラー: {algo_e}")
@@ -149,26 +177,22 @@ def apply_coloring_algorithm(
 
         # --- 3.2 非発散部分の着色 ---
         if np.any(non_divergent_mask): # 処理対象が存在するかチェック
-
             try:
-                # アルゴリズムに応じて必要な引数を渡す
-                if non_divergent_algo_name == 'グラデーション':
-                    # グラデーション用の値は事前に計算しておく必要がある
-                    logger.log(LogLevel.DEBUG, "グラデーション値を計算します...")
-                    gradient_values = compute_gradient(image_shape, logger)
-                    logger.log(LogLevel.DEBUG, "グラデーション値 計算完了", {"shape": gradient_values.shape})
-                    non_divergent_algo(colored, non_divergent_mask, iterations, gradient_values, non_cmap_func, params, logger)
-                elif non_divergent_algo_name == '統計分布':
-                    non_divergent_algo(colored, non_divergent_mask, iterations, non_cmap_func, params, logger)
-                elif non_divergent_algo_name == '単色':
-                    non_divergent_algo(colored, non_divergent_mask, params, logger)
-                elif non_divergent_algo_name in ['パラメータ(C)', 'パラメータ(Z)']:
-                    # パラメータカラーリングは mask, z_vals, cmap, params, logger を受け取る想定
-                    # 関数内部で C か Z かを params['fractal_type'] などで判断する
-                    non_divergent_algo(colored, non_divergent_mask, z_vals, non_cmap_func, params, logger)
-                else:
-                    # 他の多くの非発散アルゴリズムは z_vals が必要と想定
-                    non_divergent_algo(colored, non_divergent_mask, z_vals, non_cmap_func, params, logger)
+                # --- 動的な引数渡し ---
+                # JSON内の引数名とall_available_argsのキー名をマッピングする必要がある場合がある
+                # 例えば、JSON側が 'mask' や 'cmap_func' という汎用的な名前を使い、
+                # manager.py側で状況に応じて divergent_mask/non_divergent_mask を渡す場合など。
+                # ここでは、JSONの引数名が all_available_args のキーと一致すると仮定。
+                # ただし、'cmap_func' や 'mask' などの汎用名は、
+                # non_divergent 用の 'non_cmap_func', 'non_divergent_mask' にマップする。
+                current_context_args = all_available_args.copy()
+                current_context_args['cmap_func'] = all_available_args['non_cmap_func'] # JSONが'cmap_func'を要求したらnon_cmap_funcを渡す
+                current_context_args['divergent_mask'] = all_available_args['non_divergent_mask'] # JSONが'divergent_mask'を要求したらnon_divergent_maskを渡す
+                args_to_pass = [current_context_args[arg_name] for arg_name in non_divergent_arg_list if arg_name in current_context_args]
+                if len(args_to_pass) != len(non_divergent_arg_list):
+                    missing_args = [arg for arg in non_divergent_arg_list if arg not in current_context_args]
+                    raise ColorAlgorithmError(f"非発散部アルゴリズム '{non_divergent_algo_name}' の引数不足: {missing_args}")
+                non_divergent_algo(*args_to_pass)
                 logger.log(LogLevel.SUCCESS, "着色完了 非発散部", {"non_divergent_algo_name": non_divergent_algo_name})
             except Exception as algo_e:
                 logger.log(LogLevel.ERROR, f"非発散アルゴリズム '{non_divergent_algo_name}' 実行中にエラー: {algo_e}")

@@ -209,8 +209,8 @@ class DebugLogger:
             str: ログレベルに対応する色名
         """
         color_map = {
-            LogLevel.DEBUG: "grey50",
-#            LogLevel.INIT: "dim cyan",
+            LogLevel.DEBUG: "dim cyan",
+            LogLevel.LOAD: "grey50",
             LogLevel.CALL: "green",
             LogLevel.SUCCESS: "bold blue",
             LogLevel.INFO: "white",

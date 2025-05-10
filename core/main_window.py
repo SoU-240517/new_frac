@@ -98,19 +98,20 @@ class MainWindow:
         self.draw_thread = None
 
         self.ui_settings = self.config.get("ui_settings", {})
-
         self.fractal_type_plugin_dir = self.config.get("system_settings",{}).get("fractal_type_plugin_dir", "plugins/fractal_types")
-        self.logger.log(LogLevel.DEBUG, "設定読込", {"fractal_type_plugin_dir": self.fractal_type_plugin_dir})
+        self.logger.log(LogLevel.LOAD, "設定読込", {"fractal_type_plugin_dir": self.fractal_type_plugin_dir})
 
-        self.fractal_loader = FractalTypeLoader(plugin_dir=self.fractal_type_plugin_dir, logger=self.logger)
-
+        self.fractal_loader = FractalTypeLoader(
+            plugin_dir=self.fractal_type_plugin_dir,
+            logger=self.logger
+        )
         self.fractal_loader.scan_and_load_plugins()
 
         # --- カラーリングプラグインローダーの初期化とプラグインの読み込み ---
         coloring_dirs_config = self.config.get("system_settings", {}).get("coloring_plugin_dirs", {})
         divergent_plugin_dir = coloring_dirs_config.get("divergent_plugin_dir", "plugins/coloring/divergent")
         non_divergent_plugin_dir = coloring_dirs_config.get("non_divergent_plugin_dir", "plugins/coloring/non_divergent")
-        self.logger.log(LogLevel.DEBUG, "設定読込", {
+        self.logger.log(LogLevel.LOAD, "設定読込", {
             "divergent_plugin_dir": divergent_plugin_dir,
             "non_divergent_plugin_dir": non_divergent_plugin_dir
         })
@@ -146,7 +147,7 @@ class MainWindow:
         app_title = self.config.get("ui_settings", {}).get("app_title", "フラクタル描画アプリケーション")
         window_width = self.config.get("ui_settings", {}).get("window_width", 1280)
         window_height = self.config.get("ui_settings", {}).get("window_height", 800)
-        self.logger.log(LogLevel.DEBUG, "設定読込", {"app_title": app_title, "w": window_width, "h": window_height})
+        self.logger.log(LogLevel.LOAD, "設定読込", {"app_title": app_title, "w": window_width, "h": window_height})
 
         self.root.title(app_title)
         self.root.geometry(f"{window_width}x{window_height}")
@@ -183,7 +184,7 @@ class MainWindow:
         self.logger.log(LogLevel.INFO, "パラメータパネル設定開始")
 
         width = self.config.get("ui_settings", {}).get("parameter_panel_width", 300)
-        self.logger.log(LogLevel.DEBUG, "設定読込", {"parameter_panel_width": width})
+        self.logger.log(LogLevel.LOAD, "設定読込", {"parameter_panel_width": width})
 
         self.parameter_frame = ttk.Frame(self.root, width=width)
         self.parameter_frame.pack(
@@ -231,7 +232,7 @@ class MainWindow:
 
         initial_canvas_width = self.config.get("ui_settings", {}).get("initial_canvas_width", 1067)
         initial_canvas_height = self.config.get("ui_settings", {}).get("initial_canvas_height", 600)
-        self.logger.log(LogLevel.DEBUG, "設定読込", {"initial_canvas_width": initial_canvas_width, "initial_canvas_height": initial_canvas_height})
+        self.logger.log(LogLevel.LOAD, "設定読込", {"initial_canvas_width": initial_canvas_width, "initial_canvas_height": initial_canvas_height})
 
         self.fractal_canvas = FractalCanvas(
             self.canvas_frame,
@@ -266,8 +267,8 @@ class MainWindow:
         width = initial_zoom_config.get("width", 4.0)
         height_ratio = initial_zoom_config.get("height_ratio", 9 / 16)
         rotation = initial_zoom_config.get("rotation", 0.0)
-        self.logger.log(LogLevel.DEBUG, "設定読込", {"center_x": center_x, "center_y": center_y, "width": width})
-        self.logger.log(LogLevel.DEBUG, "設定読込", {"height_ratio": height_ratio, "rotation": rotation})
+        self.logger.log(LogLevel.LOAD, "設定読込", {"center_x": center_x, "center_y": center_y, "width": width})
+        self.logger.log(LogLevel.LOAD, "設定読込", {"height_ratio": height_ratio, "rotation": rotation})
 
         # 高さは幅と比率から計算 (設定ファイルに height_ratio あり)
         height = width * height_ratio
@@ -411,7 +412,7 @@ class MainWindow:
 
         new_width = w
         height_ratio = self.config.get("fractal_settings", {}).get("initial_zoom_settings", {}).get("height_ratio", 9/16)
-        self.logger.log(LogLevel.DEBUG, "設定読込", {"height_ratio": height_ratio})
+        self.logger.log(LogLevel.LOAD, "設定読込", {"height_ratio": height_ratio})
         new_height = new_width * height_ratio # 16:9 アスペクト比維持
 
         zoom_factor = self.zoom_params["width"] / new_width if new_width > 0 else 1
@@ -508,7 +509,7 @@ class MainWindow:
         # --- パラメータパネルの状態も初期化 ------------------
         # 初期表示のフラクタルタイプを取得
         default_fractal_type = self.config.get("fractal_settings", {}).get("parameter_panel_settings", {}).get("fractal_type", None)
-        self.logger.log(LogLevel.DEBUG, "設定読込", {"default_fractal_type": default_fractal_type})
+        self.logger.log(LogLevel.LOAD, "設定読込", {"default_fractal_type": default_fractal_type})
 
         if default_fractal_type is None and self.fractal_loader.get_available_types():
             default_fractal_type = self.fractal_loader.get_available_types()[0] # ローダーから最初のタイプを取得
@@ -519,7 +520,7 @@ class MainWindow:
         else:
             self.logger.log(LogLevel.WARNING, "デフォルトのフラクタルタイプが見つからないため、パラメータパネルのリセットをスキップ")
             reset_iter = self.config.get("fractal_settings", {}).get("reset_max_iterations", 200)
-            self.logger.log(LogLevel.DEBUG, "設定読込", {"reset_iter": reset_iter})
+            self.logger.log(LogLevel.LOAD, "設定読込", {"reset_iter": reset_iter})
             self.parameter_panel.max_iter_var.set(str(reset_iter)) # max_iter_var がまだ存在する場合
             self.logger.log(LogLevel.CALL, f"最大反復回数のみリセット: {reset_iter}")
         # -------------------------------------------------

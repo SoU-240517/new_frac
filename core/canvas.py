@@ -57,7 +57,7 @@ class FractalCanvas:
         self.config = config
 
         self.facecolor = self.config.get("canvas_settings", {}).get("canvas_bg_color", "black")
-        self.logger.log(LogLevel.DEBUG, "設定読込", {"facecolor": self.facecolor})
+        self.logger.log(LogLevel.LOAD, "設定読込", {"facecolor": self.facecolor})
 
         # FigureとAxesの初期化
         self._setup_figure(width, height)
@@ -81,7 +81,7 @@ class FractalCanvas:
             ValueError: DPIの設定が不正な場合
         """
         config_dpi = self.config.get("canvas_settings", {}).get("config_dpi", 100)
-        self.logger.log(LogLevel.DEBUG, "設定読込", {"config_dpi": config_dpi})
+        self.logger.log(LogLevel.LOAD, "設定読込", {"config_dpi": config_dpi})
 
         # Figure の設定
         self.fig = Figure(

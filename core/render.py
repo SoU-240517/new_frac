@@ -47,7 +47,7 @@ def _calculate_dynamic_resolution(width: float, config: Dict[str, Any], logger: 
     min_res = dr_config.get("min", 400)
     max_res = dr_config.get("max", 1200)
     log_factor = dr_config.get("log_factor", 5.0) # 対数計算用係数
-    logger.log(LogLevel.DEBUG, "設定読込：動的解像度パラメータ",
+    logger.log(LogLevel.LOAD, "設定読込：動的解像度パラメータ",
                 {"base_res": base_res, "min_res": min_res, "max_res": max_res, "log_factor": log_factor})
 
     # width が非常に小さい場合に log 引数が負にならないようにクリップ
@@ -288,14 +288,14 @@ def render_fractal(
     current_width = params.get("width", 4.0) # 現在の描画範囲の幅
 
     dpi = config.get("canvas_settings", {}).get("config_dpi", 100)
-    logger.log(LogLevel.DEBUG, "設定読込", {"dpi": dpi})
+    logger.log(LogLevel.LOAD, "設定読込", {"dpi": dpi})
 
     # 動的解像度計算 (config を渡す)
     resolution = _calculate_dynamic_resolution(current_width, config, logger)
 
     # 簡易モードでは解像度をさらに下げる
     quick_mode_resolution_factor = config.get("canvas_settings", {}).get("quick_mode_resolution_factor", 0.5)
-    logger.log(LogLevel.DEBUG, "設定読込", {"quick_mode_resolution_factor": quick_mode_resolution_factor})
+    logger.log(LogLevel.LOAD, "設定読込", {"quick_mode_resolution_factor": quick_mode_resolution_factor})
 
     if render_mode == "quick":
         resolution = int(resolution * quick_mode_resolution_factor)
@@ -307,14 +307,14 @@ def render_fractal(
     zoom_threshold = ss_config.get("zoom_threshold", 0.8)
     low_samples = ss_config.get("low_samples", 2)
     high_samples = ss_config.get("high_samples", 4)
-    logger.log(LogLevel.DEBUG, "設定読込", {"zoom_threshold": zoom_threshold, "low_samples": low_samples, "high_samples": high_samples})
+    logger.log(LogLevel.LOAD, "設定読込", {"zoom_threshold": zoom_threshold, "low_samples": low_samples, "high_samples": high_samples})
 
     zoom_level = 4.0 / current_width # 基準幅4.0に対する比率 (大きいほどズームイン)
 
     # 簡易モードではアンチエイリアシング無効 (サンプル数 = 1)
     if render_mode == "quick":
         samples_per_pixel = config.get("canvas_settings", {}).get("samples_per_pixel", 1)
-        logger.log(LogLevel.DEBUG, "設定読込", {"samples_per_pixel": samples_per_pixel})
+        logger.log(LogLevel.LOAD, "設定読込", {"samples_per_pixel": samples_per_pixel})
     else:
         # ズームレベルに応じてサンプル数を決定
         samples_per_pixel = high_samples if zoom_level >= zoom_threshold else low_samples
